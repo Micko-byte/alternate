@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -25,11 +26,11 @@ const Header = () => {
       <div className="container mx-auto px-4 md:px-6">
         <div className="flex items-center justify-between h-16 md:h-20">
           {/* Logo */}
-          <a href="/" className="flex items-center">
+          <Link to="/" className="flex items-center">
             <span className="font-display text-2xl md:text-3xl tracking-wider text-foreground">
               ALTERNATE
             </span>
-          </a>
+          </Link>
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-8">
@@ -39,12 +40,12 @@ const Header = () => {
             >
               Drops
             </a>
-            <a
-              href="#story"
+            <Link
+              to="/about"
               className="text-sm uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors"
             >
-              Our Story
-            </a>
+              About Us
+            </Link>
             <a
               href="#lookbook"
               className="text-sm uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors"
@@ -79,12 +80,13 @@ const Header = () => {
               >
                 Drops
               </a>
-              <a
-                href="#story"
+              <Link
+                to="/about"
                 className="text-lg uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors"
+                onClick={() => setIsMobileMenuOpen(false)}
               >
-                Our Story
-              </a>
+                About Us
+              </Link>
               <a
                 href="#lookbook"
                 className="text-lg uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors"
