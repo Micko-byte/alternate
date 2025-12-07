@@ -7,22 +7,22 @@ import productPants from "@/assets/product-pants.jpg";
 const products = [
   {
     id: 1,
-    name: "Roots Graphic Tee",
+    name: "JDM Drift Tee",
     price: "UGX 45,000",
     image: productTee,
     tag: "New Drop",
   },
   {
     id: 2,
-    name: "Bolt Oversized Hoodie",
-    price: "UGX 85,000",
+    name: "Kampala Heritage Tee",
+    price: "UGX 45,000",
     image: productHoodie,
     tag: "Best Seller",
   },
   {
     id: 3,
-    name: "Urban Cargo Pants",
-    price: "UGX 65,000",
+    name: "Island Vibes Tee",
+    price: "UGX 45,000",
     image: productPants,
     tag: "Limited",
   },
