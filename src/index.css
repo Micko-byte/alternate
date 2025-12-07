@@ -6,50 +6,55 @@
 
 @layer base {
   :root {
-    --background: 0 0% 5%;
-    --foreground: 40 20% 95%;
+    --background: 0 0% 2%;
+    --foreground: 0 0% 98%;
 
-    --card: 0 0% 8%;
-    --card-foreground: 40 20% 95%;
+    --card: 0 0% 5%;
+    --card-foreground: 0 0% 98%;
 
-    --popover: 0 0% 8%;
-    --popover-foreground: 40 20% 95%;
+    --popover: 0 0% 5%;
+    --popover-foreground: 0 0% 98%;
 
-    --primary: 38 92% 50%;
-    --primary-foreground: 0 0% 5%;
+    --primary: 82 85% 55%;
+    --primary-foreground: 0 0% 2%;
 
-    --secondary: 0 0% 12%;
-    --secondary-foreground: 40 20% 95%;
+    --secondary: 0 0% 10%;
+    --secondary-foreground: 0 0% 98%;
 
-    --muted: 0 0% 15%;
-    --muted-foreground: 40 10% 60%;
+    --muted: 0 0% 12%;
+    --muted-foreground: 0 0% 55%;
 
-    --accent: 38 92% 50%;
-    --accent-foreground: 0 0% 5%;
+    --accent: 330 85% 60%;
+    --accent-foreground: 0 0% 2%;
 
     --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 40 20% 95%;
+    --destructive-foreground: 0 0% 98%;
 
-    --border: 0 0% 18%;
-    --input: 0 0% 18%;
-    --ring: 38 92% 50%;
+    --border: 0 0% 15%;
+    --input: 0 0% 15%;
+    --ring: 82 85% 55%;
 
     --radius: 0.25rem;
 
-    /* Custom brand tokens */
-    --brand-amber: 38 92% 50%;
-    --brand-amber-glow: 38 100% 60%;
-    --brand-charcoal: 0 0% 8%;
-    --brand-deep: 0 0% 3%;
+    /* Custom brand tokens - Neon palette */
+    --neon-lime: 82 85% 55%;
+    --neon-lime-glow: 82 100% 65%;
+    --neon-yellow: 55 100% 55%;
+    --neon-pink: 330 85% 60%;
+    --neon-cyan: 180 85% 55%;
+    --brand-charcoal: 0 0% 5%;
+    --brand-deep: 0 0% 2%;
 
     /* Gradients */
-    --gradient-hero: linear-gradient(135deg, hsl(0 0% 3%) 0%, hsl(0 0% 8%) 50%, hsl(38 20% 8%) 100%);
-    --gradient-card: linear-gradient(180deg, hsl(0 0% 10%) 0%, hsl(0 0% 6%) 100%);
-    --gradient-accent: linear-gradient(135deg, hsl(38 92% 50%) 0%, hsl(28 90% 45%) 100%);
+    --gradient-hero: linear-gradient(135deg, hsl(0 0% 2%) 0%, hsl(0 0% 5%) 50%, hsl(82 10% 5%) 100%);
+    --gradient-card: linear-gradient(180deg, hsl(0 0% 8%) 0%, hsl(0 0% 4%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(82 85% 55%) 0%, hsl(55 100% 55%) 100%);
+    --gradient-neon: linear-gradient(135deg, hsl(82 85% 55%) 0%, hsl(180 85% 55%) 100%);
 
     /* Shadows */
-    --shadow-glow: 0 0 60px hsl(38 92% 50% / 0.15);
-    --shadow-card: 0 20px 40px hsl(0 0% 0% / 0.4);
+    --shadow-glow: 0 0 60px hsl(82 85% 55% / 0.25);
+    --shadow-glow-pink: 0 0 60px hsl(330 85% 60% / 0.25);
+    --shadow-card: 0 20px 40px hsl(0 0% 0% / 0.6);
 
     /* Typography */
     --font-display: 'Bebas Neue', sans-serif;
@@ -59,14 +64,14 @@
     --transition-smooth: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     --transition-bounce: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
 
-    --sidebar-background: 0 0% 8%;
-    --sidebar-foreground: 40 20% 95%;
-    --sidebar-primary: 38 92% 50%;
-    --sidebar-primary-foreground: 0 0% 5%;
-    --sidebar-accent: 0 0% 12%;
-    --sidebar-accent-foreground: 40 20% 95%;
-    --sidebar-border: 0 0% 18%;
-    --sidebar-ring: 38 92% 50%;
+    --sidebar-background: 0 0% 5%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-primary: 82 85% 55%;
+    --sidebar-primary-foreground: 0 0% 2%;
+    --sidebar-accent: 0 0% 10%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 0 0% 15%;
+    --sidebar-ring: 82 85% 55%;
   }
 }
 
@@ -110,8 +115,16 @@
     background: var(--gradient-card);
   }
 
-  .glow-amber {
+  .glow-neon {
     box-shadow: var(--shadow-glow);
+  }
+
+  .glow-pink {
+    box-shadow: var(--shadow-glow-pink);
+  }
+
+  .text-neon-glow {
+    text-shadow: 0 0 20px hsl(82 85% 55% / 0.6), 0 0 40px hsl(82 85% 55% / 0.4);
   }
 
   .animate-fade-up {
@@ -164,10 +177,31 @@
 
 @keyframes glowPulse {
   0%, 100% {
-    box-shadow: 0 0 40px hsl(38 92% 50% / 0.2);
+    box-shadow: 0 0 40px hsl(82 85% 55% / 0.3);
   }
   50% {
-    box-shadow: 0 0 80px hsl(38 92% 50% / 0.4);
+    box-shadow: 0 0 80px hsl(82 85% 55% / 0.5);
+  }
+}
+
+@keyframes neonFlicker {
+  0%, 100% {
+    opacity: 1;
+  }
+  92% {
+    opacity: 1;
+  }
+  93% {
+    opacity: 0.8;
+  }
+  94% {
+    opacity: 1;
+  }
+  95% {
+    opacity: 0.9;
+  }
+  96% {
+    opacity: 1;
   }
 }
 

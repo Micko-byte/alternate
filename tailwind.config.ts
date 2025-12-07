@@ -51,9 +51,14 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        neon: {
+          lime: "hsl(var(--neon-lime))",
+          "lime-glow": "hsl(var(--neon-lime-glow))",
+          yellow: "hsl(var(--neon-yellow))",
+          pink: "hsl(var(--neon-pink))",
+          cyan: "hsl(var(--neon-cyan))",
+        },
         brand: {
-          amber: "hsl(var(--brand-amber))",
-          "amber-glow": "hsl(var(--brand-amber-glow))",
           charcoal: "hsl(var(--brand-charcoal))",
           deep: "hsl(var(--brand-deep))",
         },
