@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 import productTee from "@/assets/product-tee.jpg";
@@ -11,6 +12,7 @@ const products = [
     price: "UGX 45,000",
     image: productTee,
     tag: "New Drop",
+    stock: 12,
   },
   {
     id: 2,
@@ -18,6 +20,7 @@ const products = [
     price: "UGX 45,000",
     image: productHoodie,
     tag: "Best Seller",
+    stock: 8,
   },
   {
     id: 3,
@@ -25,6 +28,7 @@ const products = [
     price: "UGX 45,000",
     image: productPants,
     tag: "Limited",
+    stock: 5,
   },
 ];
 
@@ -51,9 +55,10 @@ const FeaturedDrops = () => {
         {/* Products Grid */}
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
           {products.map((product, index) => (
-            <div
+            <Link
+              to={`/product/${product.id}`}
               key={product.id}
-              className="group cursor-pointer animate-fade-up"
+              className="group cursor-pointer animate-fade-up block"
               style={{ animationDelay: `${index * 0.15}s` }}
             >
               {/* Image Container */}
@@ -67,10 +72,16 @@ const FeaturedDrops = () => {
                 <div className="absolute top-4 left-4 bg-primary text-primary-foreground text-xs font-display tracking-wider px-3 py-1 rounded">
                   {product.tag}
                 </div>
+                {/* Low Stock Badge */}
+                {product.stock <= 10 && (
+                  <div className="absolute top-4 right-4 bg-neon-pink text-white text-xs font-display tracking-wider px-2 py-1 rounded animate-glow-pulse">
+                    {product.stock} LEFT
+                  </div>
+                )}
                 {/* Quick Add Overlay */}
                 <div className="absolute inset-0 bg-background/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
                   <Button variant="hero" size="lg">
-                    Quick Add
+                    View Details
                   </Button>
                 </div>
               </div>
@@ -89,7 +100,7 @@ const FeaturedDrops = () => {
                   {product.price}
                 </p>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       </div>
