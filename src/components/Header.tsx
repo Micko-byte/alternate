@@ -41,17 +41,17 @@ const Header = () => {
               Drops
             </a>
             <Link
+              to="/design"
+              className="text-sm uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors"
+            >
+              Create
+            </Link>
+            <Link
               to="/about"
               className="text-sm uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors"
             >
               About Us
             </Link>
-            <a
-              href="#lookbook"
-              className="text-sm uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors"
-            >
-              Lookbook
-            </a>
           </nav>
 
           {/* Desktop CTA */}
@@ -81,18 +81,19 @@ const Header = () => {
                 Drops
               </a>
               <Link
+                to="/design"
+                className="text-lg uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Create Your Own
+              </Link>
+              <Link
                 to="/about"
                 className="text-lg uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 About Us
               </Link>
-              <a
-                href="#lookbook"
-                className="text-lg uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors"
-              >
-                Lookbook
-              </a>
               <Button variant="outline" size="lg" className="mt-4">
                 Join Waitlist
               </Button>
