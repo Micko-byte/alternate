@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Save, Type, Images, LayoutTemplate, Shirt, ShoppingBag } from "lucide-react";
+import { ArrowLeft, Save, Type, Images, LayoutTemplate, Shirt, ShoppingBag, Sparkles, FolderOpen, User, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -13,17 +13,28 @@ import AssetsPanel from "@/components/design-studio/AssetsPanel";
 import TemplatesPanel from "@/components/design-studio/TemplatesPanel";
 import MockupPreview from "@/components/design-studio/MockupPreview";
 import ExportPanel from "@/components/design-studio/ExportPanel";
+import AIGeneratePanel from "@/components/design-studio/AIGeneratePanel";
+import SavedDesignsPanel from "@/components/design-studio/SavedDesignsPanel";
 import MobileMoneyCheckout from "@/components/MobileMoneyCheckout";
+import { useAuth } from "@/hooks/useAuth";
+import { useNavigate } from "react-router-dom";
 
 type Tool = "select" | "draw" | "text" | "rectangle" | "circle";
 
 const DesignStudio = () => {
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
   const [activeTool, setActiveTool] = useState<Tool>("select");
   const [activeColor, setActiveColor] = useState("#84cc16");
   const [canvasRef, setCanvasRef] = useState<DesignCanvasRef | null>(null);
-  const [activePanel, setActivePanel] = useState("text");
+  const [activePanel, setActivePanel] = useState("ai");
   const [showCheckout, setShowCheckout] = useState(false);
   const [selectedSize, setSelectedSize] = useState("m");
+
+  const handleSignOut = async () => {
+    await signOut();
+    toast.success("Signed out");
+  };
 
   const handleCanvasReady = useCallback((ref: DesignCanvasRef) => {
     setCanvasRef(ref);
@@ -70,10 +81,21 @@ const DesignStudio = () => {
 
         <div className="flex items-center gap-2">
           <ColorPicker color={activeColor} onChange={setActiveColor} />
-          <Button variant="outline" size="sm" onClick={handleSave}>
-            <Save className="w-4 h-4 mr-2" />
-            <span className="hidden sm:inline">Save</span>
-          </Button>
+          {user ? (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground hidden sm:inline">
+                {user.email?.split('@')[0]}
+              </span>
+              <Button variant="ghost" size="sm" onClick={handleSignOut}>
+                <LogOut className="w-4 h-4" />
+              </Button>
+            </div>
+          ) : (
+            <Button variant="outline" size="sm" onClick={() => navigate('/auth')}>
+              <User className="w-4 h-4 mr-2" />
+              <span className="hidden sm:inline">Sign In</span>
+            </Button>
+          )}
         </div>
       </header>
 
@@ -91,23 +113,32 @@ const DesignStudio = () => {
         </aside>
 
         {/* Left Panel - Options (Desktop) */}
-        <aside className="w-64 border-r border-border bg-card p-4 overflow-y-auto hidden lg:block">
+        <aside className="w-72 border-r border-border bg-card p-4 overflow-y-auto hidden lg:block">
           <Tabs value={activePanel} onValueChange={setActivePanel}>
-            <TabsList className="w-full grid grid-cols-3 mb-4">
-              <TabsTrigger value="text" className="text-xs">
-                <Type className="w-3 h-3 mr-1" />
-                Text
+            <TabsList className="w-full grid grid-cols-5 mb-4">
+              <TabsTrigger value="ai" className="text-xs p-1">
+                <Sparkles className="w-3 h-3" />
               </TabsTrigger>
-              <TabsTrigger value="assets" className="text-xs">
-                <Images className="w-3 h-3 mr-1" />
-                Assets
+              <TabsTrigger value="saved" className="text-xs p-1">
+                <FolderOpen className="w-3 h-3" />
               </TabsTrigger>
-              <TabsTrigger value="templates" className="text-xs">
-                <LayoutTemplate className="w-3 h-3 mr-1" />
-                Templates
+              <TabsTrigger value="text" className="text-xs p-1">
+                <Type className="w-3 h-3" />
+              </TabsTrigger>
+              <TabsTrigger value="assets" className="text-xs p-1">
+                <Images className="w-3 h-3" />
+              </TabsTrigger>
+              <TabsTrigger value="templates" className="text-xs p-1">
+                <LayoutTemplate className="w-3 h-3" />
               </TabsTrigger>
             </TabsList>
 
+            <TabsContent value="ai" className="mt-0">
+              <AIGeneratePanel canvasRef={canvasRef} />
+            </TabsContent>
+            <TabsContent value="saved" className="mt-0">
+              <SavedDesignsPanel canvasRef={canvasRef} />
+            </TabsContent>
             <TabsContent value="text" className="mt-0">
               <TextPanel canvasRef={canvasRef} activeColor={activeColor} />
             </TabsContent>
