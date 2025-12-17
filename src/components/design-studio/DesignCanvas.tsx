@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import { Canvas as FabricCanvas, Rect, Circle, IText, FabricImage } from "fabric";
+import { Canvas as FabricCanvas, Rect, Circle, IText, FabricImage, PencilBrush } from "fabric";
 
 export interface DesignCanvasRef {
   canvas: FabricCanvas | null;
@@ -46,6 +46,8 @@ const DesignCanvas = ({ activeColor, activeTool, onCanvasReady }: DesignCanvasPr
       selection: true,
     });
 
+    // Initialize the freeDrawingBrush manually for Fabric.js v6
+    canvas.freeDrawingBrush = new PencilBrush(canvas);
     canvas.freeDrawingBrush.color = activeColor;
     canvas.freeDrawingBrush.width = 3;
 
