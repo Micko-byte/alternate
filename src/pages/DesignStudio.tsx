@@ -185,16 +185,44 @@ const DesignStudio = () => {
       </div>
 
       {/* Mobile Bottom Bar */}
-      <div className="md:hidden border-t border-border bg-card p-2 flex items-center justify-around">
+      <div className="md:hidden border-t border-border bg-card p-2 flex items-center justify-around gap-1">
+        {/* Mobile AI/Saved */}
+        <Sheet>
+          <SheetTrigger asChild>
+            <Button variant="ghost" size="sm" className="px-2">
+              <Sparkles className="w-4 h-4" />
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="bottom" className="h-[70vh] overflow-y-auto">
+            <Tabs defaultValue="ai" className="mt-4">
+              <TabsList className="w-full grid grid-cols-2">
+                <TabsTrigger value="ai">
+                  <Sparkles className="w-3 h-3 mr-1" />
+                  AI Generate
+                </TabsTrigger>
+                <TabsTrigger value="saved">
+                  <FolderOpen className="w-3 h-3 mr-1" />
+                  Saved
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="ai" className="mt-4">
+                <AIGeneratePanel canvasRef={canvasRef} />
+              </TabsContent>
+              <TabsContent value="saved" className="mt-4">
+                <SavedDesignsPanel canvasRef={canvasRef} />
+              </TabsContent>
+            </Tabs>
+          </SheetContent>
+        </Sheet>
+
         {/* Mobile Toolbar */}
         <Sheet>
           <SheetTrigger asChild>
-            <Button variant="ghost" size="sm">
-              <Type className="w-4 h-4 mr-1" />
-              Tools
+            <Button variant="ghost" size="sm" className="px-2">
+              <Type className="w-4 h-4" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="bottom" className="h-[70vh]">
+          <SheetContent side="bottom" className="h-[70vh] overflow-y-auto">
             <Tabs defaultValue="text" className="mt-4">
               <TabsList className="w-full grid grid-cols-3">
                 <TabsTrigger value="text">Text</TabsTrigger>
@@ -219,12 +247,11 @@ const DesignStudio = () => {
         {/* Mobile Preview/Order */}
         <Sheet>
           <SheetTrigger asChild>
-            <Button variant="default" size="sm">
-              <ShoppingBag className="w-4 h-4 mr-1" />
-              Order
+            <Button variant="default" size="sm" className="px-2">
+              <ShoppingBag className="w-4 h-4" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="bottom" className="h-[70vh]">
+          <SheetContent side="bottom" className="h-[70vh] overflow-y-auto">
             <div className="mt-4 space-y-6">
               <MockupPreview canvasRef={canvasRef} />
               <ExportPanel canvasRef={canvasRef} onOrder={handleOrder} />
