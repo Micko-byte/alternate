@@ -1,11 +1,11 @@
 import { useState, useCallback } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Save, Type, Images, LayoutTemplate, Shirt, ShoppingBag, Sparkles, FolderOpen, User, LogOut } from "lucide-react";
+import { ArrowLeft, Save, Type, Images, LayoutTemplate, Shirt, ShoppingBag, Sparkles, FolderOpen, User, LogOut, Sliders } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { toast } from "sonner";
-import DesignCanvas, { DesignCanvasRef } from "@/components/design-studio/DesignCanvas";
+import DesignCanvas, { DesignCanvasRef, ShirtZone } from "@/components/design-studio/DesignCanvas";
 import Toolbar from "@/components/design-studio/Toolbar";
 import ColorPicker from "@/components/design-studio/ColorPicker";
 import TextPanel from "@/components/design-studio/TextPanel";
@@ -15,6 +15,8 @@ import MockupPreview from "@/components/design-studio/MockupPreview";
 import ExportPanel from "@/components/design-studio/ExportPanel";
 import AIGeneratePanel from "@/components/design-studio/AIGeneratePanel";
 import SavedDesignsPanel from "@/components/design-studio/SavedDesignsPanel";
+import ShirtZoneSelector from "@/components/design-studio/ShirtZoneSelector";
+import TransformTools from "@/components/design-studio/TransformTools";
 import MobileMoneyCheckout from "@/components/MobileMoneyCheckout";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
@@ -30,6 +32,7 @@ const DesignStudio = () => {
   const [activePanel, setActivePanel] = useState("ai");
   const [showCheckout, setShowCheckout] = useState(false);
   const [selectedSize, setSelectedSize] = useState("m");
+  const [activeZone, setActiveZone] = useState<ShirtZone>("front");
 
   const handleSignOut = async () => {
     await signOut();
@@ -114,6 +117,16 @@ const DesignStudio = () => {
 
         {/* Left Panel - Options (Desktop) */}
         <aside className="w-72 border-r border-border bg-card p-4 overflow-y-auto hidden lg:block">
+          {/* Zone Selector */}
+          <div className="mb-4 pb-4 border-b border-border">
+            <ShirtZoneSelector activeZone={activeZone} onZoneChange={setActiveZone} />
+          </div>
+
+          {/* Transform Tools */}
+          <div className="mb-4 pb-4 border-b border-border">
+            <TransformTools canvasRef={canvasRef} />
+          </div>
+
           <Tabs value={activePanel} onValueChange={setActivePanel}>
             <TabsList className="w-full grid grid-cols-5 mb-4">
               <TabsTrigger value="ai" className="text-xs p-1">
@@ -156,6 +169,7 @@ const DesignStudio = () => {
           <DesignCanvas
             activeColor={activeColor}
             activeTool={activeTool}
+            activeZone={activeZone}
             onCanvasReady={handleCanvasReady}
           />
         </main>
@@ -186,6 +200,21 @@ const DesignStudio = () => {
 
       {/* Mobile Bottom Bar */}
       <div className="md:hidden border-t border-border bg-card p-2 flex items-center justify-around gap-1">
+        {/* Mobile Zone/Transform */}
+        <Sheet>
+          <SheetTrigger asChild>
+            <Button variant="ghost" size="sm" className="px-2">
+              <Sliders className="w-4 h-4" />
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="bottom" className="h-[70vh] overflow-y-auto">
+            <div className="mt-4 space-y-6">
+              <ShirtZoneSelector activeZone={activeZone} onZoneChange={setActiveZone} />
+              <TransformTools canvasRef={canvasRef} />
+            </div>
+          </SheetContent>
+        </Sheet>
+
         {/* Mobile AI/Saved */}
         <Sheet>
           <SheetTrigger asChild>

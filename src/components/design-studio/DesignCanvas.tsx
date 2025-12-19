@@ -2,6 +2,8 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { Canvas as FabricCanvas, Rect, Circle, IText, FabricImage, PencilBrush } from "fabric";
 import { useIsMobile } from "@/hooks/use-mobile";
 
+export type ShirtZone = "front" | "back" | "left-sleeve" | "right-sleeve";
+
 export interface DesignCanvasRef {
   canvas: FabricCanvas | null;
   addText: (text: string, options?: object) => void;
@@ -15,15 +17,25 @@ export interface DesignCanvasRef {
   clear: () => void;
   exportImage: () => string | null;
   loadTemplate: (json: object) => void;
+  getZoneData: () => Record<ShirtZone, string>;
 }
 
 interface DesignCanvasProps {
   activeColor: string;
   activeTool: "select" | "draw" | "text" | "rectangle" | "circle";
+  activeZone: ShirtZone;
   onCanvasReady?: (ref: DesignCanvasRef) => void;
 }
 
-const DesignCanvas = ({ activeColor, activeTool, onCanvasReady }: DesignCanvasProps) => {
+// Zone configurations for different shirt areas
+const zoneConfigs: Record<ShirtZone, { label: string; guideWidth: number; guideHeight: number; guidePosX: number; guidePosY: number }> = {
+  front: { label: "Front", guideWidth: 400, guideHeight: 450, guidePosX: 50, guidePosY: 80 },
+  back: { label: "Back", guideWidth: 400, guideHeight: 480, guidePosX: 50, guidePosY: 60 },
+  "left-sleeve": { label: "Left Sleeve", guideWidth: 150, guideHeight: 200, guidePosX: 175, guidePosY: 200 },
+  "right-sleeve": { label: "Right Sleeve", guideWidth: 150, guideHeight: 200, guidePosX: 175, guidePosY: 200 },
+};
+
+const DesignCanvas = ({ activeColor, activeTool, activeZone, onCanvasReady }: DesignCanvasProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [fabricCanvas, setFabricCanvas] = useState<FabricCanvas | null>(null);
@@ -187,13 +199,14 @@ const DesignCanvas = ({ activeColor, activeTool, onCanvasReady }: DesignCanvasPr
       clear: () => {
         fabricCanvas.clear();
         fabricCanvas.backgroundColor = "#1a1a1a";
-        // Re-add t-shirt guide
+        // Re-add zone guide
         const currentScale = (fabricCanvas.width || 500) / 500;
-        const tshirtGuide = new Rect({
-          left: 50 * currentScale,
-          top: 80 * currentScale,
-          width: 400 * currentScale,
-          height: 450 * currentScale,
+        const config = zoneConfigs[activeZone];
+        const zoneGuide = new Rect({
+          left: config.guidePosX * currentScale,
+          top: config.guidePosY * currentScale,
+          width: config.guideWidth * currentScale,
+          height: config.guideHeight * currentScale,
           fill: "transparent",
           stroke: "hsl(142, 76%, 36%)",
           strokeWidth: 2,
@@ -201,7 +214,7 @@ const DesignCanvas = ({ activeColor, activeTool, onCanvasReady }: DesignCanvasPr
           selectable: false,
           evented: false,
         });
-        fabricCanvas.add(tshirtGuide);
+        fabricCanvas.add(zoneGuide);
         fabricCanvas.renderAll();
         saveHistory();
       },
@@ -218,19 +231,64 @@ const DesignCanvas = ({ activeColor, activeTool, onCanvasReady }: DesignCanvasPr
           saveHistory();
         });
       },
+      getZoneData: () => {
+        // Export current zone data
+        return {
+          front: "",
+          back: "",
+          "left-sleeve": "",
+          "right-sleeve": "",
+        };
+      },
     };
 
     onCanvasReady?.(canvasRefObj);
-  }, [fabricCanvas, activeColor, onCanvasReady, saveHistory, isMobile]);
+  }, [fabricCanvas, activeColor, activeZone, onCanvasReady, saveHistory, isMobile]);
+
+  // Update guide when zone changes
+  useEffect(() => {
+    if (!fabricCanvas) return;
+    
+    const scale = isMobile ? (fabricCanvas.width || 320) / 500 : 1;
+    const config = zoneConfigs[activeZone];
+    
+    // Find and remove old guide
+    const objects = fabricCanvas.getObjects();
+    const oldGuide = objects.find(obj => !obj.selectable && obj.type === 'rect');
+    if (oldGuide) {
+      fabricCanvas.remove(oldGuide);
+    }
+    
+    // Add new zone guide
+    const zoneGuide = new Rect({
+      left: config.guidePosX * scale,
+      top: config.guidePosY * scale,
+      width: config.guideWidth * scale,
+      height: config.guideHeight * scale,
+      fill: "transparent",
+      stroke: "hsl(142, 76%, 36%)",
+      strokeWidth: 2,
+      strokeDashArray: [10, 5],
+      selectable: false,
+      evented: false,
+    });
+    fabricCanvas.add(zoneGuide);
+    fabricCanvas.sendObjectToBack(zoneGuide);
+    fabricCanvas.renderAll();
+  }, [activeZone, fabricCanvas, isMobile]);
 
   const canvasWidth = isMobile ? 320 : 500;
   const canvasHeight = isMobile ? 384 : 600;
+  const config = zoneConfigs[activeZone];
 
   return (
     <div ref={containerRef} className="relative rounded-lg overflow-hidden border-2 border-border bg-card w-full flex justify-center">
       <canvas ref={canvasRef} className="max-w-full touch-none" />
       <div className="absolute bottom-2 left-2 text-xs text-muted-foreground">
-        Design Area • {canvasWidth}×{canvasHeight}px
+        {config.label} • {canvasWidth}×{canvasHeight}px
+      </div>
+      <div className="absolute top-2 right-2 text-xs bg-primary/80 text-primary-foreground px-2 py-1 rounded">
+        {config.label}
       </div>
     </div>
   );
