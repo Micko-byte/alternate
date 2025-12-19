@@ -2,3 +2,12 @@ project_id = "wcpmeginkorfbkkkilgs"
 
 [functions.generate-design]
 verify_jwt = false
+
+[functions.generate-design-image]
+verify_jwt = false
+
+[functions.search-design-references]
+verify_jwt = false
+
+[functions.generate-design]
+verify_jwt = false
