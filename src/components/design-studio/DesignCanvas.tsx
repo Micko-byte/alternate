@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Canvas as FabricCanvas, Rect, Circle, IText, FabricImage, PencilBrush } from "fabric";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { Loader2 } from "lucide-react";
 
 export type ShirtZone = "front" | "back" | "left-sleeve" | "right-sleeve";
 
@@ -39,6 +40,7 @@ const DesignCanvas = ({ activeColor, activeTool, activeZone, onCanvasReady }: De
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [fabricCanvas, setFabricCanvas] = useState<FabricCanvas | null>(null);
+  const [isContainerReady, setIsContainerReady] = useState(false);
   const historyRef = useRef<string[]>([]);
   const historyIndexRef = useRef(-1);
   const isMobile = useIsMobile();
@@ -51,13 +53,30 @@ const DesignCanvas = ({ activeColor, activeTool, activeZone, onCanvasReady }: De
     historyIndexRef.current = historyRef.current.length - 1;
   }, [fabricCanvas]);
 
+  // Check container readiness
   useEffect(() => {
-    if (!canvasRef.current || !containerRef.current) return;
+    if (!containerRef.current) return;
+    
+    const checkContainer = () => {
+      if (containerRef.current && containerRef.current.clientWidth > 0) {
+        setIsContainerReady(true);
+      } else {
+        requestAnimationFrame(checkContainer);
+      }
+    };
+    
+    checkContainer();
+  }, []);
+
+  useEffect(() => {
+    if (!canvasRef.current || !containerRef.current || !isContainerReady) return;
 
     // Calculate responsive canvas size
     const containerWidth = containerRef.current.clientWidth;
+    if (containerWidth <= 0) return; // Safety check
+    
     const maxWidth = Math.min(containerWidth - 16, 500);
-    const canvasWidth = isMobile ? Math.min(320, maxWidth) : 500;
+    const canvasWidth = isMobile ? Math.min(280, maxWidth) : 500;
     const canvasHeight = isMobile ? Math.round(canvasWidth * 1.2) : 600;
 
     const canvas = new FabricCanvas(canvasRef.current, {
@@ -65,6 +84,7 @@ const DesignCanvas = ({ activeColor, activeTool, activeZone, onCanvasReady }: De
       height: canvasHeight,
       backgroundColor: "#1a1a1a",
       selection: true,
+      allowTouchScrolling: true,
     });
 
     // Initialize the freeDrawingBrush manually for Fabric.js v6
@@ -101,7 +121,7 @@ const DesignCanvas = ({ activeColor, activeTool, activeZone, onCanvasReady }: De
     return () => {
       canvas.dispose();
     };
-  }, [isMobile]);
+  }, [isMobile, isContainerReady]);
 
   useEffect(() => {
     if (!fabricCanvas) return;
@@ -277,13 +297,26 @@ const DesignCanvas = ({ activeColor, activeTool, activeZone, onCanvasReady }: De
     fabricCanvas.renderAll();
   }, [activeZone, fabricCanvas, isMobile]);
 
-  const canvasWidth = isMobile ? 320 : 500;
-  const canvasHeight = isMobile ? 384 : 600;
+  const canvasWidth = isMobile ? 280 : 500;
+  const canvasHeight = isMobile ? 336 : 600;
   const config = zoneConfigs[activeZone];
+
+  // Show loading state while canvas initializes
+  if (!isContainerReady || !fabricCanvas) {
+    return (
+      <div ref={containerRef} className="relative rounded-lg overflow-hidden border-2 border-border bg-card w-full flex justify-center items-center" style={{ minHeight: isMobile ? 336 : 600 }}>
+        <div className="flex flex-col items-center gap-2">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          <span className="text-sm text-muted-foreground">Loading canvas...</span>
+        </div>
+        <canvas ref={canvasRef} className="hidden" />
+      </div>
+    );
+  }
 
   return (
     <div ref={containerRef} className="relative rounded-lg overflow-hidden border-2 border-border bg-card w-full flex justify-center">
-      <canvas ref={canvasRef} className="max-w-full touch-none" />
+      <canvas ref={canvasRef} className="max-w-full" style={{ touchAction: 'none' }} />
       <div className="absolute bottom-2 left-2 text-xs text-muted-foreground">
         {config.label} • {canvasWidth}×{canvasHeight}px
       </div>
