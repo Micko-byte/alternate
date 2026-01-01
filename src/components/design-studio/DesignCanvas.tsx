@@ -28,7 +28,6 @@ interface DesignCanvasProps {
   onCanvasReady?: (ref: DesignCanvasRef) => void;
 }
 
-// Zone configurations for different shirt areas
 const zoneConfigs: Record<ShirtZone, { label: string; guideWidth: number; guideHeight: number; guidePosX: number; guidePosY: number }> = {
   front: { label: "Front", guideWidth: 400, guideHeight: 450, guidePosX: 50, guidePosY: 80 },
   back: { label: "Back", guideWidth: 400, guideHeight: 480, guidePosX: 50, guidePosY: 60 },
@@ -39,247 +38,125 @@ const zoneConfigs: Record<ShirtZone, { label: string; guideWidth: number; guideH
 const DesignCanvas = ({ activeColor, activeTool, activeZone, onCanvasReady }: DesignCanvasProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [fabricCanvas, setFabricCanvas] = useState<FabricCanvas | null>(null);
-  const [isContainerReady, setIsContainerReady] = useState(false);
+  
+  // Use a ref for the fabric instance to avoid closure staleness in event handlers
+  const fabricRef = useRef<FabricCanvas | null>(null);
+  const [isReady, setIsReady] = useState(false);
+  
   const historyRef = useRef<string[]>([]);
   const historyIndexRef = useRef(-1);
+  const historyLocked = useRef(false);
+  
   const isMobile = useIsMobile();
 
+  // Helper to save history
   const saveHistory = useCallback(() => {
-    if (!fabricCanvas) return;
-    const json = JSON.stringify(fabricCanvas.toJSON());
+    if (!fabricRef.current || historyLocked.current) return;
+    
+    const json = JSON.stringify(fabricRef.current.toJSON());
     historyRef.current = historyRef.current.slice(0, historyIndexRef.current + 1);
     historyRef.current.push(json);
     historyIndexRef.current = historyRef.current.length - 1;
-  }, [fabricCanvas]);
-
-  // Check container readiness
-  useEffect(() => {
-    if (!containerRef.current) return;
-    
-    const checkContainer = () => {
-      if (containerRef.current && containerRef.current.clientWidth > 0) {
-        setIsContainerReady(true);
-      } else {
-        requestAnimationFrame(checkContainer);
-      }
-    };
-    
-    checkContainer();
   }, []);
 
+  // Initialize Canvas
   useEffect(() => {
-    if (!canvasRef.current || !containerRef.current || !isContainerReady) return;
+    if (!containerRef.current || !canvasRef.current) return;
 
-    // Calculate responsive canvas size
-    const containerWidth = containerRef.current.clientWidth;
-    if (containerWidth <= 0) return; // Safety check
-    
-    const maxWidth = Math.min(containerWidth - 16, 500);
-    const canvasWidth = isMobile ? Math.min(280, maxWidth) : 500;
-    const canvasHeight = isMobile ? Math.round(canvasWidth * 1.2) : 600;
+    const initCanvas = () => {
+      const containerWidth = containerRef.current?.clientWidth || 0;
+      if (containerWidth === 0) return;
 
-    const canvas = new FabricCanvas(canvasRef.current, {
-      width: canvasWidth,
-      height: canvasHeight,
-      backgroundColor: "#1a1a1a",
-      selection: true,
-      allowTouchScrolling: true,
+      // Dispose old canvas if exists to prevent duplicates
+      if (fabricRef.current) {
+        fabricRef.current.dispose();
+        fabricRef.current = null;
+      }
+
+      const maxWidth = Math.min(containerWidth - 16, 500);
+      const canvasWidth = isMobile ? Math.min(280, maxWidth) : 500;
+      const canvasHeight = isMobile ? Math.round(canvasWidth * 1.2) : 600;
+
+      const canvas = new FabricCanvas(canvasRef.current!, {
+        width: canvasWidth,
+        height: canvasHeight,
+        backgroundColor: "#1a1a1a",
+        selection: true,
+        allowTouchScrolling: false, // Must be false for drawing to work on mobile
+        preserveObjectStacking: true,
+      });
+
+      // Setup Brush
+      canvas.freeDrawingBrush = new PencilBrush(canvas);
+      canvas.freeDrawingBrush.color = activeColor;
+      canvas.freeDrawingBrush.width = 3;
+
+      // Setup Events
+      canvas.on("object:added", () => saveHistory());
+      canvas.on("object:modified", () => saveHistory());
+      canvas.on("object:removed", () => saveHistory());
+
+      // Initialize History
+      historyRef.current = [JSON.stringify(canvas.toJSON())];
+      historyIndexRef.current = 0;
+
+      fabricRef.current = canvas;
+      setIsReady(true);
+    };
+
+    // Use ResizeObserver instead of recursive requestAnimationFrame
+    const resizeObserver = new ResizeObserver(() => {
+      if (!fabricRef.current) {
+        initCanvas();
+      }
     });
 
-    // Initialize the freeDrawingBrush manually for Fabric.js v6
-    canvas.freeDrawingBrush = new PencilBrush(canvas);
-    canvas.freeDrawingBrush.color = activeColor;
-    canvas.freeDrawingBrush.width = 3;
-
-    // Add t-shirt outline as guide - scale proportionally
-    const scale = canvasWidth / 500;
-    const tshirtGuide = new Rect({
-      left: 50 * scale,
-      top: 80 * scale,
-      width: 400 * scale,
-      height: 450 * scale,
-      fill: "transparent",
-      stroke: "hsl(142, 76%, 36%)",
-      strokeWidth: 2,
-      strokeDashArray: [10, 5],
-      selectable: false,
-      evented: false,
-    });
-    canvas.add(tshirtGuide);
-
-    canvas.on("object:added", () => saveHistory());
-    canvas.on("object:modified", () => saveHistory());
-    canvas.on("object:removed", () => saveHistory());
-
-    setFabricCanvas(canvas);
-
-    // Initial history state
-    historyRef.current = [JSON.stringify(canvas.toJSON())];
-    historyIndexRef.current = 0;
+    resizeObserver.observe(containerRef.current);
 
     return () => {
-      canvas.dispose();
+      resizeObserver.disconnect();
+      if (fabricRef.current) {
+        fabricRef.current.dispose();
+        fabricRef.current = null;
+      }
+      setIsReady(false);
     };
-  }, [isMobile, isContainerReady]);
+  }, [isMobile, activeColor, saveHistory]);
 
+  // Handle Tool & Color Updates
   useEffect(() => {
-    if (!fabricCanvas) return;
-    fabricCanvas.isDrawingMode = activeTool === "draw";
-    if (activeTool === "draw" && fabricCanvas.freeDrawingBrush) {
-      fabricCanvas.freeDrawingBrush.color = activeColor;
-    }
-  }, [activeTool, activeColor, fabricCanvas]);
+    const canvas = fabricRef.current;
+    if (!canvas) return;
 
-  useEffect(() => {
-    if (!fabricCanvas) return;
-    const scale = isMobile ? (fabricCanvas.width || 320) / 500 : 1;
-
-    const canvasRefObj: DesignCanvasRef = {
-      canvas: fabricCanvas,
-      addText: (text: string, options = {}) => {
-        const textObj = new IText(text, {
-          left: 150 * scale,
-          top: 250 * scale,
-          fill: activeColor,
-          fontFamily: "Bebas Neue",
-          fontSize: Math.round(48 * scale),
-          ...options,
-        });
-        fabricCanvas.add(textObj);
-        fabricCanvas.setActiveObject(textObj);
-        fabricCanvas.renderAll();
-      },
-      addShape: (shape: "rectangle" | "circle") => {
-        if (shape === "rectangle") {
-          const rect = new Rect({
-            left: 150 * scale,
-            top: 200 * scale,
-            fill: activeColor,
-            width: 100 * scale,
-            height: 100 * scale,
-          });
-          fabricCanvas.add(rect);
-          fabricCanvas.setActiveObject(rect);
-        } else if (shape === "circle") {
-          const circle = new Circle({
-            left: 200 * scale,
-            top: 250 * scale,
-            fill: activeColor,
-            radius: 50 * scale,
-          });
-          fabricCanvas.add(circle);
-          fabricCanvas.setActiveObject(circle);
-        }
-        fabricCanvas.renderAll();
-      },
-      addImage: async (url: string) => {
-        try {
-          const img = await FabricImage.fromURL(url, { crossOrigin: "anonymous" });
-          img.scaleToWidth(200 * scale);
-          img.set({ left: 150 * scale, top: 150 * scale });
-          fabricCanvas.add(img);
-          fabricCanvas.setActiveObject(img);
-          fabricCanvas.renderAll();
-        } catch (error) {
-          console.error("Failed to load image:", error);
-        }
-      },
-      setDrawingMode: (enabled: boolean) => {
-        fabricCanvas.isDrawingMode = enabled;
-      },
-      setBrushColor: (color: string) => {
-        if (fabricCanvas.freeDrawingBrush) {
-          fabricCanvas.freeDrawingBrush.color = color;
-        }
-      },
-      setBrushWidth: (width: number) => {
-        if (fabricCanvas.freeDrawingBrush) {
-          fabricCanvas.freeDrawingBrush.width = width;
-        }
-      },
-      undo: () => {
-        if (historyIndexRef.current > 0) {
-          historyIndexRef.current--;
-          const json = historyRef.current[historyIndexRef.current];
-          fabricCanvas.loadFromJSON(JSON.parse(json)).then(() => {
-            fabricCanvas.renderAll();
-          });
-        }
-      },
-      redo: () => {
-        if (historyIndexRef.current < historyRef.current.length - 1) {
-          historyIndexRef.current++;
-          const json = historyRef.current[historyIndexRef.current];
-          fabricCanvas.loadFromJSON(JSON.parse(json)).then(() => {
-            fabricCanvas.renderAll();
-          });
-        }
-      },
-      clear: () => {
-        fabricCanvas.clear();
-        fabricCanvas.backgroundColor = "#1a1a1a";
-        // Re-add zone guide
-        const currentScale = (fabricCanvas.width || 500) / 500;
-        const config = zoneConfigs[activeZone];
-        const zoneGuide = new Rect({
-          left: config.guidePosX * currentScale,
-          top: config.guidePosY * currentScale,
-          width: config.guideWidth * currentScale,
-          height: config.guideHeight * currentScale,
-          fill: "transparent",
-          stroke: "hsl(142, 76%, 36%)",
-          strokeWidth: 2,
-          strokeDashArray: [10, 5],
-          selectable: false,
-          evented: false,
-        });
-        fabricCanvas.add(zoneGuide);
-        fabricCanvas.renderAll();
-        saveHistory();
-      },
-      exportImage: () => {
-        return fabricCanvas.toDataURL({
-          format: "png",
-          quality: 1,
-          multiplier: 2,
-        });
-      },
-      loadTemplate: (json: object) => {
-        fabricCanvas.loadFromJSON(json).then(() => {
-          fabricCanvas.renderAll();
-          saveHistory();
-        });
-      },
-      getZoneData: () => {
-        // Export current zone data
-        return {
-          front: "",
-          back: "",
-          "left-sleeve": "",
-          "right-sleeve": "",
-        };
-      },
-    };
-
-    onCanvasReady?.(canvasRefObj);
-  }, [fabricCanvas, activeColor, activeZone, onCanvasReady, saveHistory, isMobile]);
-
-  // Update guide when zone changes
-  useEffect(() => {
-    if (!fabricCanvas) return;
+    canvas.isDrawingMode = activeTool === "draw";
     
-    const scale = isMobile ? (fabricCanvas.width || 320) / 500 : 1;
+    if (canvas.freeDrawingBrush) {
+      canvas.freeDrawingBrush.color = activeColor;
+    }
+    
+    const activeObj = canvas.getActiveObject();
+    if (activeObj && (activeObj.type === 'rect' || activeObj.type === 'circle' || activeObj.type === 'i-text')) {
+      activeObj.set('fill', activeColor);
+      canvas.requestRenderAll();
+    }
+  }, [activeTool, activeColor]);
+
+  // Handle Zone Guides
+  useEffect(() => {
+    const canvas = fabricRef.current;
+    if (!canvas || !isReady) return;
+
+    const scale = canvas.width / 500;
     const config = zoneConfigs[activeZone];
-    
-    // Find and remove old guide
-    const objects = fabricCanvas.getObjects();
-    const oldGuide = objects.find(obj => !obj.selectable && obj.type === 'rect');
-    if (oldGuide) {
-      fabricCanvas.remove(oldGuide);
-    }
-    
-    // Add new zone guide
+
+    // Remove old guide
+    canvas.getObjects().forEach(obj => {
+      if (!obj.selectable && obj.type === 'rect' && obj.strokeDashArray) {
+        canvas.remove(obj);
+      }
+    });
+
+    // Add new guide
     const zoneGuide = new Rect({
       left: config.guidePosX * scale,
       top: config.guidePosY * scale,
@@ -292,31 +169,129 @@ const DesignCanvas = ({ activeColor, activeTool, activeZone, onCanvasReady }: De
       selectable: false,
       evented: false,
     });
-    fabricCanvas.add(zoneGuide);
-    fabricCanvas.sendObjectToBack(zoneGuide);
-    fabricCanvas.renderAll();
-  }, [activeZone, fabricCanvas, isMobile]);
 
+    canvas.add(zoneGuide);
+    canvas.sendObjectToBack(zoneGuide);
+    canvas.requestRenderAll();
+  }, [activeZone, isReady, isMobile]);
+
+  // Expose API via ref
+  useEffect(() => {
+    if (!fabricRef.current || !onCanvasReady) return;
+
+    const canvas = fabricRef.current;
+    const scale = canvas.width / 500;
+
+    const api: DesignCanvasRef = {
+      canvas,
+      addText: (text) => {
+        const textObj = new IText(text, {
+          left: 150 * scale,
+          top: 250 * scale,
+          fill: activeColor,
+          fontFamily: "Arial",
+          fontSize: 48 * scale,
+        });
+        canvas.add(textObj);
+        canvas.setActiveObject(textObj);
+      },
+      addShape: (shape) => {
+        let obj;
+        if (shape === "rectangle") {
+          obj = new Rect({ left: 150 * scale, top: 200 * scale, fill: activeColor, width: 100 * scale, height: 100 * scale });
+        } else {
+          obj = new Circle({ left: 200 * scale, top: 250 * scale, fill: activeColor, radius: 50 * scale });
+        }
+        canvas.add(obj);
+        canvas.setActiveObject(obj);
+      },
+      addImage: async (url) => {
+        try {
+          const img = await FabricImage.fromURL(url, { crossOrigin: 'anonymous' });
+          img.scaleToWidth(200 * scale);
+          img.set({ left: 150 * scale, top: 150 * scale });
+          canvas.add(img);
+          canvas.setActiveObject(img);
+        } catch (e) {
+          console.error('Failed to load image:', e);
+        }
+      },
+      setDrawingMode: (enabled) => { canvas.isDrawingMode = enabled; },
+      setBrushColor: (color) => { if (canvas.freeDrawingBrush) canvas.freeDrawingBrush.color = color; },
+      setBrushWidth: (width) => { if (canvas.freeDrawingBrush) canvas.freeDrawingBrush.width = width; },
+      undo: async () => {
+        if (historyIndexRef.current > 0) {
+          historyLocked.current = true;
+          historyIndexRef.current--;
+          await canvas.loadFromJSON(JSON.parse(historyRef.current[historyIndexRef.current]));
+          canvas.requestRenderAll();
+          historyLocked.current = false;
+        }
+      },
+      redo: async () => {
+        if (historyIndexRef.current < historyRef.current.length - 1) {
+          historyLocked.current = true;
+          historyIndexRef.current++;
+          await canvas.loadFromJSON(JSON.parse(historyRef.current[historyIndexRef.current]));
+          canvas.requestRenderAll();
+          historyLocked.current = false;
+        }
+      },
+      clear: () => {
+        canvas.clear();
+        canvas.backgroundColor = "#1a1a1a";
+        saveHistory();
+      },
+      exportImage: () => canvas.toDataURL({ format: "png", multiplier: 2 }),
+      loadTemplate: (json) => {
+        historyLocked.current = true;
+        canvas.loadFromJSON(json).then(() => {
+          canvas.requestRenderAll();
+          saveHistory();
+          historyLocked.current = false;
+        });
+      },
+      getZoneData: () => ({ front: "", back: "", "left-sleeve": "", "right-sleeve": "" })
+    };
+
+    onCanvasReady(api);
+  }, [activeColor, onCanvasReady, isReady, isMobile, saveHistory]);
+
+  const config = zoneConfigs[activeZone];
   const canvasWidth = isMobile ? 280 : 500;
   const canvasHeight = isMobile ? 336 : 600;
-  const config = zoneConfigs[activeZone];
-  const isLoading = !isContainerReady || !fabricCanvas;
 
   return (
-    <div ref={containerRef} className="relative rounded-lg overflow-hidden border-2 border-border bg-card w-full flex justify-center" style={{ minHeight: isMobile ? 336 : 600 }}>
-      <canvas ref={canvasRef} className={isLoading ? "opacity-0" : "max-w-full"} style={{ touchAction: 'none' }} />
-      {isLoading && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
+    <div 
+      ref={containerRef} 
+      className="relative rounded-lg overflow-hidden border-2 border-border bg-card w-full flex justify-center"
+      style={{ minHeight: canvasHeight }}
+    >
+      {/* Loading Overlay */}
+      {!isReady && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center z-10">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
           <span className="text-sm text-muted-foreground mt-2">Loading canvas...</span>
         </div>
       )}
-      <div className="absolute bottom-2 left-2 text-xs text-muted-foreground">
-        {config.label} • {canvasWidth}×{canvasHeight}px
-      </div>
-      <div className="absolute top-2 right-2 text-xs bg-primary/80 text-primary-foreground px-2 py-1 rounded">
-        {config.label}
-      </div>
+
+      {/* Canvas Element - Always present */}
+      <canvas 
+        ref={canvasRef} 
+        className={isReady ? "max-w-full" : "opacity-0"} 
+        style={{ touchAction: 'none' }} 
+      />
+
+      {isReady && (
+        <>
+          <div className="absolute top-2 left-2 bg-background/80 px-2 py-1 rounded text-xs text-muted-foreground">
+            {config.label}
+          </div>
+          <div className="absolute bottom-2 left-2 text-xs text-muted-foreground">
+            {config.label} • {canvasWidth}×{canvasHeight}px
+          </div>
+        </>
+      )}
     </div>
   );
 };
