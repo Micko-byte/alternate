@@ -300,23 +300,17 @@ const DesignCanvas = ({ activeColor, activeTool, activeZone, onCanvasReady }: De
   const canvasWidth = isMobile ? 280 : 500;
   const canvasHeight = isMobile ? 336 : 600;
   const config = zoneConfigs[activeZone];
-
-  // Show loading state while canvas initializes
-  if (!isContainerReady || !fabricCanvas) {
-    return (
-      <div ref={containerRef} className="relative rounded-lg overflow-hidden border-2 border-border bg-card w-full flex justify-center items-center" style={{ minHeight: isMobile ? 336 : 600 }}>
-        <div className="flex flex-col items-center gap-2">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          <span className="text-sm text-muted-foreground">Loading canvas...</span>
-        </div>
-        <canvas ref={canvasRef} className="hidden" />
-      </div>
-    );
-  }
+  const isLoading = !isContainerReady || !fabricCanvas;
 
   return (
-    <div ref={containerRef} className="relative rounded-lg overflow-hidden border-2 border-border bg-card w-full flex justify-center">
-      <canvas ref={canvasRef} className="max-w-full" style={{ touchAction: 'none' }} />
+    <div ref={containerRef} className="relative rounded-lg overflow-hidden border-2 border-border bg-card w-full flex justify-center" style={{ minHeight: isMobile ? 336 : 600 }}>
+      <canvas ref={canvasRef} className={isLoading ? "opacity-0" : "max-w-full"} style={{ touchAction: 'none' }} />
+      {isLoading && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          <span className="text-sm text-muted-foreground mt-2">Loading canvas...</span>
+        </div>
+      )}
       <div className="absolute bottom-2 left-2 text-xs text-muted-foreground">
         {config.label} • {canvasWidth}×{canvasHeight}px
       </div>
