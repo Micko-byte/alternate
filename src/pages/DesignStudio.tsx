@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Save, Type, Images, LayoutTemplate, Shirt, ShoppingBag, Sparkles, FolderOpen, User, LogOut, Sliders } from "lucide-react";
+import { ArrowLeft, Type, Images, LayoutTemplate, Shirt, ShoppingBag, Sparkles, FolderOpen, User, LogOut, Sliders, Layers, Palette, Brush } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -17,6 +17,10 @@ import AIGeneratePanel from "@/components/design-studio/AIGeneratePanel";
 import SavedDesignsPanel from "@/components/design-studio/SavedDesignsPanel";
 import ShirtZoneSelector from "@/components/design-studio/ShirtZoneSelector";
 import TransformTools from "@/components/design-studio/TransformTools";
+import TextEffectsPanel from "@/components/design-studio/TextEffectsPanel";
+import TexturesPanel from "@/components/design-studio/TexturesPanel";
+import LayerPanel from "@/components/design-studio/LayerPanel";
+import ColorSwatchPanel from "@/components/design-studio/ColorSwatchPanel";
 import MobileMoneyCheckout from "@/components/MobileMoneyCheckout";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
@@ -128,21 +132,33 @@ const DesignStudio = () => {
           </div>
 
           <Tabs value={activePanel} onValueChange={setActivePanel}>
-            <TabsList className="w-full grid grid-cols-5 mb-4">
-              <TabsTrigger value="ai" className="text-xs p-1">
+            <TabsList className="w-full grid grid-cols-4 mb-4">
+              <TabsTrigger value="ai" className="text-xs p-1" title="AI Generate">
                 <Sparkles className="w-3 h-3" />
               </TabsTrigger>
-              <TabsTrigger value="saved" className="text-xs p-1">
-                <FolderOpen className="w-3 h-3" />
-              </TabsTrigger>
-              <TabsTrigger value="text" className="text-xs p-1">
+              <TabsTrigger value="text" className="text-xs p-1" title="Text & Effects">
                 <Type className="w-3 h-3" />
               </TabsTrigger>
-              <TabsTrigger value="assets" className="text-xs p-1">
+              <TabsTrigger value="layers" className="text-xs p-1" title="Layers">
+                <Layers className="w-3 h-3" />
+              </TabsTrigger>
+              <TabsTrigger value="colors" className="text-xs p-1" title="Colors">
+                <Palette className="w-3 h-3" />
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsList className="w-full grid grid-cols-4 mb-4">
+              <TabsTrigger value="effects" className="text-xs p-1" title="3D Effects">
+                <Brush className="w-3 h-3" />
+              </TabsTrigger>
+              <TabsTrigger value="assets" className="text-xs p-1" title="Assets">
                 <Images className="w-3 h-3" />
               </TabsTrigger>
-              <TabsTrigger value="templates" className="text-xs p-1">
+              <TabsTrigger value="templates" className="text-xs p-1" title="Templates">
                 <LayoutTemplate className="w-3 h-3" />
+              </TabsTrigger>
+              <TabsTrigger value="saved" className="text-xs p-1" title="Saved">
+                <FolderOpen className="w-3 h-3" />
               </TabsTrigger>
             </TabsList>
 
@@ -154,6 +170,24 @@ const DesignStudio = () => {
             </TabsContent>
             <TabsContent value="text" className="mt-0">
               <TextPanel canvasRef={canvasRef} activeColor={activeColor} />
+            </TabsContent>
+            <TabsContent value="effects" className="mt-0">
+              <div className="space-y-6">
+                <TextEffectsPanel canvasRef={canvasRef} activeColor={activeColor} />
+                <div className="border-t border-border pt-4">
+                  <TexturesPanel canvasRef={canvasRef} />
+                </div>
+              </div>
+            </TabsContent>
+            <TabsContent value="layers" className="mt-0">
+              <LayerPanel canvasRef={canvasRef} />
+            </TabsContent>
+            <TabsContent value="colors" className="mt-0">
+              <ColorSwatchPanel 
+                canvasRef={canvasRef} 
+                activeColor={activeColor} 
+                onColorChange={setActiveColor}
+              />
             </TabsContent>
             <TabsContent value="assets" className="mt-0">
               <AssetsPanel canvasRef={canvasRef} activeColor={activeColor} />
