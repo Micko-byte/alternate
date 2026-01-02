@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
-import { Shirt, RotateCcw, ZoomIn, ZoomOut } from "lucide-react";
+import { Shirt, Maximize2, Minimize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 import { DesignCanvasRef } from "./DesignCanvas";
 
 interface MockupPreviewProps {
@@ -9,93 +9,102 @@ interface MockupPreviewProps {
 }
 
 const tshirtColors = [
-  { id: "black", name: "Black", hex: "#1a1a1a" },
-  { id: "white", name: "White", hex: "#f5f5f5" },
-  { id: "grey", name: "Grey", hex: "#6b7280" },
-  { id: "navy", name: "Navy", hex: "#1e3a5f" },
+  { id: "black", name: "Black", hex: "#121212", image: "/mockups/heavy-cotton-black.png" },
+  { id: "white", name: "White", hex: "#FFFFFF", image: "/mockups/heavy-cotton-white.png" },
+  { id: "vintage-navy", name: "Navy", hex: "#1e293b", image: "/mockups/heavy-cotton-navy.png" },
 ];
 
 const MockupPreview = ({ canvasRef }: MockupPreviewProps) => {
   const [tshirtColor, setTshirtColor] = useState(tshirtColors[0]);
   const [designImage, setDesignImage] = useState<string | null>(null);
-  const [zoom, setZoom] = useState(1);
-  const [rotation, setRotation] = useState(0);
+  const [isFullView, setIsFullView] = useState(false);
 
-  // Update design preview when canvas changes
   useEffect(() => {
     if (!canvasRef?.canvas) return;
-
-    const updatePreview = () => {
-      const dataUrl = canvasRef.exportImage();
-      if (dataUrl) {
-        setDesignImage(dataUrl);
-      }
-    };
-
-    // Initial render
+    const updatePreview = () => setDesignImage(canvasRef.exportImage());
+    
+    // Listen for changes to auto-update mockup
+    canvasRef.canvas.on("after:render", updatePreview);
     updatePreview();
-
-    // Listen for canvas changes
-    const canvas = canvasRef.canvas;
-    canvas.on("object:added", updatePreview);
-    canvas.on("object:modified", updatePreview);
-    canvas.on("object:removed", updatePreview);
-
+    
     return () => {
-      canvas.off("object:added", updatePreview);
-      canvas.off("object:modified", updatePreview);
-      canvas.off("object:removed", updatePreview);
+      canvasRef.canvas.off("after:render", updatePreview);
     };
   }, [canvasRef]);
 
-  const handleZoomIn = () => setZoom((prev) => Math.min(prev + 0.25, 2));
-  const handleZoomOut = () => setZoom((prev) => Math.max(prev - 0.25, 0.5));
-  const handleRotate = () => setRotation((prev) => (prev + 90) % 360);
-
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-        <Shirt className="w-4 h-4" />
-        <span>Preview</span>
+    <div className="flex flex-col h-full">
+      {/* Header Area */}
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <Shirt className="w-4 h-4 text-primary" />
+          <span className="text-sm font-medium text-foreground">Live Preview</span>
+          <span className="text-[10px] font-mono text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded">
+            REAL-TIME MOCKUP V1.0
+          </span>
+        </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="w-7 h-7"
+          onClick={() => setIsFullView(!isFullView)}
+        >
+          {isFullView ? (
+            <Minimize2 className="w-4 h-4" />
+          ) : (
+            <Maximize2 className="w-4 h-4" />
+          )}
+        </Button>
       </div>
 
-      {/* T-Shirt Mockup */}
+      {/* Main Preview Stage */}
       <div
-        className="relative aspect-square rounded-lg border border-border overflow-hidden flex items-center justify-center"
+        className={cn(
+          "relative rounded-xl overflow-hidden border border-border bg-gradient-to-b from-zinc-800 to-zinc-900 flex items-center justify-center transition-all duration-300",
+          isFullView ? "aspect-[3/4] flex-1" : "aspect-square"
+        )}
         style={{ backgroundColor: tshirtColor.hex }}
       >
-        {/* T-Shirt SVG Shape */}
-        <svg
-          viewBox="0 0 200 220"
-          className="absolute inset-0 w-full h-full opacity-20"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1"
-        >
-          {/* Simple t-shirt outline */}
-          <path
-            d="M60 30 L30 50 L30 80 L50 80 L50 200 L150 200 L150 80 L170 80 L170 50 L140 30 L120 40 L80 40 L60 30"
-            className="text-foreground"
-          />
-        </svg>
+        {/* 1. Base Texture (The Shirt) */}
+        <img
+          src={tshirtColor.image}
+          alt={`${tshirtColor.name} t-shirt mockup`}
+          className="absolute inset-0 w-full h-full object-contain"
+          onError={(e) => {
+            // Fallback to solid color if image fails to load
+            e.currentTarget.style.display = 'none';
+          }}
+        />
 
-        {/* Design Overlay */}
+        {/* 2. The Design Layer */}
         {designImage && (
           <div
-            className="relative z-10 transition-transform duration-200"
+            className="absolute z-10 pointer-events-none"
             style={{
-              transform: `scale(${zoom * 0.4}) rotate(${rotation}deg)`,
+              top: "28%",
+              left: "50%",
+              transform: "translateX(-50%)",
+              width: "35%",
             }}
           >
             <img
               src={designImage}
               alt="Design preview"
-              className="w-full h-auto max-w-[180px] rounded"
-              style={{ mixBlendMode: "multiply" }}
+              className="w-full h-auto"
+              style={{ mixBlendMode: "multiply", filter: "contrast(1.05)" }}
             />
           </div>
         )}
 
+        {/* 3. Shadow/Fold Overlay for realism */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background: "radial-gradient(ellipse at 50% 30%, transparent 40%, rgba(0,0,0,0.15) 100%)",
+          }}
+        />
+
+        {/* Placeholder when no design */}
         {!designImage && (
           <div className="text-center text-muted-foreground p-4 z-10">
             <Shirt className="w-8 h-8 mx-auto mb-2 opacity-50" />
@@ -104,46 +113,45 @@ const MockupPreview = ({ canvasRef }: MockupPreviewProps) => {
         )}
       </div>
 
-      {/* Controls */}
-      <div className="flex items-center justify-center gap-2">
-        <Button variant="outline" size="icon" className="w-8 h-8" onClick={handleZoomOut}>
-          <ZoomOut className="w-4 h-4" />
-        </Button>
-        <span className="text-xs text-muted-foreground w-12 text-center">
-          {Math.round(zoom * 100)}%
-        </span>
-        <Button variant="outline" size="icon" className="w-8 h-8" onClick={handleZoomIn}>
-          <ZoomIn className="w-4 h-4" />
-        </Button>
-        <Button variant="outline" size="icon" className="w-8 h-8" onClick={handleRotate}>
-          <RotateCcw className="w-4 h-4" />
-        </Button>
-      </div>
-
-      {/* T-Shirt Color Selection */}
-      <div className="space-y-2">
-        <Label className="text-xs text-muted-foreground">T-Shirt Color</Label>
-        <div className="flex gap-2">
+      {/* Selector: Horizontal Strip */}
+      <div className="mt-4 space-y-2">
+        <span className="text-xs text-muted-foreground font-medium">Fabric Color</span>
+        <div className="flex gap-2 p-1.5 bg-muted/30 rounded-lg">
           {tshirtColors.map((color) => (
             <button
               key={color.id}
-              className={`w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 ${
-                tshirtColor.id === color.id
-                  ? "border-primary ring-2 ring-primary/20"
-                  : "border-border"
-              }`}
-              style={{ backgroundColor: color.hex }}
               onClick={() => setTshirtColor(color)}
-              title={color.name}
-            />
+              className={cn(
+                "flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md transition-all duration-200",
+                tshirtColor.id === color.id
+                  ? "bg-background shadow-sm border border-border"
+                  : "hover:bg-background/50"
+              )}
+            >
+              <div
+                className={cn(
+                  "w-4 h-4 rounded-full border-2 transition-transform",
+                  tshirtColor.id === color.id ? "scale-110 border-primary" : "border-border"
+                )}
+                style={{ backgroundColor: color.hex }}
+              />
+              <span
+                className={cn(
+                  "text-xs font-medium",
+                  tshirtColor.id === color.id ? "text-foreground" : "text-muted-foreground"
+                )}
+              >
+                {color.name}
+              </span>
+            </button>
           ))}
         </div>
       </div>
 
-      {/* Mockup Info */}
-      <div className="p-3 bg-muted/50 rounded-lg text-xs text-muted-foreground">
+      {/* Info Note */}
+      <div className="mt-3 p-2.5 bg-muted/30 rounded-lg text-xs text-muted-foreground">
         <p>
-          <strong>Note:</strong> This is a preview. Final print may vary slightly.
+          <strong className="text-foreground">Note:</strong> This is a preview. Final print may vary slightly.
         </p>
       </div>
     </div>
