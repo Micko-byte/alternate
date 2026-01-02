@@ -1,4 +1,3 @@
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 export type ShirtZone = "front" | "back" | "left-sleeve" | "right-sleeve";
@@ -11,17 +10,16 @@ interface ShirtZoneSelectorProps {
 const zones: { id: ShirtZone; label: string; icon: JSX.Element }[] = [
   {
     id: "front",
-    label: "Front",
+    label: "FRONT",
     icon: (
       <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.5">
         <path d="M12 2L8 6H5v14h14V6h-3l-4-4z" />
-        <rect x="9" y="9" width="6" height="6" strokeDasharray="2 1" />
       </svg>
     ),
   },
   {
     id: "back",
-    label: "Back",
+    label: "BACK",
     icon: (
       <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.5">
         <path d="M12 2L8 6H5v14h14V6h-3l-4-4z" />
@@ -31,7 +29,7 @@ const zones: { id: ShirtZone; label: string; icon: JSX.Element }[] = [
   },
   {
     id: "left-sleeve",
-    label: "L.Sleeve",
+    label: "L-SLEEVE",
     icon: (
       <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.5">
         <path d="M3 8L7 6v12l-4-2V8z" />
@@ -41,7 +39,7 @@ const zones: { id: ShirtZone; label: string; icon: JSX.Element }[] = [
   },
   {
     id: "right-sleeve",
-    label: "R.Sleeve",
+    label: "R-SLEEVE",
     icon: (
       <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.5">
         <path d="M21 8L17 6v12l4-2V8z" />
@@ -53,24 +51,46 @@ const zones: { id: ShirtZone; label: string; icon: JSX.Element }[] = [
 
 const ShirtZoneSelector = ({ activeZone, onZoneChange }: ShirtZoneSelectorProps) => {
   return (
-    <div className="flex flex-col gap-2">
-      <span className="text-xs text-muted-foreground font-medium">Design Area</span>
-      <div className="grid grid-cols-4 gap-1">
-        {zones.map((zone) => (
-          <Button
-            key={zone.id}
-            variant={activeZone === zone.id ? "default" : "outline"}
-            size="sm"
-            onClick={() => onZoneChange(zone.id)}
-            className={cn(
-              "flex flex-col items-center gap-0.5 h-auto py-2 px-1",
-              activeZone === zone.id && "bg-primary text-primary-foreground"
-            )}
-          >
-            {zone.icon}
-            <span className="text-[10px]">{zone.label}</span>
-          </Button>
-        ))}
+    <div className="rounded-xl bg-zinc-950 p-3 space-y-3">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
+          Design Area
+        </span>
+        <span className="text-xs text-primary font-semibold">
+          {zones.find(z => z.id === activeZone)?.label}
+        </span>
+      </div>
+
+      {/* Segmented Control Container */}
+      <div className="flex gap-1 p-1 bg-zinc-900/50 rounded-lg">
+        {zones.map((zone) => {
+          const isActive = activeZone === zone.id;
+          return (
+            <button
+              key={zone.id}
+              onClick={() => onZoneChange(zone.id)}
+              className={cn(
+                "relative flex flex-1 flex-col items-center justify-center gap-1.5 py-2.5 transition-all duration-200 rounded-lg",
+                isActive 
+                  ? "bg-zinc-800 text-primary shadow-sm shadow-black/50" 
+                  : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+              )}
+            >
+              <div className="w-5 h-5">
+                {zone.icon}
+              </div>
+              <span className="text-[10px] font-medium tracking-wider">
+                {zone.label}
+              </span>
+              
+              {/* Active Indicator Underline */}
+              {isActive && (
+                <div className="absolute bottom-1 left-1/2 -translate-x-1/2 w-4 h-0.5 bg-primary rounded-full" />
+              )}
+            </button>
+          );
+        })}
       </div>
     </div>
   );
