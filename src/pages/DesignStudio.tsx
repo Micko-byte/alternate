@@ -21,6 +21,7 @@ import TextEffectsPanel from "@/components/design-studio/TextEffectsPanel";
 import TexturesPanel from "@/components/design-studio/TexturesPanel";
 import LayerPanel from "@/components/design-studio/LayerPanel";
 import ColorSwatchPanel from "@/components/design-studio/ColorSwatchPanel";
+import MobileZoneDrawer from "@/components/design-studio/MobileZoneDrawer";
 import MobileMoneyCheckout from "@/components/MobileMoneyCheckout";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
@@ -241,9 +242,9 @@ const DesignStudio = () => {
               <Sliders className="w-4 h-4" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="bottom" className="h-[70vh] overflow-y-auto">
-            <div className="mt-4 space-y-6">
-              <ShirtZoneSelector activeZone={activeZone} onZoneChange={setActiveZone} />
+          <SheetContent side="bottom" className="h-auto max-h-[80vh] overflow-y-auto">
+            <MobileZoneDrawer activeZone={activeZone} onZoneChange={setActiveZone} />
+            <div className="px-4 pb-4">
               <TransformTools canvasRef={canvasRef} />
             </div>
           </SheetContent>
