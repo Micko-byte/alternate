@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Shirt, Maximize2, Minimize2 } from "lucide-react";
+import debounce from "lodash.debounce";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { DesignCanvasRef } from "./DesignCanvas";
@@ -21,14 +22,29 @@ const MockupPreview = ({ canvasRef }: MockupPreviewProps) => {
 
   useEffect(() => {
     if (!canvasRef?.canvas) return;
-    const updatePreview = () => setDesignImage(canvasRef.exportImage());
-    
-    // Listen for changes to auto-update mockup
-    canvasRef.canvas.on("after:render", updatePreview);
-    updatePreview();
-    
+
+    const debouncedUpdate = debounce(() => {
+      const dataUrl = canvasRef.exportImage();
+      if (dataUrl) {
+        setDesignImage(dataUrl);
+      }
+    }, 300);
+
+    const canvas = canvasRef.canvas;
+
+    // Use specific object events instead of 'after:render' to prevent infinite loops
+    canvas.on("object:modified", debouncedUpdate);
+    canvas.on("object:added", debouncedUpdate);
+    canvas.on("object:removed", debouncedUpdate);
+
+    // Initial render
+    debouncedUpdate();
+
     return () => {
-      canvasRef.canvas.off("after:render", updatePreview);
+      canvas.off("object:modified", debouncedUpdate);
+      canvas.off("object:added", debouncedUpdate);
+      canvas.off("object:removed", debouncedUpdate);
+      debouncedUpdate.cancel();
     };
   }, [canvasRef]);
 
