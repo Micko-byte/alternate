@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      design_templates: {
+        Row: {
+          category: string
+          config: Json
+          created_at: string
+          description: string | null
+          id: string
+          is_premium: boolean
+          name: string
+          preview_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          config: Json
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_premium?: boolean
+          name: string
+          preview_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          config?: Json
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_premium?: boolean
+          name?: string
+          preview_url?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
