@@ -4,6 +4,7 @@ import { Label } from "@/components/ui/label";
 import { DesignCanvasRef } from "./DesignCanvas";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { cn } from "@/lib/utils";
 
 interface TemplatesPanelProps {
   canvasRef: DesignCanvasRef | null;
@@ -19,11 +20,20 @@ interface DesignTemplate {
   is_premium: boolean;
 }
 
+const categories = [
+  { id: "all", label: "All" },
+  { id: "streetwear", label: "Streetwear" },
+  { id: "minimal", label: "Minimal" },
+  { id: "vintage", label: "Vintage" },
+  { id: "sports", label: "Sports" },
+];
+
 // Fallback blank template
 const blankTemplate = {
   id: "blank",
   name: "Blank Canvas",
   description: "Start from scratch",
+  category: "all",
   preview_url: null,
   config: {
     version: "6.0.0",
@@ -35,15 +45,23 @@ const blankTemplate = {
 const TemplatesPanel = ({ canvasRef }: TemplatesPanelProps) => {
   const [templates, setTemplates] = useState<DesignTemplate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [activeCategory, setActiveCategory] = useState("all");
 
   useEffect(() => {
     const fetchTemplates = async () => {
       setIsLoading(true);
-      const { data, error } = await supabase
+      
+      let query = supabase
         .from("design_templates")
         .select("*")
-        .eq("category", "streetwear")
         .order("created_at", { ascending: true });
+
+      // Filter by category if not "all"
+      if (activeCategory !== "all") {
+        query = query.eq("category", activeCategory);
+      }
+
+      const { data, error } = await query;
 
       if (error) {
         console.error("Failed to fetch templates:", error);
@@ -57,7 +75,7 @@ const TemplatesPanel = ({ canvasRef }: TemplatesPanelProps) => {
     };
 
     fetchTemplates();
-  }, []);
+  }, [activeCategory]);
 
   const handleLoadTemplate = (template: DesignTemplate | typeof blankTemplate) => {
     if (!canvasRef) return;
@@ -75,6 +93,24 @@ const TemplatesPanel = ({ canvasRef }: TemplatesPanelProps) => {
       <div className="flex items-center gap-2 text-sm font-medium text-foreground">
         <LayoutTemplate className="w-4 h-4" />
         <span>Templates</span>
+      </div>
+
+      {/* Category Filter */}
+      <div className="flex flex-wrap gap-1.5">
+        {categories.map((cat) => (
+          <button
+            key={cat.id}
+            onClick={() => setActiveCategory(cat.id)}
+            className={cn(
+              "px-2.5 py-1 text-[10px] font-medium uppercase tracking-wide rounded-md transition-all",
+              activeCategory === cat.id
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted text-muted-foreground hover:bg-accent hover:text-foreground"
+            )}
+          >
+            {cat.label}
+          </button>
+        ))}
       </div>
 
       <Label className="text-xs text-muted-foreground">
@@ -133,6 +169,13 @@ const TemplatesPanel = ({ canvasRef }: TemplatesPanelProps) => {
             </p>
           </button>
         </div>
+      )}
+
+      {/* Empty State */}
+      {!isLoading && templates.length === 0 && (
+        <p className="text-xs text-muted-foreground text-center py-4">
+          No templates found in this category
+        </p>
       )}
 
       {/* Pro Tip */}
