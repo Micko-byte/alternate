@@ -2,7 +2,7 @@ import { MousePointer2, Pencil, Type, Square, Circle, Undo2, Redo2, Trash2 } fro
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
-type Tool = "select" | "draw" | "text" | "rectangle" | "circle";
+export type Tool = "select" | "draw" | "text" | "rect" | "circle";
 
 interface ToolbarProps {
   activeTool: Tool;
@@ -16,7 +16,7 @@ const tools = [
   { id: "select" as Tool, icon: MousePointer2, label: "Select" },
   { id: "draw" as Tool, icon: Pencil, label: "Draw" },
   { id: "text" as Tool, icon: Type, label: "Text" },
-  { id: "rectangle" as Tool, icon: Square, label: "Rectangle" },
+  { id: "rect" as Tool, icon: Square, label: "Rectangle" },
   { id: "circle" as Tool, icon: Circle, label: "Circle" },
 ];
 

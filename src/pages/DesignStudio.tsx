@@ -1,12 +1,12 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { Link } from "react-router-dom";
 import { ArrowLeft, Type, Images, LayoutTemplate, Shirt, ShoppingBag, Sparkles, FolderOpen, User, LogOut, Sliders, Layers, Palette, Brush } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { toast } from "sonner";
-import DesignCanvas, { DesignCanvasRef, ShirtZone } from "@/components/design-studio/DesignCanvas";
-import Toolbar from "@/components/design-studio/Toolbar";
+import DesignCanvas, { DesignCanvasRef } from "@/components/design-studio/DesignCanvas";
+import Toolbar, { Tool } from "@/components/design-studio/Toolbar";
 import ColorPicker from "@/components/design-studio/ColorPicker";
 import TextPanel from "@/components/design-studio/TextPanel";
 import AssetsPanel from "@/components/design-studio/AssetsPanel";
@@ -15,51 +15,43 @@ import MockupPreview from "@/components/design-studio/MockupPreview";
 import ExportPanel from "@/components/design-studio/ExportPanel";
 import AIGeneratePanel from "@/components/design-studio/AIGeneratePanel";
 import SavedDesignsPanel from "@/components/design-studio/SavedDesignsPanel";
-import ShirtZoneSelector from "@/components/design-studio/ShirtZoneSelector";
 import TransformTools from "@/components/design-studio/TransformTools";
 import TextEffectsPanel from "@/components/design-studio/TextEffectsPanel";
 import TexturesPanel from "@/components/design-studio/TexturesPanel";
 import LayerPanel from "@/components/design-studio/LayerPanel";
 import ColorSwatchPanel from "@/components/design-studio/ColorSwatchPanel";
-import MobileZoneDrawer from "@/components/design-studio/MobileZoneDrawer";
 import MobileMoneyCheckout from "@/components/MobileMoneyCheckout";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
-
-type Tool = "select" | "draw" | "text" | "rectangle" | "circle";
 
 const DesignStudio = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const [activeTool, setActiveTool] = useState<Tool>("select");
   const [activeColor, setActiveColor] = useState("#84cc16");
-  const [canvasRef, setCanvasRef] = useState<DesignCanvasRef | null>(null);
+  const canvasRef = useRef<DesignCanvasRef>(null);
   const [activePanel, setActivePanel] = useState("ai");
   const [showCheckout, setShowCheckout] = useState(false);
   const [selectedSize, setSelectedSize] = useState("m");
-  const [activeZone, setActiveZone] = useState<ShirtZone>("front");
+  const [hasSelection, setHasSelection] = useState(false);
 
   const handleSignOut = async () => {
     await signOut();
     toast.success("Signed out");
   };
 
-  const handleCanvasReady = useCallback((ref: DesignCanvasRef) => {
-    setCanvasRef(ref);
-  }, []);
-
   const handleToolChange = (tool: Tool) => {
     setActiveTool(tool);
-    if (tool === "rectangle" || tool === "circle") {
-      canvasRef?.addShape(tool);
+    if (tool === "rect" || tool === "circle") {
+      canvasRef.current?.addShape(tool);
       setActiveTool("select");
     }
   };
 
-  const handleUndo = () => canvasRef?.undo();
-  const handleRedo = () => canvasRef?.redo();
+  const handleUndo = () => canvasRef.current?.undo();
+  const handleRedo = () => canvasRef.current?.redo();
   const handleClear = () => {
-    canvasRef?.clear();
+    canvasRef.current?.clear();
     toast.success("Canvas cleared!");
   };
 
@@ -122,14 +114,9 @@ const DesignStudio = () => {
 
         {/* Left Panel - Options (Desktop) */}
         <aside className="w-72 border-r border-border bg-card p-4 overflow-y-auto hidden lg:block">
-          {/* Zone Selector */}
-          <div className="mb-4 pb-4 border-b border-border">
-            <ShirtZoneSelector activeZone={activeZone} onZoneChange={setActiveZone} />
-          </div>
-
           {/* Transform Tools */}
           <div className="mb-4 pb-4 border-b border-border">
-            <TransformTools canvasRef={canvasRef} />
+            <TransformTools canvasRef={canvasRef.current} />
           </div>
 
           <Tabs value={activePanel} onValueChange={setActivePanel}>
@@ -164,37 +151,37 @@ const DesignStudio = () => {
             </TabsList>
 
             <TabsContent value="ai" className="mt-0">
-              <AIGeneratePanel canvasRef={canvasRef} />
+              <AIGeneratePanel canvasRef={canvasRef.current} />
             </TabsContent>
             <TabsContent value="saved" className="mt-0">
-              <SavedDesignsPanel canvasRef={canvasRef} />
+              <SavedDesignsPanel canvasRef={canvasRef.current} />
             </TabsContent>
             <TabsContent value="text" className="mt-0">
-              <TextPanel canvasRef={canvasRef} activeColor={activeColor} />
+              <TextPanel canvasRef={canvasRef.current} activeColor={activeColor} />
             </TabsContent>
             <TabsContent value="effects" className="mt-0">
               <div className="space-y-6">
-                <TextEffectsPanel canvasRef={canvasRef} activeColor={activeColor} />
+                <TextEffectsPanel canvasRef={canvasRef.current} activeColor={activeColor} />
                 <div className="border-t border-border pt-4">
-                  <TexturesPanel canvasRef={canvasRef} />
+                  <TexturesPanel canvasRef={canvasRef.current} />
                 </div>
               </div>
             </TabsContent>
             <TabsContent value="layers" className="mt-0">
-              <LayerPanel canvasRef={canvasRef} />
+              <LayerPanel canvasRef={canvasRef.current} />
             </TabsContent>
             <TabsContent value="colors" className="mt-0">
               <ColorSwatchPanel 
-                canvasRef={canvasRef} 
+                canvasRef={canvasRef.current} 
                 activeColor={activeColor} 
                 onColorChange={setActiveColor}
               />
             </TabsContent>
             <TabsContent value="assets" className="mt-0">
-              <AssetsPanel canvasRef={canvasRef} activeColor={activeColor} />
+              <AssetsPanel canvasRef={canvasRef.current} activeColor={activeColor} />
             </TabsContent>
             <TabsContent value="templates" className="mt-0">
-              <TemplatesPanel canvasRef={canvasRef} />
+              <TemplatesPanel canvasRef={canvasRef.current} />
             </TabsContent>
           </Tabs>
         </aside>
@@ -202,10 +189,8 @@ const DesignStudio = () => {
         {/* Canvas Area */}
         <main className="flex-1 flex items-center justify-center p-4 md:p-8 overflow-auto bg-muted/30">
           <DesignCanvas
-            activeColor={activeColor}
-            activeTool={activeTool}
-            activeZone={activeZone}
-            onCanvasReady={handleCanvasReady}
+            ref={canvasRef}
+            onSelectionChange={setHasSelection}
           />
         </main>
 
@@ -224,10 +209,10 @@ const DesignStudio = () => {
             </TabsList>
 
             <TabsContent value="preview" className="mt-0">
-              <MockupPreview canvasRef={canvasRef} />
+              <MockupPreview canvasRef={canvasRef.current} />
             </TabsContent>
             <TabsContent value="order" className="mt-0">
-              <ExportPanel canvasRef={canvasRef} onOrder={handleOrder} />
+              <ExportPanel canvasRef={canvasRef.current} onOrder={handleOrder} />
             </TabsContent>
           </Tabs>
         </aside>
@@ -235,7 +220,7 @@ const DesignStudio = () => {
 
       {/* Mobile Bottom Bar */}
       <div className="md:hidden border-t border-border bg-card p-2 flex items-center justify-around gap-1">
-        {/* Mobile Zone/Transform */}
+        {/* Mobile Transform */}
         <Sheet>
           <SheetTrigger asChild>
             <Button variant="ghost" size="sm" className="px-2">
@@ -243,9 +228,8 @@ const DesignStudio = () => {
             </Button>
           </SheetTrigger>
           <SheetContent side="bottom" className="h-auto max-h-[80vh] overflow-y-auto">
-            <MobileZoneDrawer activeZone={activeZone} onZoneChange={setActiveZone} />
-            <div className="px-4 pb-4">
-              <TransformTools canvasRef={canvasRef} />
+            <div className="px-4 pb-4 pt-4">
+              <TransformTools canvasRef={canvasRef.current} />
             </div>
           </SheetContent>
         </Sheet>
@@ -270,10 +254,10 @@ const DesignStudio = () => {
                 </TabsTrigger>
               </TabsList>
               <TabsContent value="ai" className="mt-4">
-                <AIGeneratePanel canvasRef={canvasRef} />
+                <AIGeneratePanel canvasRef={canvasRef.current} />
               </TabsContent>
               <TabsContent value="saved" className="mt-4">
-                <SavedDesignsPanel canvasRef={canvasRef} />
+                <SavedDesignsPanel canvasRef={canvasRef.current} />
               </TabsContent>
             </Tabs>
           </SheetContent>
@@ -294,13 +278,13 @@ const DesignStudio = () => {
                 <TabsTrigger value="templates">Templates</TabsTrigger>
               </TabsList>
               <TabsContent value="text" className="mt-4">
-                <TextPanel canvasRef={canvasRef} activeColor={activeColor} />
+                <TextPanel canvasRef={canvasRef.current} activeColor={activeColor} />
               </TabsContent>
               <TabsContent value="assets" className="mt-4">
-                <AssetsPanel canvasRef={canvasRef} activeColor={activeColor} />
+                <AssetsPanel canvasRef={canvasRef.current} activeColor={activeColor} />
               </TabsContent>
               <TabsContent value="templates" className="mt-4">
-                <TemplatesPanel canvasRef={canvasRef} />
+                <TemplatesPanel canvasRef={canvasRef.current} />
               </TabsContent>
             </Tabs>
           </SheetContent>
@@ -317,8 +301,8 @@ const DesignStudio = () => {
           </SheetTrigger>
           <SheetContent side="bottom" className="h-[70vh] overflow-y-auto">
             <div className="mt-4 space-y-6">
-              <MockupPreview canvasRef={canvasRef} />
-              <ExportPanel canvasRef={canvasRef} onOrder={handleOrder} />
+              <MockupPreview canvasRef={canvasRef.current} />
+              <ExportPanel canvasRef={canvasRef.current} onOrder={handleOrder} />
             </div>
           </SheetContent>
         </Sheet>
