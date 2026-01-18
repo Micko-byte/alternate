@@ -4,21 +4,14 @@ import { Label } from "@/components/ui/label";
 import { DesignCanvasRef } from "./DesignCanvas";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
 import { cn } from "@/lib/utils";
 
 interface TemplatesPanelProps {
   canvasRef: DesignCanvasRef | null;
 }
 
-interface DesignTemplate {
-  id: string;
-  name: string;
-  description: string | null;
-  category: string;
-  preview_url: string | null;
-  config: Record<string, unknown>;
-  is_premium: boolean;
-}
+type DesignTemplate = Tables<'design_templates'>;
 
 const categories = [
   { id: "all", label: "All" },
