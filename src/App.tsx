@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import About from "./pages/About";
 import ProductDetails from "./pages/ProductDetails";
 import DesignStudio from "./pages/DesignStudio";
+import EnhancedDesignStudio from "./pages/EnhancedDesignStudio";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
@@ -24,7 +25,8 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/about" element={<About />} />
             <Route path="/auth" element={<Auth />} />
-            <Route path="/design" element={<DesignStudio />} />
+            <Route path="/design" element={<EnhancedDesignStudio />} />
+            <Route path="/design-legacy" element={<DesignStudio />} />
             <Route path="/product/:id" element={<ProductDetails />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
