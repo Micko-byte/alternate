@@ -481,28 +481,92 @@ const EnhancedDesignStudio = () => {
   };
 
   const loadTemplateHandler = async (template: any) => {
-    console.log('Using template:', template.id);
+    console.log('Using template:', template.id, template.config);
     
-    // Safely extract design objects from template config
+    // Convert Fabric.js template format to our DesignObject format
+    const convertTemplateObject = (obj: any, index: number): DesignObject | null => {
+      const baseObj = {
+        id: Date.now() + index,
+        x: obj.left ?? obj.x ?? 100,
+        y: obj.top ?? obj.y ?? 100,
+        fill: obj.fill || '#ffffff',
+      };
+
+      // Handle text objects (Fabric.js uses 'i-text', 'text', 'textbox')
+      if (obj.type === 'i-text' || obj.type === 'text' || obj.type === 'textbox') {
+        return {
+          ...baseObj,
+          type: 'text' as const,
+          text: obj.text || 'Text',
+          fontSize: obj.fontSize || 48,
+          fontFamily: obj.fontFamily || 'Arial Black',
+        };
+      }
+      
+      // Handle rectangle shapes
+      if (obj.type === 'rect') {
+        return {
+          ...baseObj,
+          type: 'shape' as const,
+          shape: 'rect' as const,
+          width: obj.width || 100,
+          height: obj.height || 100,
+          stroke: obj.stroke,
+          strokeWidth: obj.strokeWidth || 0,
+        };
+      }
+      
+      // Handle circle shapes
+      if (obj.type === 'circle') {
+        return {
+          ...baseObj,
+          type: 'shape' as const,
+          shape: 'circle' as const,
+          radius: obj.radius || 50,
+          stroke: obj.stroke,
+          strokeWidth: obj.strokeWidth || 0,
+        };
+      }
+
+      // Handle image type
+      if (obj.type === 'image') {
+        return {
+          ...baseObj,
+          type: 'image' as const,
+          width: obj.width || 200,
+          height: obj.height || 200,
+          imageUrl: obj.src || obj.imageUrl,
+        };
+      }
+
+      return null;
+    };
+    
     let designObjects: DesignObject[] = [];
     
     if (template.config) {
-      // Handle different config formats
+      let rawObjects: any[] = [];
+      
+      // Extract objects array from various formats
       if (Array.isArray(template.config)) {
-        designObjects = template.config;
+        rawObjects = template.config;
       } else if (typeof template.config === 'object' && template.config !== null) {
-        // If config has a 'objects' or 'elements' array property
         if (Array.isArray(template.config.objects)) {
-          designObjects = template.config.objects;
+          rawObjects = template.config.objects;
         } else if (Array.isArray(template.config.elements)) {
-          designObjects = template.config.elements;
+          rawObjects = template.config.elements;
         } else if (Array.isArray(template.config.front)) {
-          // Multi-zone template format
-          designObjects = template.config.front;
+          rawObjects = template.config.front;
         }
       }
+      
+      // Convert each object
+      designObjects = rawObjects
+        .map((obj, index) => convertTemplateObject(obj, index))
+        .filter((obj): obj is DesignObject => obj !== null);
     }
     
+    console.log('Converted design objects:', designObjects);
     multiZone.updateCurrentZone(designObjects);
     setSelectedObject(null);
     
@@ -513,6 +577,7 @@ const EnhancedDesignStudio = () => {
     }
     
     saveHistory();
+    toast.success(`Loaded template: ${template.name}`);
   };
 
   // AI Generation
