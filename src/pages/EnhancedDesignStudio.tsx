@@ -4,7 +4,8 @@ import {
   Type, Image, Palette, Layout, Save, Download, Shirt, Copy, Trash2, 
   ArrowUp, ArrowDown, Undo2, Redo2, Plus, Circle, Square, Search,
   Filter, X, Star, RotateCw, AlignCenter, AlignLeft, AlignRight,
-  ZoomIn, ZoomOut, Grid3x3, Lock, Unlock, Eye, EyeOff, Layers
+  ZoomIn, ZoomOut, Grid3x3, Lock, Unlock, Eye, EyeOff, Layers, Sparkles, 
+  Loader2, Wand2
 } from 'lucide-react';
 
 import { useTemplateFilters } from '@/hooks/useTemplateFilters';
@@ -13,10 +14,17 @@ import { useMyDesigns } from '@/hooks/useMyDesigns';
 import { useTemplateActions } from '@/hooks/useTemplateActions';
 import { useMultiZoneDesign } from '@/hooks/useMultiZoneDesign';
 import type { DesignObject } from '@/hooks/useMultiZoneDesign';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+
+interface GeneratedImage {
+  url: string;
+  description?: string;
+}
 
 const EnhancedDesignStudio = () => {
   // UI State
-  const [activeTab, setActiveTab] = useState('templates');
+  const [activeTab, setActiveTab] = useState('ai');
   const [activeColor, setActiveColor] = useState('#84cc16');
   const [shirtColor, setShirtColor] = useState('#1a1a1a');
   const [showLayers, setShowLayers] = useState(true);
@@ -34,6 +42,11 @@ const EnhancedDesignStudio = () => {
   // History
   const [history, setHistory] = useState<string[]>([]);
   const [historyStep, setHistoryStep] = useState(-1);
+
+  // AI State
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generatedImages, setGeneratedImages] = useState<GeneratedImage[]>([]);
 
   // API Hooks
   const multiZone = useMultiZoneDesign();
@@ -204,6 +217,37 @@ const EnhancedDesignStudio = () => {
         ctx.lineWidth = isSelected ? 2 : 1;
         ctx.strokeRect(obj.x - 5, obj.y - iconSize - 5, iconSize + 10, iconSize + 10);
       }
+    } else if (obj.type === 'image' && obj.imageUrl) {
+      // Draw placeholder for image (actual image loading is async)
+      const imgWidth = obj.width || 200;
+      const imgHeight = obj.height || 200;
+      
+      // Try to draw the image
+      const img = new window.Image();
+      img.crossOrigin = 'anonymous';
+      img.src = obj.imageUrl;
+      
+      if (img.complete) {
+        ctx.drawImage(img, obj.x, obj.y, imgWidth, imgHeight);
+      } else {
+        // Draw placeholder while loading
+        ctx.fillStyle = '#374151';
+        ctx.fillRect(obj.x, obj.y, imgWidth, imgHeight);
+        ctx.fillStyle = '#9ca3af';
+        ctx.font = '14px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('Loading...', obj.x + imgWidth / 2, obj.y + imgHeight / 2);
+        
+        img.onload = () => {
+          if (canvasContext) renderCanvas(canvasContext);
+        };
+      }
+
+      if (isSelected || isHovered) {
+        ctx.strokeStyle = isSelected ? '#84cc16' : 'rgba(132, 204, 22, 0.5)';
+        ctx.lineWidth = isSelected ? 2 : 1;
+        ctx.strokeRect(obj.x - 5, obj.y - 5, imgWidth + 10, imgHeight + 10);
+      }
     }
 
     ctx.restore();
@@ -256,6 +300,13 @@ const EnhancedDesignStudio = () => {
         y: obj.y - (obj.radius || 50),
         width: (obj.radius || 50) * 2,
         height: (obj.radius || 50) * 2
+      };
+    } else if (obj.type === 'image') {
+      return {
+        x: obj.x,
+        y: obj.y,
+        width: obj.width || 200,
+        height: obj.height || 200
       };
     }
     return null;
@@ -464,6 +515,75 @@ const EnhancedDesignStudio = () => {
     saveHistory();
   };
 
+  // AI Generation
+  const handleGenerateImage = async () => {
+    if (!aiPrompt.trim()) {
+      toast.error('Please enter a design idea');
+      return;
+    }
+
+    setIsGenerating(true);
+    setGeneratedImages([]);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-design-image', {
+        body: { prompt: aiPrompt }
+      });
+
+      if (error) throw error;
+      if (data.error) throw new Error(data.error);
+
+      if (data.images && data.images.length > 0) {
+        setGeneratedImages(data.images.map((url: string) => ({ 
+          url, 
+          description: data.description 
+        })));
+        toast.success('Design image generated!');
+      } else {
+        toast.info('No image generated. Try a different prompt.');
+      }
+    } catch (error) {
+      console.error('Error generating image:', error);
+      if (error instanceof Error) {
+        if (error.message.includes('Rate limit') || error.message.includes('429')) {
+          toast.error('Too many requests. Please wait a moment.');
+        } else if (error.message.includes('Payment') || error.message.includes('402')) {
+          toast.error('AI credits exhausted. Please add more credits.');
+        } else {
+          toast.error('Failed to generate. Try again.');
+        }
+      } else {
+        toast.error('An error occurred');
+      }
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const addGeneratedImageToCanvas = (imageUrl: string) => {
+    const newObj: DesignObject = {
+      id: Date.now(),
+      type: 'image' as const,
+      x: currentDimensions.width / 2 - 100,
+      y: currentDimensions.height / 2 - 100,
+      width: 200,
+      height: 200,
+      fill: 'transparent',
+      imageUrl
+    };
+    multiZone.updateCurrentZone([...objects, newObj]);
+    setSelectedObject(newObj);
+    saveHistory();
+    toast.success('Image added to canvas!');
+  };
+
+  const aiPromptExamples = [
+    'Bold urban streetwear with Japanese text',
+    'Minimalist skull with neon accents',
+    'Vintage 90s hip-hop aesthetic',
+    'Abstract geometric patterns',
+  ];
+
   const handleSaveDesign = async () => {
     const name = prompt('Enter a name for your design:');
     if (!name) return;
@@ -526,6 +646,7 @@ const EnhancedDesignStudio = () => {
             {/* Tabs */}
             <div className="flex gap-1 bg-zinc-800 p-1 rounded-lg">
               {[
+                { id: 'ai', icon: Sparkles, label: 'AI' },
                 { id: 'templates', icon: Layout, label: 'Templates' },
                 { id: 'text', icon: Type, label: 'Text' },
                 { id: 'graphics', icon: Image, label: 'Graphics' },
@@ -542,6 +663,87 @@ const EnhancedDesignStudio = () => {
                 </button>
               ))}
             </div>
+
+            {/* AI Tab */}
+            {activeTab === 'ai' && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <Sparkles className="w-4 h-4 text-lime-400" />
+                  <span>AI Design Generator</span>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs text-zinc-400">Describe your design</label>
+                  <textarea
+                    value={aiPrompt}
+                    onChange={(e) => setAiPrompt(e.target.value)}
+                    placeholder="e.g., A bold streetwear design with Japanese text and neon colors..."
+                    className="w-full min-h-[80px] px-3 py-2 bg-zinc-950 border border-zinc-700 rounded-lg text-sm resize-none"
+                  />
+                </div>
+
+                {/* Quick prompts */}
+                <div className="flex flex-wrap gap-1">
+                  {aiPromptExamples.map((example, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setAiPrompt(example)}
+                      className="text-xs px-2 py-1 bg-zinc-800 hover:bg-zinc-700 rounded transition-colors"
+                    >
+                      {example.substring(0, 18)}...
+                    </button>
+                  ))}
+                </div>
+
+                <button
+                  onClick={handleGenerateImage}
+                  disabled={isGenerating || !aiPrompt.trim()}
+                  className="w-full py-3 bg-lime-500 hover:bg-lime-400 text-black rounded-lg flex items-center justify-center gap-2 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isGenerating ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <Wand2 className="w-4 h-4" />
+                      Generate Design
+                    </>
+                  )}
+                </button>
+
+                {/* Generated Images */}
+                {generatedImages.length > 0 && (
+                  <div className="space-y-2">
+                    <label className="text-xs text-zinc-400">Generated Designs</label>
+                    <div className="space-y-2">
+                      {generatedImages.map((image, i) => (
+                        <div
+                          key={i}
+                          className="relative group rounded-lg overflow-hidden border border-zinc-700 bg-zinc-900"
+                        >
+                          <img 
+                            src={image.url} 
+                            alt={`Generated design ${i + 1}`}
+                            className="w-full h-auto object-contain"
+                          />
+                          <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <button
+                              onClick={() => addGeneratedImageToCanvas(image.url)}
+                              className="px-4 py-2 bg-lime-500 text-black rounded-lg flex items-center gap-2 font-medium"
+                            >
+                              <Plus className="w-4 h-4" />
+                              Add to Canvas
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {activeTab === 'templates' && (
               <div className="space-y-3">

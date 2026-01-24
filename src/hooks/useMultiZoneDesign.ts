@@ -19,6 +19,7 @@ export interface DesignObject {
   strokeWidth?: number;
   icon?: string;
   size?: number;
+  imageUrl?: string;
 }
 
 interface ZoneDesigns {
