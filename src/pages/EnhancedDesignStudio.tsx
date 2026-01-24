@@ -430,11 +430,37 @@ const EnhancedDesignStudio = () => {
   };
 
   const loadTemplateHandler = async (template: any) => {
+    console.log('Using template:', template.id);
+    
+    // Safely extract design objects from template config
+    let designObjects: DesignObject[] = [];
+    
     if (template.config) {
-      multiZone.updateCurrentZone(template.config);
+      // Handle different config formats
+      if (Array.isArray(template.config)) {
+        designObjects = template.config;
+      } else if (typeof template.config === 'object' && template.config !== null) {
+        // If config has a 'objects' or 'elements' array property
+        if (Array.isArray(template.config.objects)) {
+          designObjects = template.config.objects;
+        } else if (Array.isArray(template.config.elements)) {
+          designObjects = template.config.elements;
+        } else if (Array.isArray(template.config.front)) {
+          // Multi-zone template format
+          designObjects = template.config.front;
+        }
+      }
     }
+    
+    multiZone.updateCurrentZone(designObjects);
     setSelectedObject(null);
-    await useTemplate(template.id);
+    
+    try {
+      await useTemplate(template.id);
+    } catch (err) {
+      console.error('Failed to track template use:', err);
+    }
+    
     saveHistory();
   };
 
