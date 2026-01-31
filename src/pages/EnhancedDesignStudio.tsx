@@ -38,6 +38,9 @@ const EnhancedDesignStudio = () => {
   const [hoveredObject, setHoveredObject] = useState<DesignObject | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [editingTextId, setEditingTextId] = useState<number | null>(null);
+  const [editingTextValue, setEditingTextValue] = useState('');
+  const textInputRef = useRef<HTMLInputElement>(null);
   
   // History
   const [history, setHistory] = useState<string[]>([]);
@@ -402,6 +405,51 @@ const EnhancedDesignStudio = () => {
       saveHistory();
     }
     setIsDragging(false);
+  };
+
+  const handleCanvasDoubleClick = (e: React.MouseEvent) => {
+    const canvas = activeCanvasRef.current;
+    if (!canvas || !canvasContext) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / canvasZoom;
+    const y = (e.clientY - rect.top) / canvasZoom;
+
+    const clicked = [...objects].reverse().find(obj => isPointInObject(x, y, obj));
+    
+    if (clicked && clicked.type === 'text' && clicked.text) {
+      setEditingTextId(clicked.id);
+      setEditingTextValue(clicked.text);
+      setTimeout(() => textInputRef.current?.focus(), 0);
+    }
+  };
+
+  const handleTextEditChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setEditingTextValue(e.target.value);
+  };
+
+  const handleTextEditSubmit = () => {
+    if (editingTextId === null) return;
+    
+    multiZone.updateCurrentZone(
+      objects.map(obj => 
+        obj.id === editingTextId 
+          ? { ...obj, text: editingTextValue }
+          : obj
+      )
+    );
+    setEditingTextId(null);
+    setEditingTextValue('');
+    saveHistory();
+  };
+
+  const handleTextEditKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleTextEditSubmit();
+    } else if (e.key === 'Escape') {
+      setEditingTextId(null);
+      setEditingTextValue('');
+    }
   };
 
   const isPointInObject = (x: number, y: number, obj: DesignObject): boolean => {
@@ -1089,6 +1137,7 @@ const EnhancedDesignStudio = () => {
                 onMouseMove={handleCanvasMouseMove}
                 onMouseUp={handleCanvasMouseUp}
                 onMouseLeave={handleCanvasMouseUp}
+                onDoubleClick={handleCanvasDoubleClick}
                 className="rounded-lg shadow-2xl border border-zinc-700"
                 style={{
                   backgroundColor: '#1a1a1a',
@@ -1096,6 +1145,43 @@ const EnhancedDesignStudio = () => {
                   transformOrigin: 'center center'
                 }}
               />
+              
+              {/* Text Editing Overlay */}
+              {editingTextId !== null && (() => {
+                const editingObj = objects.find(o => o.id === editingTextId);
+                if (!editingObj) return null;
+                const bounds = getObjectBounds(editingObj);
+                if (!bounds) return null;
+                
+                return (
+                  <div 
+                    className="absolute"
+                    style={{
+                      left: bounds.x * canvasZoom,
+                      top: bounds.y * canvasZoom,
+                      transform: `scale(${canvasZoom})`,
+                      transformOrigin: 'top left'
+                    }}
+                  >
+                    <input
+                      ref={textInputRef}
+                      type="text"
+                      value={editingTextValue}
+                      onChange={handleTextEditChange}
+                      onKeyDown={handleTextEditKeyDown}
+                      onBlur={handleTextEditSubmit}
+                      className="bg-transparent border-2 border-lime-500 outline-none px-2 py-1 text-white"
+                      style={{
+                        fontSize: `${editingObj.fontSize || 48}px`,
+                        fontFamily: editingObj.fontFamily || 'Arial Black',
+                        color: editingObj.fill,
+                        minWidth: '100px',
+                        width: `${bounds.width + 20}px`,
+                      }}
+                    />
+                  </div>
+                );
+              })()}
               
               <div className="absolute -bottom-8 left-0 right-0 text-center text-xs text-zinc-500">
                 {currentDimensions.width} × {currentDimensions.height}px • {currentDimensions.label}
