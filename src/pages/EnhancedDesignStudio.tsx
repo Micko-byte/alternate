@@ -165,18 +165,19 @@ const EnhancedDesignStudio = () => {
     ctx.save();
 
     if (obj.type === 'text' && obj.text) {
-      ctx.font = `${obj.fontSize || 48}px ${obj.fontFamily || 'Arial Black'}`;
+      const fontSize = obj.fontSize || 48;
+      ctx.font = `${fontSize}px ${obj.fontFamily || 'Arial Black'}`;
       ctx.fillStyle = obj.fill;
       ctx.textAlign = 'left';
-      ctx.fillText(obj.text, obj.x, obj.y);
+      // Draw text with y as top position (add fontSize for baseline)
+      ctx.fillText(obj.text, obj.x, obj.y + fontSize);
 
       if (isSelected || isHovered) {
         const metrics = ctx.measureText(obj.text);
         const width = metrics.width;
-        const height = obj.fontSize || 48;
         ctx.strokeStyle = isSelected ? '#84cc16' : 'rgba(132, 204, 22, 0.5)';
         ctx.lineWidth = isSelected ? 2 : 1;
-        ctx.strokeRect(obj.x - 5, obj.y - height - 5, width + 10, height + 10);
+        ctx.strokeRect(obj.x - 5, obj.y - 5, width + 10, fontSize + 10);
       }
     } else if (obj.type === 'shape') {
       ctx.fillStyle = obj.fill;
@@ -279,13 +280,14 @@ const EnhancedDesignStudio = () => {
     if (!canvasContext) return null;
 
     if (obj.type === 'text' && obj.text) {
-      canvasContext.font = `${obj.fontSize || 48}px ${obj.fontFamily || 'Arial Black'}`;
+      const fontSize = obj.fontSize || 48;
+      canvasContext.font = `${fontSize}px ${obj.fontFamily || 'Arial Black'}`;
       const metrics = canvasContext.measureText(obj.text);
       return {
         x: obj.x,
-        y: obj.y - (obj.fontSize || 48),
+        y: obj.y,
         width: metrics.width,
-        height: obj.fontSize || 48
+        height: fontSize
       };
     } else if (obj.type === 'shape' && obj.shape === 'rect') {
       return {
