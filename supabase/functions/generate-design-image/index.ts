@@ -18,12 +18,23 @@ serve(async (req) => {
       throw new Error('LOVABLE_API_KEY is not configured');
     }
 
-    console.log('Generating design image for prompt:', prompt);
+    console.log('Generating design graphic for prompt:', prompt);
 
-    const enhancedPrompt = `Create a streetwear t-shirt design: ${prompt}. 
-    Style: Bold, urban, high contrast, suitable for screen printing on a t-shirt. 
-    Background: transparent or solid color. 
-    Make it visually striking and trendy.`;
+    // CRITICAL: Ask for isolated graphic only, NOT a t-shirt mockup
+    const enhancedPrompt = `Create an ISOLATED graphic design element for: ${prompt}
+
+IMPORTANT REQUIREMENTS:
+- Generate ONLY the graphic/artwork itself - NO t-shirt, NO clothing, NO mockup
+- The design should be a standalone illustration, logo, typography, or artwork
+- Use a plain solid dark background (dark gray or black) - NOT transparent
+- High contrast colors that pop
+- Bold, urban streetwear aesthetic
+- Clean edges suitable for print
+- DO NOT show any clothing items, mannequins, or product mockups
+- Just the raw graphic design element that can be placed on apparel
+
+Think of this as creating a sticker, patch, or graphic that would go ON a shirt, not a picture OF a shirt.`;
+
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
