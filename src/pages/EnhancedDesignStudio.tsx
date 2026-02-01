@@ -5,7 +5,7 @@ import {
   ArrowUp, ArrowDown, Undo2, Redo2, Plus, Circle, Square, Search,
   Filter, X, Star, RotateCw, AlignCenter, AlignLeft, AlignRight,
   ZoomIn, ZoomOut, Grid3x3, Lock, Unlock, Eye, EyeOff, Layers, Sparkles, 
-  Loader2, Wand2
+  Loader2, Wand2, PenTool, Monitor
 } from 'lucide-react';
 
 import { useTemplateFilters } from '@/hooks/useTemplateFilters';
@@ -16,6 +16,7 @@ import { useMultiZoneDesign } from '@/hooks/useMultiZoneDesign';
 import type { DesignObject } from '@/hooks/useMultiZoneDesign';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import MockupCanvas, { MockupCanvasRef } from '@/components/design-studio/MockupCanvas';
 
 interface GeneratedImage {
   url: string;
@@ -23,6 +24,10 @@ interface GeneratedImage {
 }
 
 const EnhancedDesignStudio = () => {
+  // Studio Mode: 'design' = canvas editor, 'mockup' = t-shirt placement
+  const [studioMode, setStudioMode] = useState<'design' | 'mockup'>('design');
+  const mockupCanvasRef = useRef<MockupCanvasRef>(null);
+  
   // UI State
   const [activeTab, setActiveTab] = useState('ai');
   const [activeColor, setActiveColor] = useState('#84cc16');
@@ -787,27 +792,61 @@ const EnhancedDesignStudio = () => {
             </div>
             <span className="font-bold">ALTERNATE</span>
           </Link>
-          <span className="text-zinc-500 text-sm">Design Studio Pro</span>
+          
+          {/* Mode Toggle */}
+          <div className="flex bg-zinc-800 rounded-lg p-1">
+            <button
+              onClick={() => setStudioMode('design')}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium flex items-center gap-1.5 transition-all ${
+                studioMode === 'design'
+                  ? 'bg-lime-500 text-black'
+                  : 'text-zinc-400 hover:text-white'
+              }`}
+            >
+              <PenTool className="w-3.5 h-3.5" />
+              Design
+            </button>
+            <button
+              onClick={() => setStudioMode('mockup')}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium flex items-center gap-1.5 transition-all ${
+                studioMode === 'mockup'
+                  ? 'bg-lime-500 text-black'
+                  : 'text-zinc-400 hover:text-white'
+              }`}
+            >
+              <Shirt className="w-3.5 h-3.5" />
+              Mockup
+            </button>
+          </div>
         </div>
         
         <div className="flex items-center gap-2">
-          <button
-            onClick={handleSaveDesign}
-            className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg flex items-center gap-2 text-sm"
-          >
-            <Save className="w-4 h-4" />
-            Save
-          </button>
+          {studioMode === 'design' && (
+            <button
+              onClick={handleSaveDesign}
+              className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg flex items-center gap-2 text-sm"
+            >
+              <Save className="w-4 h-4" />
+              Save
+            </button>
+          )}
           <button className="px-4 py-2 bg-lime-500 hover:bg-lime-400 text-black rounded-lg flex items-center gap-2 text-sm font-medium">
             <Download className="w-4 h-4" />
-            Download
+            {studioMode === 'mockup' ? 'Export Design' : 'Download'}
           </button>
         </div>
       </header>
 
       <div className="flex-1 flex overflow-hidden">
-        {/* Left Sidebar */}
-        <div className="w-72 border-r border-zinc-800 bg-zinc-900 overflow-y-auto">
+        {/* MOCKUP MODE */}
+        {studioMode === 'mockup' ? (
+          <div className="flex-1 flex items-center justify-center bg-zinc-900 overflow-auto">
+            <MockupCanvas ref={mockupCanvasRef} />
+          </div>
+        ) : (
+          <>
+            {/* Left Sidebar */}
+            <div className="w-72 border-r border-zinc-800 bg-zinc-900 overflow-y-auto">
           <div className="p-4 space-y-4">
             {/* Tabs */}
             <div className="flex gap-1 bg-zinc-800 p-1 rounded-lg">
@@ -1347,6 +1386,8 @@ const EnhancedDesignStudio = () => {
             </div>
           </div>
         </div>
+          </>
+        )}
       </div>
     </div>
   );
