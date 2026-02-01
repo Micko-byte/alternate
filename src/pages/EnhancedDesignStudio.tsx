@@ -460,6 +460,57 @@ const EnhancedDesignStudio = () => {
            y >= bounds.y && y <= bounds.y + bounds.height;
   };
 
+  // Enhanced drag & drop for file uploads
+  const [isDragOver, setIsDragOver] = useState(false);
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+
+    const file = e.dataTransfer.files[0];
+
+    if (file && file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const imageUrl = event.target?.result as string;
+        addImageToCanvas(imageUrl);
+      };
+      reader.readAsDataURL(file);
+    } else if (file) {
+      toast.error('Please drop an image file (PNG, JPG, GIF, etc.)');
+    }
+  };
+
+  const addImageToCanvas = (imageUrl: string) => {
+    const newObj: DesignObject = {
+      id: Date.now(),
+      type: 'image',
+      x: currentDimensions.width / 2 - 100,
+      y: currentDimensions.height / 2 - 100,
+      width: 200,
+      height: 200,
+      imageUrl,
+      fill: '#ffffff'
+    };
+    multiZone.updateCurrentZone([...objects, newObj]);
+    setSelectedObject(newObj);
+    saveHistory();
+    toast.success('Image added to canvas!');
+  };
+
   const deleteSelected = () => {
     if (!selectedObject) return;
     multiZone.updateCurrentZone(objects.filter(obj => obj.id !== selectedObject.id));
@@ -1129,8 +1180,24 @@ const EnhancedDesignStudio = () => {
           </div>
 
           {/* Canvas Area */}
-          <div className="flex-1 p-8 overflow-auto bg-zinc-900/50 flex items-center justify-center">
+          <div 
+            className="flex-1 p-8 overflow-auto bg-zinc-900/50 flex items-center justify-center"
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+          >
             <div className="relative">
+              {/* Drag & Drop Overlay */}
+              {isDragOver && (
+                <div className="absolute inset-0 z-50 bg-lime-500/20 border-2 border-dashed border-lime-500 rounded-lg flex items-center justify-center pointer-events-none">
+                  <div className="bg-zinc-900/90 px-6 py-4 rounded-lg text-center">
+                    <Image className="w-10 h-10 text-lime-500 mx-auto mb-2" />
+                    <p className="text-lime-500 font-medium">Drop image here</p>
+                    <p className="text-zinc-400 text-sm">PNG, JPG, GIF, SVG</p>
+                  </div>
+                </div>
+              )}
+              
               <canvas
                 ref={activeCanvasRef}
                 onMouseDown={handleCanvasMouseDown}
@@ -1138,7 +1205,9 @@ const EnhancedDesignStudio = () => {
                 onMouseUp={handleCanvasMouseUp}
                 onMouseLeave={handleCanvasMouseUp}
                 onDoubleClick={handleCanvasDoubleClick}
-                className="rounded-lg shadow-2xl border border-zinc-700"
+                className={`rounded-lg shadow-2xl border transition-colors ${
+                  isDragOver ? 'border-lime-500' : 'border-zinc-700'
+                }`}
                 style={{
                   backgroundColor: '#1a1a1a',
                   transform: `scale(${canvasZoom})`,
