@@ -1,13 +1,18 @@
-project_id = "wcpmeginkorfbkkkilgs"
+project_id = "alternate"
 
-[functions.generate-design]
+# Functions check the signed-in user themselves (works with the new publishable keys)
+[functions.tryon-process]
 verify_jwt = false
 
-[functions.generate-design-image]
+[functions.payments-init]
 verify_jwt = false
 
-[functions.search-design-references]
+[functions.payments-verify]
 verify_jwt = false
 
-[functions.generate-design]
+# Paystack calls this directly; it is verified with the Paystack signature
+[functions.paystack-webhook]
+verify_jwt = false
+
+[functions.draft-product]
 verify_jwt = false

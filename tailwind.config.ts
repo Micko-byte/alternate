@@ -1,113 +1,43 @@
 import type { Config } from "tailwindcss";
 
+// Layout language after peregrineclothing.co.uk; type from FID & Co. (Nohemi + Satoshi).
 export default {
-  darkMode: ["class"],
-  content: ["./pages/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./app/**/*.{ts,tsx}", "./src/**/*.{ts,tsx}"],
-  prefix: "",
+  content: ["./index.html", "./src/**/*.{ts,tsx}"],
   theme: {
-    container: {
-      center: true,
-      padding: "1.5rem",
-      screens: {
-        "2xl": "1400px",
-      },
-    },
     extend: {
-      fontFamily: {
-        display: ["Bebas Neue", "sans-serif"],
-        body: ["Inter", "sans-serif"],
-      },
       colors: {
-        border: "hsl(var(--border))",
-        input: "hsl(var(--input))",
-        ring: "hsl(var(--ring))",
-        background: "hsl(var(--background))",
-        foreground: "hsl(var(--foreground))",
-        primary: {
-          DEFAULT: "hsl(var(--primary))",
-          foreground: "hsl(var(--primary-foreground))",
-        },
-        secondary: {
-          DEFAULT: "hsl(var(--secondary))",
-          foreground: "hsl(var(--secondary-foreground))",
-        },
-        destructive: {
-          DEFAULT: "hsl(var(--destructive))",
-          foreground: "hsl(var(--destructive-foreground))",
-        },
-        muted: {
-          DEFAULT: "hsl(var(--muted))",
-          foreground: "hsl(var(--muted-foreground))",
-        },
-        accent: {
-          DEFAULT: "hsl(var(--accent))",
-          foreground: "hsl(var(--accent-foreground))",
-        },
-        popover: {
-          DEFAULT: "hsl(var(--popover))",
-          foreground: "hsl(var(--popover-foreground))",
-        },
-        card: {
-          DEFAULT: "hsl(var(--card))",
-          foreground: "hsl(var(--card-foreground))",
-        },
-        neon: {
-          lime: "hsl(var(--neon-lime))",
-          "lime-glow": "hsl(var(--neon-lime-glow))",
-          yellow: "hsl(var(--neon-yellow))",
-          pink: "hsl(var(--neon-pink))",
-          cyan: "hsl(var(--neon-cyan))",
-        },
-        brand: {
-          charcoal: "hsl(var(--brand-charcoal))",
-          deep: "hsl(var(--brand-deep))",
-        },
-        sidebar: {
-          DEFAULT: "hsl(var(--sidebar-background))",
-          foreground: "hsl(var(--sidebar-foreground))",
-          primary: "hsl(var(--sidebar-primary))",
-          "primary-foreground": "hsl(var(--sidebar-primary-foreground))",
-          accent: "hsl(var(--sidebar-accent))",
-          "accent-foreground": "hsl(var(--sidebar-accent-foreground))",
-          border: "hsl(var(--sidebar-border))",
-          ring: "hsl(var(--sidebar-ring))",
-        },
+        paper: "#FFFFFF",
+        surface: "#FFFFFF",
+        sunk: "#F3F2EE",
+        ink: "#191710",
+        muted: "#686868",
+        grey: "#AEAEAE",
+        rule: "#E4E2DC",
+        accent: { DEFAULT: "#222A41", deep: "#161C2E", soft: "#E7E9EF" },
+        mustard: { DEFAULT: "#DBAE49", soft: "#F6EDD5" },
+        good: { DEFAULT: "#2E6B4F", soft: "#E3EFE8" },
+        warn: { DEFAULT: "#8A6414", soft: "#F6EDD5" },
+        bad: { DEFAULT: "#A8322A", soft: "#F7E3E1" },
       },
-      borderRadius: {
-        lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
+      fontFamily: {
+        display: ['"Nohemi"', '"Satoshi"', "system-ui", "sans-serif"],
+        sans: ['"Satoshi"', '"Segoe UI"', "system-ui", "sans-serif"],
+        mono: ['"IBM Plex Mono"', "ui-monospace", "Consolas", "monospace"],
+      },
+      letterSpacing: {
+        label: "0.08em",
+        brand: "0.2em",
+        tightest: "-0.035em",
       },
       keyframes: {
-        "accordion-down": {
-          from: { height: "0" },
-          to: { height: "var(--radix-accordion-content-height)" },
-        },
-        "accordion-up": {
-          from: { height: "var(--radix-accordion-content-height)" },
-          to: { height: "0" },
-        },
-        "fade-up": {
-          from: { opacity: "0", transform: "translateY(40px)" },
-          to: { opacity: "1", transform: "translateY(0)" },
-        },
-        "fade-in": {
-          from: { opacity: "0" },
-          to: { opacity: "1" },
-        },
-        marquee: {
-          from: { transform: "translateX(0)" },
-          to: { transform: "translateX(-50%)" },
-        },
+        rise: { from: { opacity: "0.001", transform: "translateY(10px)" }, to: { opacity: "1", transform: "none" } },
+        marquee: { from: { transform: "translateX(0)" }, to: { transform: "translateX(-50%)" } },
       },
       animation: {
-        "accordion-down": "accordion-down 0.2s ease-out",
-        "accordion-up": "accordion-up 0.2s ease-out",
-        "fade-up": "fade-up 0.8s ease-out forwards",
-        "fade-in": "fade-in 0.6s ease-out forwards",
-        marquee: "marquee 20s linear infinite",
+        rise: "rise .6s cubic-bezier(.2,.7,.2,1) both",
+        marquee: "marquee 38s linear infinite",
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [],
 } satisfies Config;

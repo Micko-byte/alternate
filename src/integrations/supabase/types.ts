@@ -10,98 +10,1163 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.1"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
-      design_templates: {
+      body_photos: {
         Row: {
-          category: string
-          config: Json
+          angle: Database["public"]["Enums"]["photo_angle"]
+          confirmed_self: boolean
           created_at: string
-          description: string | null
+          edit_mask_path: string | null
+          face_mask_path: string | null
+          height: number | null
           id: string
-          is_premium: boolean
+          is_active: boolean
+          mask_lower_path: string | null
+          mask_upper_path: string | null
+          storage_path: string
+          user_id: string
+          width: number | null
+        }
+        Insert: {
+          angle: Database["public"]["Enums"]["photo_angle"]
+          confirmed_self?: boolean
+          created_at?: string
+          edit_mask_path?: string | null
+          face_mask_path?: string | null
+          height?: number | null
+          id?: string
+          is_active?: boolean
+          mask_lower_path?: string | null
+          mask_upper_path?: string | null
+          storage_path: string
+          user_id: string
+          width?: number | null
+        }
+        Update: {
+          angle?: Database["public"]["Enums"]["photo_angle"]
+          confirmed_self?: boolean
+          created_at?: string
+          edit_mask_path?: string | null
+          face_mask_path?: string | null
+          height?: number | null
+          id?: string
+          is_active?: boolean
+          mask_lower_path?: string | null
+          mask_upper_path?: string | null
+          storage_path?: string
+          user_id?: string
+          width?: number | null
+        }
+        Relationships: []
+      }
+      consents: {
+        Row: {
+          consent_type: Database["public"]["Enums"]["consent_type"]
+          granted_at: string
+          id: string
+          policy_version: string
+          user_id: string
+          withdrawn_at: string | null
+        }
+        Insert: {
+          consent_type: Database["public"]["Enums"]["consent_type"]
+          granted_at?: string
+          id?: string
+          policy_version: string
+          user_id: string
+          withdrawn_at?: string | null
+        }
+        Update: {
+          consent_type?: Database["public"]["Enums"]["consent_type"]
+          granted_at?: string
+          id?: string
+          policy_version?: string
+          user_id?: string
+          withdrawn_at?: string | null
+        }
+        Relationships: []
+      }
+      credit_ledger: {
+        Row: {
+          amount: number
+          created_at: string
+          entry_type: Database["public"]["Enums"]["credit_entry_type"]
+          id: string
+          note: string | null
+          payment_id: string | null
+          tryon_id: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          entry_type: Database["public"]["Enums"]["credit_entry_type"]
+          id?: string
+          note?: string | null
+          payment_id?: string | null
+          tryon_id?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          entry_type?: Database["public"]["Enums"]["credit_entry_type"]
+          id?: string
+          note?: string | null
+          payment_id?: string | null
+          tryon_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credit_ledger_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_ledger_tryon_id_fkey"
+            columns: ["tryon_id"]
+            isOneToOne: false
+            referencedRelation: "tryons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      credit_packs: {
+        Row: {
+          created_at: string
+          credits: number
+          id: string
+          is_active: boolean
           name: string
-          preview_url: string | null
+          price_kes: number
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          credits: number
+          id?: string
+          is_active?: boolean
+          name: string
+          price_kes: number
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          credits?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          price_kes?: number
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      data_deletion_requests: {
+        Row: {
+          completed_at: string | null
+          id: string
+          requested_at: string
+          user_id: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          id?: string
+          requested_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          id?: string
+          requested_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      garment_uploads: {
+        Row: {
+          category: Database["public"]["Enums"]["garment_category"] | null
+          created_at: string
+          cutout_path: string | null
+          id: string
+          source_note: string | null
+          storage_path: string
+          user_id: string
+        }
+        Insert: {
+          category?: Database["public"]["Enums"]["garment_category"] | null
+          created_at?: string
+          cutout_path?: string | null
+          id?: string
+          source_note?: string | null
+          storage_path: string
+          user_id: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["garment_category"] | null
+          created_at?: string
+          cutout_path?: string | null
+          id?: string
+          source_note?: string | null
+          storage_path?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      orders: {
+        Row: {
+          commission_kes: number
+          commission_rate: number
+          created_at: string
+          delivery_notes: string | null
+          delivery_phone: string | null
+          id: string
+          product_id: string | null
+          provider_reference: string | null
+          quantity: number
+          status: Database["public"]["Enums"]["order_status"]
+          store_id: string
+          total_kes: number
+          tryon_id: string | null
+          unit_price_kes: number
+          updated_at: string
+          user_id: string | null
+          variant_id: string | null
+        }
+        Insert: {
+          commission_kes: number
+          commission_rate: number
+          created_at?: string
+          delivery_notes?: string | null
+          delivery_phone?: string | null
+          id?: string
+          product_id?: string | null
+          provider_reference?: string | null
+          quantity?: number
+          status?: Database["public"]["Enums"]["order_status"]
+          store_id: string
+          total_kes: number
+          tryon_id?: string | null
+          unit_price_kes: number
+          updated_at?: string
+          user_id?: string | null
+          variant_id?: string | null
+        }
+        Update: {
+          commission_kes?: number
+          commission_rate?: number
+          created_at?: string
+          delivery_notes?: string | null
+          delivery_phone?: string | null
+          id?: string
+          product_id?: string | null
+          provider_reference?: string | null
+          quantity?: number
+          status?: Database["public"]["Enums"]["order_status"]
+          store_id?: string
+          total_kes?: number
+          tryon_id?: string | null
+          unit_price_kes?: number
+          updated_at?: string
+          user_id?: string | null
+          variant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_tryon_id_fkey"
+            columns: ["tryon_id"]
+            isOneToOne: false
+            referencedRelation: "tryons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payments: {
+        Row: {
+          amount_kes: number
+          created_at: string
+          credit_pack_id: string | null
+          credits: number
+          id: string
+          metadata: Json
+          paid_at: string | null
+          provider: string
+          provider_reference: string
+          referral_store_id: string | null
+          status: Database["public"]["Enums"]["payment_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount_kes: number
+          created_at?: string
+          credit_pack_id?: string | null
+          credits: number
+          id?: string
+          metadata?: Json
+          paid_at?: string | null
+          provider?: string
+          provider_reference: string
+          referral_store_id?: string | null
+          status?: Database["public"]["Enums"]["payment_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount_kes?: number
+          created_at?: string
+          credit_pack_id?: string | null
+          credits?: number
+          id?: string
+          metadata?: Json
+          paid_at?: string | null
+          provider?: string
+          provider_reference?: string
+          referral_store_id?: string | null
+          status?: Database["public"]["Enums"]["payment_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_credit_pack_id_fkey"
+            columns: ["credit_pack_id"]
+            isOneToOne: false
+            referencedRelation: "credit_packs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_referral_store_id_fkey"
+            columns: ["referral_store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_media: {
+        Row: {
+          created_at: string
+          duration_seconds: number | null
+          extracted_from: string | null
+          height: number | null
+          id: string
+          is_tryon_source: boolean
+          kind: Database["public"]["Enums"]["media_kind"]
+          position: number
+          product_id: string
+          storage_path: string
+          store_id: string
+          width: number | null
+        }
+        Insert: {
+          created_at?: string
+          duration_seconds?: number | null
+          extracted_from?: string | null
+          height?: number | null
+          id?: string
+          is_tryon_source?: boolean
+          kind: Database["public"]["Enums"]["media_kind"]
+          position?: number
+          product_id: string
+          storage_path: string
+          store_id: string
+          width?: number | null
+        }
+        Update: {
+          created_at?: string
+          duration_seconds?: number | null
+          extracted_from?: string | null
+          height?: number | null
+          id?: string
+          is_tryon_source?: boolean
+          kind?: Database["public"]["Enums"]["media_kind"]
+          position?: number
+          product_id?: string
+          storage_path?: string
+          store_id?: string
+          width?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_media_extracted_from_fkey"
+            columns: ["extracted_from"]
+            isOneToOne: false
+            referencedRelation: "product_media"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_media_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_media_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_variants: {
+        Row: {
+          created_at: string
+          id: string
+          product_id: string
+          size_label: string
+          size_max: number | null
+          size_min: number | null
+          size_system: Database["public"]["Enums"]["size_system"]
+          stock_qty: number
           updated_at: string
         }
         Insert: {
-          category?: string
-          config: Json
           created_at?: string
-          description?: string | null
           id?: string
-          is_premium?: boolean
-          name: string
-          preview_url?: string | null
+          product_id: string
+          size_label: string
+          size_max?: number | null
+          size_min?: number | null
+          size_system?: Database["public"]["Enums"]["size_system"]
+          stock_qty?: number
           updated_at?: string
         }
         Update: {
-          category?: string
-          config?: Json
           created_at?: string
-          description?: string | null
           id?: string
-          is_premium?: boolean
-          name?: string
-          preview_url?: string | null
+          product_id?: string
+          size_label?: string
+          size_max?: number | null
+          size_min?: number | null
+          size_system?: Database["public"]["Enums"]["size_system"]
+          stock_qty?: number
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "product_variants_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      products: {
+        Row: {
+          ai_cost_usd: number | null
+          ai_draft: Json | null
+          category: Database["public"]["Enums"]["garment_category"]
+          created_at: string
+          department: Database["public"]["Enums"]["department"]
+          description: string | null
+          garment_notes: string | null
+          id: string
+          import_source: string | null
+          is_one_of_a_kind: boolean
+          name: string
+          needs_review: boolean
+          price_kes: number
+          source_caption: string | null
+          status: Database["public"]["Enums"]["product_status"]
+          store_id: string
+          tags: string[]
+          updated_at: string
+        }
+        Insert: {
+          ai_cost_usd?: number | null
+          ai_draft?: Json | null
+          category: Database["public"]["Enums"]["garment_category"]
+          created_at?: string
+          department?: Database["public"]["Enums"]["department"]
+          description?: string | null
+          garment_notes?: string | null
+          id?: string
+          import_source?: string | null
+          is_one_of_a_kind?: boolean
+          name: string
+          needs_review?: boolean
+          price_kes: number
+          source_caption?: string | null
+          status?: Database["public"]["Enums"]["product_status"]
+          store_id: string
+          tags?: string[]
+          updated_at?: string
+        }
+        Update: {
+          ai_cost_usd?: number | null
+          ai_draft?: Json | null
+          category?: Database["public"]["Enums"]["garment_category"]
+          created_at?: string
+          department?: Database["public"]["Enums"]["department"]
+          description?: string | null
+          garment_notes?: string | null
+          id?: string
+          import_source?: string | null
+          is_one_of_a_kind?: boolean
+          name?: string
+          needs_review?: boolean
+          price_kes?: number
+          source_caption?: string | null
+          status?: Database["public"]["Enums"]["product_status"]
+          store_id?: string
+          tags?: string[]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
-          avatar_url: string | null
           created_at: string
+          date_of_birth: string | null
           display_name: string | null
-          email: string | null
+          height_cm: number | null
           id: string
+          phone: string | null
+          preferred_fit: Database["public"]["Enums"]["fit_style"]
+          shops_for: Database["public"]["Enums"]["shops_for"] | null
           updated_at: string
+          weight_kg: number | null
         }
         Insert: {
-          avatar_url?: string | null
           created_at?: string
+          date_of_birth?: string | null
           display_name?: string | null
-          email?: string | null
+          height_cm?: number | null
           id: string
+          phone?: string | null
+          preferred_fit?: Database["public"]["Enums"]["fit_style"]
+          shops_for?: Database["public"]["Enums"]["shops_for"] | null
           updated_at?: string
+          weight_kg?: number | null
         }
         Update: {
-          avatar_url?: string | null
           created_at?: string
+          date_of_birth?: string | null
           display_name?: string | null
-          email?: string | null
+          height_cm?: number | null
           id?: string
+          phone?: string | null
+          preferred_fit?: Database["public"]["Enums"]["fit_style"]
+          shops_for?: Database["public"]["Enums"]["shops_for"] | null
           updated_at?: string
+          weight_kg?: number | null
         }
         Relationships: []
       }
-      saved_designs: {
+      referral_earnings: {
+        Row: {
+          amount_kes: number
+          created_at: string
+          id: string
+          payment_id: string
+          payout_id: string | null
+          rate: number
+          store_id: string
+        }
+        Insert: {
+          amount_kes: number
+          created_at?: string
+          id?: string
+          payment_id: string
+          payout_id?: string | null
+          rate: number
+          store_id: string
+        }
+        Update: {
+          amount_kes?: number
+          created_at?: string
+          id?: string
+          payment_id?: string
+          payout_id?: string | null
+          rate?: number
+          store_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referral_earnings_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: true
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referral_earnings_payout_id_fkey"
+            columns: ["payout_id"]
+            isOneToOne: false
+            referencedRelation: "store_payouts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referral_earnings_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      referrals: {
         Row: {
           created_at: string
-          design_json: Json
+          referred_user_id: string
+          store_id: string
+        }
+        Insert: {
+          created_at?: string
+          referred_user_id: string
+          store_id: string
+        }
+        Update: {
+          created_at?: string
+          referred_user_id?: string
+          store_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referrals_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reports: {
+        Row: {
+          created_at: string
+          details: string | null
           id: string
-          name: string
-          thumbnail_url: string | null
-          updated_at: string
+          product_id: string | null
+          reason: Database["public"]["Enums"]["report_reason"]
+          reporter_id: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: Database["public"]["Enums"]["report_status"]
+          store_id: string | null
+          tryon_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          details?: string | null
+          id?: string
+          product_id?: string | null
+          reason: Database["public"]["Enums"]["report_reason"]
+          reporter_id?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["report_status"]
+          store_id?: string | null
+          tryon_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          details?: string | null
+          id?: string
+          product_id?: string | null
+          reason?: Database["public"]["Enums"]["report_reason"]
+          reporter_id?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["report_status"]
+          store_id?: string | null
+          tryon_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reports_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reports_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reports_tryon_id_fkey"
+            columns: ["tryon_id"]
+            isOneToOne: false
+            referencedRelation: "tryons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      saved_products: {
+        Row: {
+          created_at: string
+          product_id: string
           user_id: string
         }
         Insert: {
           created_at?: string
-          design_json: Json
-          id?: string
-          name?: string
-          thumbnail_url?: string | null
-          updated_at?: string
+          product_id: string
           user_id: string
         }
         Update: {
           created_at?: string
-          design_json?: Json
+          product_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saved_products_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      size_alerts: {
+        Row: {
+          created_at: string
+          id: string
+          notified_at: string | null
+          product_id: string
+          size_system: Database["public"]["Enums"]["size_system"]
+          size_value: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
           id?: string
+          notified_at?: string | null
+          product_id: string
+          size_system?: Database["public"]["Enums"]["size_system"]
+          size_value: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          notified_at?: string | null
+          product_id?: string
+          size_system?: Database["public"]["Enums"]["size_system"]
+          size_value?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "size_alerts_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      store_finance: {
+        Row: {
+          commission_rate: number
+          payout_phone: string | null
+          paystack_subaccount_code: string | null
+          referral_rate: number
+          store_id: string
+          updated_at: string
+        }
+        Insert: {
+          commission_rate?: number
+          payout_phone?: string | null
+          paystack_subaccount_code?: string | null
+          referral_rate?: number
+          store_id: string
+          updated_at?: string
+        }
+        Update: {
+          commission_rate?: number
+          payout_phone?: string | null
+          paystack_subaccount_code?: string | null
+          referral_rate?: number
+          store_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_finance_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: true
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      store_members: {
+        Row: {
+          created_at: string
+          role: Database["public"]["Enums"]["store_member_role"]
+          store_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          role?: Database["public"]["Enums"]["store_member_role"]
+          store_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          role?: Database["public"]["Enums"]["store_member_role"]
+          store_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_members_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      store_payouts: {
+        Row: {
+          amount_kes: number
+          failure_reason: string | null
+          id: string
+          paid_at: string | null
+          provider_reference: string | null
+          requested_at: string
+          status: Database["public"]["Enums"]["payout_status"]
+          store_id: string
+        }
+        Insert: {
+          amount_kes: number
+          failure_reason?: string | null
+          id?: string
+          paid_at?: string | null
+          provider_reference?: string | null
+          requested_at?: string
+          status?: Database["public"]["Enums"]["payout_status"]
+          store_id: string
+        }
+        Update: {
+          amount_kes?: number
+          failure_reason?: string | null
+          id?: string
+          paid_at?: string | null
+          provider_reference?: string | null
+          requested_at?: string
+          status?: Database["public"]["Enums"]["payout_status"]
+          store_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_payouts_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      store_subscription_payments: {
+        Row: {
+          amount_kes: number
+          created_at: string
+          id: string
+          period_end: string
+          period_start: string
+          plan: Database["public"]["Enums"]["store_plan"]
+          provider_reference: string
+          status: Database["public"]["Enums"]["payment_status"]
+          store_id: string
+        }
+        Insert: {
+          amount_kes: number
+          created_at?: string
+          id?: string
+          period_end: string
+          period_start: string
+          plan: Database["public"]["Enums"]["store_plan"]
+          provider_reference: string
+          status?: Database["public"]["Enums"]["payment_status"]
+          store_id: string
+        }
+        Update: {
+          amount_kes?: number
+          created_at?: string
+          id?: string
+          period_end?: string
+          period_start?: string
+          plan?: Database["public"]["Enums"]["store_plan"]
+          provider_reference?: string
+          status?: Database["public"]["Enums"]["payment_status"]
+          store_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_subscription_payments_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stores: {
+        Row: {
+          bio: string | null
+          cover_path: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          instagram_handle: string | null
+          location: string | null
+          logo_path: string | null
+          name: string
+          plan: Database["public"]["Enums"]["store_plan"]
+          plan_renews_at: string | null
+          referral_code: string
+          slug: string
+          status: Database["public"]["Enums"]["store_status"]
+          tiktok_handle: string | null
+          updated_at: string
+          whatsapp_phone: string | null
+        }
+        Insert: {
+          bio?: string | null
+          cover_path?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          instagram_handle?: string | null
+          location?: string | null
+          logo_path?: string | null
+          name: string
+          plan?: Database["public"]["Enums"]["store_plan"]
+          plan_renews_at?: string | null
+          referral_code?: string
+          slug: string
+          status?: Database["public"]["Enums"]["store_status"]
+          tiktok_handle?: string | null
+          updated_at?: string
+          whatsapp_phone?: string | null
+        }
+        Update: {
+          bio?: string | null
+          cover_path?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          instagram_handle?: string | null
+          location?: string | null
+          logo_path?: string | null
           name?: string
-          thumbnail_url?: string | null
+          plan?: Database["public"]["Enums"]["store_plan"]
+          plan_renews_at?: string | null
+          referral_code?: string
+          slug?: string
+          status?: Database["public"]["Enums"]["store_status"]
+          tiktok_handle?: string | null
+          updated_at?: string
+          whatsapp_phone?: string | null
+        }
+        Relationships: []
+      }
+      tryon_prices: {
+        Row: {
+          credits: number
+          quality: Database["public"]["Enums"]["tryon_quality"]
+        }
+        Insert: {
+          credits: number
+          quality: Database["public"]["Enums"]["tryon_quality"]
+        }
+        Update: {
+          credits?: number
+          quality?: Database["public"]["Enums"]["tryon_quality"]
+        }
+        Relationships: []
+      }
+      tryons: {
+        Row: {
+          attempts: number
+          body_photo_id: string
+          completed_at: string | null
+          cost_usd: number | null
+          created_at: string
+          credits_charged: number
+          edit_mask_path: string | null
+          engine: string | null
+          error_message: string | null
+          feedback: string | null
+          fit: Database["public"]["Enums"]["fit_style"]
+          garment_instruction: string | null
+          garment_upload_id: string | null
+          id: string
+          identity_score: number | null
+          product_id: string | null
+          quality: Database["public"]["Enums"]["tryon_quality"]
+          rating: number | null
+          result_path: string | null
+          shared_path: string | null
+          size_label: string | null
+          size_system: Database["public"]["Enums"]["size_system"] | null
+          size_value: number | null
+          started_at: string | null
+          status: Database["public"]["Enums"]["tryon_status"]
+          user_id: string
+        }
+        Insert: {
+          attempts?: number
+          body_photo_id: string
+          completed_at?: string | null
+          cost_usd?: number | null
+          created_at?: string
+          credits_charged?: number
+          edit_mask_path?: string | null
+          engine?: string | null
+          error_message?: string | null
+          feedback?: string | null
+          fit?: Database["public"]["Enums"]["fit_style"]
+          garment_instruction?: string | null
+          garment_upload_id?: string | null
+          id?: string
+          identity_score?: number | null
+          product_id?: string | null
+          quality?: Database["public"]["Enums"]["tryon_quality"]
+          rating?: number | null
+          result_path?: string | null
+          shared_path?: string | null
+          size_label?: string | null
+          size_system?: Database["public"]["Enums"]["size_system"] | null
+          size_value?: number | null
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["tryon_status"]
+          user_id: string
+        }
+        Update: {
+          attempts?: number
+          body_photo_id?: string
+          completed_at?: string | null
+          cost_usd?: number | null
+          created_at?: string
+          credits_charged?: number
+          edit_mask_path?: string | null
+          engine?: string | null
+          error_message?: string | null
+          feedback?: string | null
+          fit?: Database["public"]["Enums"]["fit_style"]
+          garment_instruction?: string | null
+          garment_upload_id?: string | null
+          id?: string
+          identity_score?: number | null
+          product_id?: string | null
+          quality?: Database["public"]["Enums"]["tryon_quality"]
+          rating?: number | null
+          result_path?: string | null
+          shared_path?: string | null
+          size_label?: string | null
+          size_system?: Database["public"]["Enums"]["size_system"] | null
+          size_value?: number | null
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["tryon_status"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tryons_body_photo_id_fkey"
+            columns: ["body_photo_id"]
+            isOneToOne: false
+            referencedRelation: "body_photos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tryons_garment_upload_id_fkey"
+            columns: ["garment_upload_id"]
+            isOneToOne: false
+            referencedRelation: "garment_uploads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tryons_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_sizes: {
+        Row: {
+          category: Database["public"]["Enums"]["garment_category"]
+          size_system: Database["public"]["Enums"]["size_system"]
+          size_value: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["garment_category"]
+          size_system?: Database["public"]["Enums"]["size_system"]
+          size_value: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["garment_category"]
+          size_system?: Database["public"]["Enums"]["size_system"]
+          size_value?: number
           updated_at?: string
           user_id?: string
         }
@@ -112,10 +1177,155 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      admin_grant_credits: {
+        Args: { _credits: number; _email: string; _note?: string }
+        Returns: number
+      }
+      admin_set_store_status: {
+        Args: {
+          _status: Database["public"]["Enums"]["store_status"]
+          _store_id: string
+        }
+        Returns: undefined
+      }
+      complete_payment: {
+        Args: { _provider_reference: string }
+        Returns: {
+          amount_kes: number
+          created_at: string
+          credit_pack_id: string | null
+          credits: number
+          id: string
+          metadata: Json
+          paid_at: string | null
+          provider: string
+          provider_reference: string
+          referral_store_id: string | null
+          status: Database["public"]["Enums"]["payment_status"]
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "payments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      credit_balance: { Args: never; Returns: number }
+      is_admin: { Args: never; Returns: boolean }
+      refund_tryon: {
+        Args: { _reason: string; _tryon_id: string }
+        Returns: undefined
+      }
+      request_tryon: {
+        Args: {
+          _body_photo_id: string
+          _fit?: Database["public"]["Enums"]["fit_style"]
+          _garment_upload_id?: string
+          _product_id?: string
+          _quality?: Database["public"]["Enums"]["tryon_quality"]
+        }
+        Returns: {
+          attempts: number
+          body_photo_id: string
+          completed_at: string | null
+          cost_usd: number | null
+          created_at: string
+          credits_charged: number
+          edit_mask_path: string | null
+          engine: string | null
+          error_message: string | null
+          feedback: string | null
+          fit: Database["public"]["Enums"]["fit_style"]
+          garment_instruction: string | null
+          garment_upload_id: string | null
+          id: string
+          identity_score: number | null
+          product_id: string | null
+          quality: Database["public"]["Enums"]["tryon_quality"]
+          rating: number | null
+          result_path: string | null
+          shared_path: string | null
+          size_label: string | null
+          size_system: Database["public"]["Enums"]["size_system"] | null
+          size_value: number | null
+          started_at: string | null
+          status: Database["public"]["Enums"]["tryon_status"]
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "tryons"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      store_size_demand: {
+        Args: { _store_id: string }
+        Returns: {
+          product_id: string
+          product_name: string
+          size_system: Database["public"]["Enums"]["size_system"]
+          size_value: number
+          waiting: number
+        }[]
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "moderator"
+      consent_type:
+        | "terms"
+        | "privacy_policy"
+        | "body_photo_processing"
+        | "cross_border_transfer"
+        | "marketing"
+      credit_entry_type:
+        | "purchase"
+        | "tryon_charge"
+        | "tryon_refund"
+        | "adjustment"
+      department: "women" | "men" | "unisex"
+      fit_style: "fitted" | "regular" | "relaxed" | "oversized" | "baggy"
+      garment_category:
+        | "dress"
+        | "top"
+        | "bottom"
+        | "skirt"
+        | "jumpsuit"
+        | "outerwear"
+        | "set"
+        | "other"
+      media_kind: "image" | "video"
+      order_status:
+        | "pending_payment"
+        | "paid"
+        | "fulfilled"
+        | "cancelled"
+        | "refunded"
+      payment_status: "pending" | "success" | "failed" | "refunded"
+      payout_status: "pending" | "processing" | "paid" | "failed"
+      photo_angle: "front" | "back" | "side"
+      product_status: "draft" | "active" | "sold_out" | "archived"
+      report_reason:
+        | "not_me"
+        | "inappropriate"
+        | "offensive"
+        | "copyright"
+        | "other"
+      report_status: "open" | "reviewing" | "actioned" | "dismissed"
+      shops_for: "women" | "men" | "both"
+      size_system: "uk_women" | "letter" | "waist_in"
+      store_member_role: "owner" | "staff"
+      store_plan: "free" | "pro"
+      store_status: "pending" | "active" | "suspended"
+      tryon_quality: "standard" | "hd" | "studio"
+      tryon_status:
+        | "queued"
+        | "processing"
+        | "succeeded"
+        | "failed"
+        | "rejected"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -131,12 +1341,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -160,11 +1370,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -185,11 +1395,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -210,11 +1420,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -227,11 +1437,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -242,6 +1452,60 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "moderator"],
+      consent_type: [
+        "terms",
+        "privacy_policy",
+        "body_photo_processing",
+        "cross_border_transfer",
+        "marketing",
+      ],
+      credit_entry_type: [
+        "purchase",
+        "tryon_charge",
+        "tryon_refund",
+        "adjustment",
+      ],
+      department: ["women", "men", "unisex"],
+      fit_style: ["fitted", "regular", "relaxed", "oversized", "baggy"],
+      garment_category: [
+        "dress",
+        "top",
+        "bottom",
+        "skirt",
+        "jumpsuit",
+        "outerwear",
+        "set",
+        "other",
+      ],
+      media_kind: ["image", "video"],
+      order_status: [
+        "pending_payment",
+        "paid",
+        "fulfilled",
+        "cancelled",
+        "refunded",
+      ],
+      payment_status: ["pending", "success", "failed", "refunded"],
+      payout_status: ["pending", "processing", "paid", "failed"],
+      photo_angle: ["front", "back", "side"],
+      product_status: ["draft", "active", "sold_out", "archived"],
+      report_reason: [
+        "not_me",
+        "inappropriate",
+        "offensive",
+        "copyright",
+        "other",
+      ],
+      report_status: ["open", "reviewing", "actioned", "dismissed"],
+      shops_for: ["women", "men", "both"],
+      size_system: ["uk_women", "letter", "waist_in"],
+      store_member_role: ["owner", "staff"],
+      store_plan: ["free", "pro"],
+      store_status: ["pending", "active", "suspended"],
+      tryon_quality: ["standard", "hd", "studio"],
+      tryon_status: ["queued", "processing", "succeeded", "failed", "rejected"],
+    },
   },
 } as const

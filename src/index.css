@@ -1,224 +1,79 @@
-@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* FID & Co. display face */
+@font-face {
+  font-family: "Nohemi";
+  src: url("/fonts/Nohemi-VF.ttf") format("truetype-variations");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Nohemi";
+  src: url("/fonts/Nohemi-Regular.woff") format("woff");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Nohemi";
+  src: url("/fonts/Nohemi-Bold.woff") format("woff");
+  font-weight: 700;
+  font-display: swap;
+}
+
 @layer base {
   :root {
-    --background: 0 0% 2%;
-    --foreground: 0 0% 98%;
-
-    --card: 0 0% 5%;
-    --card-foreground: 0 0% 98%;
-
-    --popover: 0 0% 5%;
-    --popover-foreground: 0 0% 98%;
-
-    --primary: 82 85% 55%;
-    --primary-foreground: 0 0% 2%;
-
-    --secondary: 0 0% 10%;
-    --secondary-foreground: 0 0% 98%;
-
-    --muted: 0 0% 12%;
-    --muted-foreground: 0 0% 55%;
-
-    --accent: 330 85% 60%;
-    --accent-foreground: 0 0% 2%;
-
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-
-    --border: 0 0% 15%;
-    --input: 0 0% 15%;
-    --ring: 82 85% 55%;
-
-    --radius: 0.25rem;
-
-    /* Custom brand tokens - Neon palette */
-    --neon-lime: 82 85% 55%;
-    --neon-lime-glow: 82 100% 65%;
-    --neon-yellow: 55 100% 55%;
-    --neon-pink: 330 85% 60%;
-    --neon-cyan: 180 85% 55%;
-    --brand-charcoal: 0 0% 5%;
-    --brand-deep: 0 0% 2%;
-
-    /* Gradients */
-    --gradient-hero: linear-gradient(135deg, hsl(0 0% 2%) 0%, hsl(0 0% 5%) 50%, hsl(82 10% 5%) 100%);
-    --gradient-card: linear-gradient(180deg, hsl(0 0% 8%) 0%, hsl(0 0% 4%) 100%);
-    --gradient-accent: linear-gradient(135deg, hsl(82 85% 55%) 0%, hsl(55 100% 55%) 100%);
-    --gradient-neon: linear-gradient(135deg, hsl(82 85% 55%) 0%, hsl(180 85% 55%) 100%);
-
-    /* Shadows */
-    --shadow-glow: 0 0 60px hsl(82 85% 55% / 0.25);
-    --shadow-glow-pink: 0 0 60px hsl(330 85% 60% / 0.25);
-    --shadow-card: 0 20px 40px hsl(0 0% 0% / 0.6);
-
-    /* Typography */
-    --font-display: 'Bebas Neue', sans-serif;
-    --font-body: 'Inter', sans-serif;
-
-    /* Animations */
-    --transition-smooth: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-bounce: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
-
-    --sidebar-background: 0 0% 5%;
-    --sidebar-foreground: 0 0% 98%;
-    --sidebar-primary: 82 85% 55%;
-    --sidebar-primary-foreground: 0 0% 2%;
-    --sidebar-accent: 0 0% 10%;
-    --sidebar-accent-foreground: 0 0% 98%;
-    --sidebar-border: 0 0% 15%;
-    --sidebar-ring: 82 85% 55%;
+    color-scheme: light;
   }
-}
-
-@layer base {
-  * {
-    @apply border-border;
+  html {
+    -webkit-tap-highlight-color: transparent;
   }
-
   body {
-    @apply bg-background text-foreground font-body antialiased;
-    font-family: var(--font-body);
+    @apply bg-paper font-sans text-ink antialiased;
+    font-size: 15px;
+    font-weight: 400;
+    line-height: 1.5;
   }
-
-  h1, h2, h3, h4, h5, h6 {
-    font-family: var(--font-display);
-    letter-spacing: 0.02em;
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
   }
-}
-
-@layer utilities {
-  .font-display {
-    font-family: var(--font-display);
+  :focus-visible {
+    @apply outline outline-2 outline-offset-2 outline-accent;
   }
-
-  .font-body {
-    font-family: var(--font-body);
-  }
-
-  .text-gradient {
-    background: var(--gradient-accent);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-
-  .bg-hero-gradient {
-    background: var(--gradient-hero);
-  }
-
-  .bg-card-gradient {
-    background: var(--gradient-card);
-  }
-
-  .glow-neon {
-    box-shadow: var(--shadow-glow);
-  }
-
-  .glow-pink {
-    box-shadow: var(--shadow-glow-pink);
-  }
-
-  .text-neon-glow {
-    text-shadow: 0 0 20px hsl(82 85% 55% / 0.6), 0 0 40px hsl(82 85% 55% / 0.4);
-  }
-
-  .animate-fade-up {
-    animation: fadeUp 0.8s ease-out forwards;
-  }
-
-  .animate-fade-in {
-    animation: fadeIn 0.6s ease-out forwards;
-  }
-
-  .animate-slide-in {
-    animation: slideIn 0.6s ease-out forwards;
-  }
-
-  .animate-glow-pulse {
-    animation: glowPulse 3s ease-in-out infinite;
+  ::selection {
+    @apply bg-mustard-soft text-ink;
   }
 }
 
-@keyframes fadeUp {
-  from {
-    opacity: 0;
-    transform: translateY(40px);
+@layer components {
+  /* Peregrine-style monospace caps */
+  .label {
+    @apply font-mono text-[11px] font-semibold uppercase tracking-label text-muted;
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+  /* Big, tight grotesk headings */
+  .display {
+    @apply font-display font-medium tracking-tightest;
+    line-height: 0.88;
   }
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
+  .num {
+    @apply font-mono;
+    font-variant-numeric: tabular-nums;
   }
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateX(-30px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
+  .page {
+    @apply mx-auto w-full max-w-[1440px] px-5 md:px-10;
   }
 }
 
-@keyframes glowPulse {
-  0%, 100% {
-    box-shadow: 0 0 40px hsl(82 85% 55% / 0.3);
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
-  50% {
-    box-shadow: 0 0 80px hsl(82 85% 55% / 0.5);
-  }
-}
-
-@keyframes neonFlicker {
-  0%, 100% {
-    opacity: 1;
-  }
-  92% {
-    opacity: 1;
-  }
-  93% {
-    opacity: 0.8;
-  }
-  94% {
-    opacity: 1;
-  }
-  95% {
-    opacity: 0.9;
-  }
-  96% {
-    opacity: 1;
-  }
-}
-
-/* Scrollbar styling */
-::-webkit-scrollbar {
-  width: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: hsl(var(--background));
-}
-
-::-webkit-scrollbar-thumb {
-  background: hsl(var(--muted));
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--muted-foreground));
 }
