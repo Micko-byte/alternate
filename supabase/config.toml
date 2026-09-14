@@ -1,5 +1,17 @@
 project_id = "alternate"
 
+# Hosted auth: where sign-up / sign-in emails and redirects may send people
+[auth]
+site_url = "https://alternate-two.vercel.app"
+additional_redirect_urls = [
+  "https://alternate-two.vercel.app/**",
+  "https://alternate-micko-bytes-projects.vercel.app/",
+  "https://alternate-micko-bytes-projects.vercel.app/**",
+  "https://alternate-*-micko-bytes-projects.vercel.app",
+  "https://alternate-*-micko-bytes-projects.vercel.app/**",
+  "http://localhost:8080/**",
+]
+
 # Functions check the signed-in user themselves (works with the new publishable keys)
 [functions.tryon-process]
 verify_jwt = false
