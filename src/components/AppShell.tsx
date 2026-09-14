@@ -1,7 +1,8 @@
 import { NavLink, Outlet, Link, useLocation } from "react-router-dom";
 import { Shirt, ShoppingBag, Sparkles, User } from "lucide-react";
 import { useAuth } from "@/lib/auth";
-import { useCredits, useMyStore } from "@/lib/queries";
+import { useCredits, useIsAdmin, useMyStore } from "@/lib/queries";
+import { FeedbackButton } from "@/components/FeedbackButton";
 import { cn } from "@/lib/utils";
 import { Wordmark } from "@/components/Wordmark";
 
@@ -19,6 +20,7 @@ export function AppShell() {
   const { user } = useAuth();
   const credits = useCredits();
   const store = useMyStore();
+  const isAdmin = useIsAdmin();
   const { pathname, search } = useLocation();
   const fullBleed = pathname === "/";
 
@@ -49,6 +51,11 @@ export function AppShell() {
             <Link to="/studio" className="font-mono text-[12px] font-semibold uppercase tracking-label text-muted hover:text-ink">
               {store.data ? "Studio" : "For stores"}
             </Link>
+            {isAdmin.data && (
+              <Link to="/admin" className="bg-ink px-2.5 py-1 font-mono text-[11px] font-semibold uppercase tracking-label text-paper hover:bg-ink/85">
+                Admin
+              </Link>
+            )}
           </nav>}
           <div className="ml-auto flex items-center gap-1">
             {user ? (
@@ -57,6 +64,7 @@ export function AppShell() {
                   <span className="num text-[15px] font-medium">{credits.data ?? "–"}</span>
                   <span className="label">credits</span>
                 </Link>
+                <FeedbackButton />
                 <NavLink to="/wardrobe" className="hidden h-10 w-10 place-items-center hover:bg-sunk md:grid" aria-label="Wardrobe">
                   <Shirt className="h-[18px] w-[18px]" strokeWidth={1.6} />
                 </NavLink>

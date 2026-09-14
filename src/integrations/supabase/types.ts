@@ -14,6 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_audit_log: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          details: Json
+          id: number
+          target_user_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json
+          id?: never
+          target_user_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json
+          id?: never
+          target_user_id?: string | null
+        }
+        Relationships: []
+      }
+      app_settings: {
+        Row: {
+          key: string
+          updated_at: string
+          updated_by: string | null
+          value: Json
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          updated_by?: string | null
+          value: Json
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: Json
+        }
+        Relationships: []
+      }
       body_photos: {
         Row: {
           angle: Database["public"]["Enums"]["photo_angle"]
@@ -187,6 +235,56 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      feedback: {
+        Row: {
+          admin_note: string | null
+          category: Database["public"]["Enums"]["feedback_category"]
+          created_at: string
+          id: string
+          message: string
+          page: string | null
+          rating: number | null
+          status: Database["public"]["Enums"]["feedback_status"]
+          tryon_id: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          admin_note?: string | null
+          category?: Database["public"]["Enums"]["feedback_category"]
+          created_at?: string
+          id?: string
+          message: string
+          page?: string | null
+          rating?: number | null
+          status?: Database["public"]["Enums"]["feedback_status"]
+          tryon_id?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          admin_note?: string | null
+          category?: Database["public"]["Enums"]["feedback_category"]
+          created_at?: string
+          id?: string
+          message?: string
+          page?: string | null
+          rating?: number | null
+          status?: Database["public"]["Enums"]["feedback_status"]
+          tryon_id?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feedback_tryon_id_fkey"
+            columns: ["tryon_id"]
+            isOneToOne: false
+            referencedRelation: "tryons"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       garment_uploads: {
         Row: {
@@ -562,6 +660,7 @@ export type Database = {
           phone: string | null
           preferred_fit: Database["public"]["Enums"]["fit_style"]
           shops_for: Database["public"]["Enums"]["shops_for"] | null
+          tryon_limit: number | null
           updated_at: string
           weight_kg: number | null
         }
@@ -574,6 +673,7 @@ export type Database = {
           phone?: string | null
           preferred_fit?: Database["public"]["Enums"]["fit_style"]
           shops_for?: Database["public"]["Enums"]["shops_for"] | null
+          tryon_limit?: number | null
           updated_at?: string
           weight_kg?: number | null
         }
@@ -586,6 +686,7 @@ export type Database = {
           phone?: string | null
           preferred_fit?: Database["public"]["Enums"]["fit_style"]
           shops_for?: Database["public"]["Enums"]["shops_for"] | null
+          tryon_limit?: number | null
           updated_at?: string
           weight_kg?: number | null
         }
@@ -1177,9 +1278,51 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_feedback: {
+        Args: never
+        Returns: {
+          admin_note: string
+          category: string
+          created_at: string
+          id: string
+          message: string
+          page: string
+          rating: number
+          status: string
+          tryon_id: string
+          user_email: string
+        }[]
+      }
       admin_grant_credits: {
         Args: { _credits: number; _email: string; _note?: string }
         Returns: number
+      }
+      admin_list_admins: {
+        Args: never
+        Returns: {
+          email: string
+          roles: string[]
+          user_id: string
+        }[]
+      }
+      admin_overview: { Args: { _days?: number }; Returns: Json }
+      admin_reports: {
+        Args: never
+        Returns: {
+          created_at: string
+          details: string
+          id: string
+          product_id: string
+          reason: string
+          reporter_email: string
+          status: string
+          store_id: string
+          tryon_id: string
+        }[]
+      }
+      admin_set_setting: {
+        Args: { _key: string; _value: Json }
+        Returns: undefined
       }
       admin_set_store_status: {
         Args: {
@@ -1187,6 +1330,55 @@ export type Database = {
           _store_id: string
         }
         Returns: undefined
+      }
+      admin_set_tryon_limit: {
+        Args: { _limit: number; _user_id: string }
+        Returns: undefined
+      }
+      admin_tryons: {
+        Args: {
+          _limit?: number
+          _offset?: number
+          _status?: Database["public"]["Enums"]["tryon_status"]
+        }
+        Returns: {
+          cost_usd: number
+          created_at: string
+          credits_charged: number
+          engine: string
+          error_message: string
+          fit: string
+          garment_path: string
+          id: string
+          product_name: string
+          quality: string
+          rating: number
+          result_path: string
+          status: string
+          store_name: string
+          user_email: string
+          user_id: string
+        }[]
+      }
+      admin_users: {
+        Args: { _search?: string }
+        Returns: {
+          banned_until: string
+          cost_usd: number
+          created_at: string
+          credits: number
+          display_name: string
+          email: string
+          feedback_count: number
+          id: string
+          last_sign_in_at: string
+          roles: string[]
+          shops_for: string
+          store_name: string
+          tryon_limit: number
+          tryons: number
+          tryons_succeeded: number
+        }[]
       }
       complete_payment: {
         Args: { _provider_reference: string }
@@ -1214,6 +1406,12 @@ export type Database = {
       }
       credit_balance: { Args: never; Returns: number }
       is_admin: { Args: never; Returns: boolean }
+      is_owner: { Args: never; Returns: boolean }
+      my_tryon_allowance: { Args: never; Returns: Json }
+      owner_set_admin: {
+        Args: { _email: string; _grant: boolean }
+        Returns: undefined
+      }
       refund_tryon: {
         Args: { _reason: string; _tryon_id: string }
         Returns: undefined
@@ -1273,7 +1471,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "moderator"
+      app_role: "admin" | "moderator" | "owner"
       consent_type:
         | "terms"
         | "privacy_policy"
@@ -1286,6 +1484,14 @@ export type Database = {
         | "tryon_refund"
         | "adjustment"
       department: "women" | "men" | "unisex"
+      feedback_category:
+        | "tryon_quality"
+        | "idea"
+        | "bug"
+        | "stores"
+        | "payments"
+        | "other"
+      feedback_status: "new" | "read" | "planned" | "done"
       fit_style: "fitted" | "regular" | "relaxed" | "oversized" | "baggy"
       garment_category:
         | "dress"
@@ -1453,7 +1659,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "moderator"],
+      app_role: ["admin", "moderator", "owner"],
       consent_type: [
         "terms",
         "privacy_policy",
@@ -1468,6 +1674,15 @@ export const Constants = {
         "adjustment",
       ],
       department: ["women", "men", "unisex"],
+      feedback_category: [
+        "tryon_quality",
+        "idea",
+        "bug",
+        "stores",
+        "payments",
+        "other",
+      ],
+      feedback_status: ["new", "read", "planned", "done"],
       fit_style: ["fitted", "regular", "relaxed", "oversized", "baggy"],
       garment_category: [
         "dress",

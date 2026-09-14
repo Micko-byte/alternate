@@ -13,6 +13,8 @@ import { Button, ButtonLink, Field, Input, Notice, Select, Spinner } from "@/com
 import { BodyPhotoUploader } from "@/components/BodyPhotoUploader";
 import { TryonView } from "@/components/TryonView";
 import { FitPicker } from "@/components/FitPicker";
+import { useTryonAllowance } from "@/lib/admin";
+import { FeedbackButton } from "@/components/FeedbackButton";
 import type { ParsedInspiration } from "@/lib/garmentCutout";
 
 const SIZED = ["dress", "top", "bottom", "skirt", "jumpsuit", "outerwear"];
@@ -26,6 +28,8 @@ export default function FittingRoom() {
   const sizes = useSizes();
   const prices = useTryonPrices();
   const credits = useCredits();
+  const allowance = useTryonAllowance();
+  const usedUp = !!allowance.data && !allowance.data.exempt && allowance.data.remaining === 0;
 
   const [photoId, setPhotoId] = useState<string>();
   const [inspirationId, setInspirationId] = useState<string>();
@@ -123,6 +127,7 @@ export default function FittingRoom() {
     try {
       const id = await startTryon({ bodyPhotoId: photoId, garmentUploadId: inspirationId, quality, fit });
       queryClient.invalidateQueries({ queryKey: ["credits"] });
+      queryClient.invalidateQueries({ queryKey: ["tryon-allowance"] });
       recent.refetch();
       setActiveTryon(id);
       setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
@@ -215,7 +220,13 @@ export default function FittingRoom() {
             )
           )}
 
-          {(credits.data ?? 0) < cost ? (
+          {usedUp ? (
+            <div className="grid gap-2 border border-ink p-4 text-center">
+              <span className="font-semibold">You've used all {allowance.data?.limit} test try-ons</span>
+              <span className="text-[13px] text-muted">Thanks for testing. Tell us what you think.</span>
+              <FeedbackButton variant="link" label="Send feedback" />
+            </div>
+          ) : (credits.data ?? 0) < cost ? (
             <ButtonLink to="/credits" variant="solid" size="lg">Get credits</ButtonLink>
           ) : (
             <Button variant="solid" size="lg" onClick={swap} loading={busy} disabled={!photoId || !inspirationId || (needsSize && mySize === undefined)}>
@@ -223,7 +234,11 @@ export default function FittingRoom() {
             </Button>
           )}
           <p className="text-center text-[12px] text-muted">
-            <span className="num text-ink">{credits.data ?? 0}</span> credits left · failed try-ons are refunded
+            <span className="num text-ink">{credits.data ?? 0}</span> credits left
+            {allowance.data && !allowance.data.exempt && allowance.data.limit !== null && (
+              <> · <span className="num text-ink">{allowance.data.remaining}</span> of {allowance.data.limit} test try-ons left</>
+            )}
+            {" "}· failed try-ons are refunded
           </p>
         </div>
 

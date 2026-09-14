@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/auth";
 import { useConsents, useIsAdmin, useMyStore, useProfile, useSetupStatus } from "@/lib/queries";
 import { errorMessage } from "@/lib/utils";
 import { Button, ButtonLink, PageHeader, Pill } from "@/components/ui";
+import { FeedbackButton } from "@/components/FeedbackButton";
 
 const CONSENT_LABELS: Record<string, string> = {
   terms: "Terms and privacy policy",
@@ -44,7 +45,10 @@ export default function Account() {
   return (
     <div className="grid gap-10">
       <PageHeader eyebrow="Account" title={profile.data?.display_name || "Your account"}>
-        <Button variant="outline" onClick={() => signOut().then(() => navigate("/"))}>Sign out</Button>
+        <div className="flex flex-wrap gap-2">
+          <FeedbackButton variant="button" label="Send feedback" />
+          <Button variant="outline" onClick={() => signOut().then(() => navigate("/"))}>Sign out</Button>
+        </div>
       </PageHeader>
 
       <div className="grid gap-px border border-rule bg-rule md:grid-cols-2">
@@ -71,7 +75,7 @@ export default function Account() {
               <ButtonLink to="/studio" variant="outline" className="justify-self-start">Open a store</ButtonLink>
             </>
           )}
-          {isAdmin.data && <Link to="/admin" className="text-[14px] font-semibold underline decoration-accent underline-offset-4">Admin</Link>}
+          {isAdmin.data && <ButtonLink to="/admin" variant="solid" className="justify-self-start">Admin dashboard</ButtonLink>}
         </section>
 
         <section className="grid content-start gap-3 bg-surface p-6 md:col-span-2">

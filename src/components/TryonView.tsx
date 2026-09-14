@@ -9,6 +9,7 @@ import { cn, errorMessage, kes, signedUrl } from "@/lib/utils";
 import { sizeText } from "@/lib/sizes";
 import { Button, ButtonLink, Notice, Pill, Spinner } from "@/components/ui";
 import { FaceLockImage } from "@/components/FaceLockImage";
+import { FeedbackButton } from "@/components/FeedbackButton";
 
 /** A try-on with live status, the face-locked result, rating and buy actions. */
 export function TryonView({ id }: { id: string }) {
@@ -163,6 +164,7 @@ export function TryonView({ id }: { id: string }) {
               <Button variant="ghost" size="sm" onClick={download}><Download className="h-4 w-4" /> Save</Button>
               <Button variant="ghost" size="sm" onClick={report}><Flag className="h-4 w-4" /> Not me</Button>
             </div>
+            <FeedbackButton tryonId={t.id} variant="link" label="Tell us how this try-on went" />
             {t.products && (
               <div className="flex flex-wrap gap-2 border-t border-rule pt-5">
                 <ButtonLink to={`/shop/${t.products.id}`} variant="solid">See the piece</ButtonLink>

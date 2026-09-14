@@ -28,3 +28,6 @@ verify_jwt = false
 
 [functions.draft-product]
 verify_jwt = false
+
+[functions.admin-users]
+verify_jwt = false

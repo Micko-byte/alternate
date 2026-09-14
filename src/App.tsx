@@ -20,7 +20,14 @@ import TryResult from "@/pages/TryResult";
 import Wardrobe from "@/pages/Wardrobe";
 import Credits from "@/pages/Credits";
 import Account from "@/pages/Account";
-import Admin from "@/pages/Admin";
+import { AdminShell } from "@/components/AdminShell";
+import AdminOverview from "@/pages/admin/Overview";
+import AdminUsers from "@/pages/admin/Users";
+import AdminTryons from "@/pages/admin/Tryons";
+import AdminFeedback from "@/pages/admin/Feedback";
+import AdminReports from "@/pages/admin/Reports";
+import AdminStores from "@/pages/admin/Stores";
+import AdminSettings from "@/pages/admin/Settings";
 import Overview from "@/pages/studio/Overview";
 import Products from "@/pages/studio/Products";
 import ProductEditor from "@/pages/studio/ProductEditor";
@@ -86,8 +93,16 @@ export default function App() {
               <Route path="/wardrobe" element={<RequireAuth><Wardrobe /></RequireAuth>} />
               <Route path="/credits" element={<RequireAuth><Credits /></RequireAuth>} />
               <Route path="/account" element={<RequireAuth><Account /></RequireAuth>} />
-              <Route path="/admin" element={<RequireAuth><Admin /></RequireAuth>} />
               <Route path="*" element={<NotFound />} />
+            </Route>
+            <Route element={<RequireAuth><AdminShell /></RequireAuth>}>
+              <Route path="/admin" element={<AdminOverview />} />
+              <Route path="/admin/users" element={<AdminUsers />} />
+              <Route path="/admin/tryons" element={<AdminTryons />} />
+              <Route path="/admin/feedback" element={<AdminFeedback />} />
+              <Route path="/admin/reports" element={<AdminReports />} />
+              <Route path="/admin/stores" element={<AdminStores />} />
+              <Route path="/admin/settings" element={<AdminSettings />} />
             </Route>
             <Route element={<RequireAuth><StudioShell /></RequireAuth>}>
               <Route path="/studio" element={<Overview />} />
