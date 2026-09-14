@@ -2,12 +2,14 @@ import { useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Link, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { Toaster } from "sonner";
-import { AuthProvider } from "@/lib/auth";
+import { AuthProvider, useAuth } from "@/lib/auth";
+import { useSetupStatus } from "@/lib/queries";
+import { Spinner } from "@/components/ui";
 import { captureReferral } from "@/lib/referral";
 import { AppShell } from "@/components/AppShell";
 import { StudioShell } from "@/components/StudioShell";
 import { RequireAuth } from "@/components/Guards";
-import Landing from "@/pages/Landing";
+import Onboarding from "@/pages/Onboarding";
 import Auth from "@/pages/Auth";
 import Shop from "@/pages/Shop";
 import Product from "@/pages/Product";
@@ -36,6 +38,21 @@ function ReferralCapture() {
   return null;
 }
 
+/** Signed out: the welcome carousel. Signed in: straight into the app. */
+function Home() {
+  const { user, loading } = useAuth();
+  const setup = useSetupStatus();
+  if (loading || (user && setup.loading)) {
+    return (
+      <div className="grid min-h-dvh place-items-center">
+        <Spinner />
+      </div>
+    );
+  }
+  if (!user) return <Onboarding />;
+  return <Navigate to={setup.ready ? "/fitting-room" : "/me/setup"} replace />;
+}
+
 function NotFound() {
   return (
     <div className="grid place-items-center gap-4 py-24 text-center">
@@ -56,9 +73,9 @@ export default function App() {
             toastOptions={{ classNames: { toast: "!rounded-none !border !border-ink !bg-surface !text-ink !font-sans !shadow-none", description: "!text-muted" } }}
           />
           <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/auth" element={<Auth />} />
             <Route element={<AppShell />}>
-              <Route path="/" element={<Landing />} />
-              <Route path="/auth" element={<Auth />} />
               <Route path="/shop" element={<Shop />} />
               <Route path="/shop/:id" element={<Product />} />
               <Route path="/s/:slug" element={<StorePage />} />

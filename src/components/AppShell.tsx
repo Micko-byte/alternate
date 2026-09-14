@@ -23,7 +23,7 @@ export function AppShell() {
   const fullBleed = pathname === "/";
 
   return (
-    <div className="flex min-h-dvh flex-col pb-16 md:pb-0">
+    <div className={cn("flex min-h-dvh flex-col md:pb-0", user && "pb-16")}>
       <div className="overflow-hidden bg-accent text-white" aria-label="Announcements">
         <div className="flex w-max animate-marquee gap-12 py-2 motion-reduce:animate-none">
           {[...announcements, ...announcements].map((a, i) => (
@@ -37,7 +37,7 @@ export function AppShell() {
       <header className="sticky top-0 z-30 border-b border-rule bg-paper/95 backdrop-blur">
         <div className="page flex h-[72px] items-center gap-10">
           <Wordmark />
-          <nav className="hidden items-center gap-7 lg:flex" aria-label="Main">
+          {user && <nav className="hidden items-center gap-7 lg:flex" aria-label="Main">
             {nav.map((l) => {
               const active = l.to.includes("?") ? pathname + search === l.to : pathname === l.to && !search;
               return (
@@ -49,7 +49,7 @@ export function AppShell() {
             <Link to="/studio" className="font-mono text-[12px] font-semibold uppercase tracking-label text-muted hover:text-ink">
               {store.data ? "Studio" : "For stores"}
             </Link>
-          </nav>
+          </nav>}
           <div className="ml-auto flex items-center gap-1">
             {user ? (
               <>
@@ -67,10 +67,10 @@ export function AppShell() {
             ) : (
               <>
                 <Link to="/auth" className="font-mono text-[12px] font-semibold uppercase tracking-label text-muted hover:text-ink">
-                  Sign in
+                  Log in
                 </Link>
-                <Link to="/auth?mode=signup" className="ml-5 hidden h-10 items-center bg-ink px-4 font-mono text-[11px] font-semibold uppercase tracking-label text-paper hover:bg-ink/85 sm:inline-flex">
-                  Join
+                <Link to="/auth?mode=signup" className="ml-5 inline-flex h-10 items-center bg-ink px-4 font-mono text-[11px] font-semibold uppercase tracking-label text-paper hover:bg-ink/85">
+                  Get started
                 </Link>
               </>
             )}
@@ -83,7 +83,7 @@ export function AppShell() {
       </main>
 
       <footer className="border-t border-rule bg-paper">
-        <div className="page grid gap-10 py-14 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
+        {user && <div className="page grid gap-10 py-14 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
           <div className="grid content-start gap-4">
             <Wordmark full className="justify-self-start" />
             <p className="max-w-[34ch] text-muted">See clothes from Kenyan stores on your own photo, in your size, before you pay.</p>
@@ -102,14 +102,14 @@ export function AppShell() {
               ))}
             </div>
           ))}
-        </div>
+        </div>}
         <div className="page flex flex-wrap items-center justify-between gap-3 border-t border-rule py-5">
           <span className="label">© 2026 ALTERNATE. All rights reserved.</span>
           <span className="label">Nairobi, Kenya · KES</span>
         </div>
       </footer>
 
-      <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-rule bg-paper pb-[env(safe-area-inset-bottom)] md:hidden" aria-label="Main">
+      {user && <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-rule bg-paper pb-[env(safe-area-inset-bottom)] md:hidden" aria-label="Main">
         {[
           { to: "/shop", label: "Shop", icon: ShoppingBag },
           { to: "/fitting-room", label: "Fitting", icon: Sparkles },
@@ -121,7 +121,7 @@ export function AppShell() {
             {l.label}
           </NavLink>
         ))}
-      </nav>
+      </nav>}
     </div>
   );
 }

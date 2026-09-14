@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
-import { Navigate, useSearchParams } from "react-router-dom";
+import { Link, Navigate, useSearchParams } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -25,7 +26,9 @@ export default function Auth() {
   const [busy, setBusy] = useState(false);
   const [checkEmail, setCheckEmail] = useState(false);
 
-  const next = params.get("next") || "/shop";
+  const asStore = params.get("as") === "store";
+  // New shoppers set up their fitting profile; stores go to Studio; everyone else lands in the app
+  const next = params.get("next") || (asStore ? "/studio" : mode === "signup" ? "/me/setup" : "/");
   if (user) return <Navigate to={next} replace />;
 
   const submit = async (e: FormEvent) => {
@@ -66,11 +69,15 @@ export default function Auth() {
   };
 
   return (
+    <main className="min-h-dvh bg-paper px-5 pb-10 pt-6">
+      <Link to="/" className="label inline-flex items-center gap-2 py-2 hover:text-ink">
+        <ArrowLeft className="h-4 w-4" /> Back
+      </Link>
     <div className="mx-auto grid max-w-md gap-8 py-4">
       <div className="grid gap-3 text-center">
         <Wordmark className="justify-center" />
-        <h1 className="display text-[40px]">{mode === "signin" ? "Welcome back" : "Your fitting room"}</h1>
-        <p className="text-muted">{mode === "signin" ? "Sign in to see your try-ons and credits." : "Create an account to try clothes on your own photo."}</p>
+        <h1 className="display text-[40px]">{mode === "signin" ? "Welcome back" : asStore ? "Open your store" : "Create your account"}</h1>
+        <p className="text-muted">{mode === "signin" ? "Sign in to your fitting room." : asStore ? "Create your account, then set up your store in Studio." : "One account for trying on, your wardrobe and credits."}</p>
       </div>
 
       {checkEmail ? (
@@ -131,5 +138,6 @@ export default function Auth() {
         </form>
       )}
     </div>
+    </main>
   );
 }
