@@ -16,7 +16,7 @@ export type GarmentRow = {
   stretch: string | null;
 };
 
-export type Seen = { type: string; colour: string; length: string | null; sleeves: string | null; silhouette: string | null } | null;
+export type Seen = { type: string; colour: string; length: string | null; sleeves: string | null; silhouette: string | null; stretch?: string | null } | null;
 
 /**
  * Everything that decides how a saved garment is drawn: what it is, length, label size, measurements
@@ -38,7 +38,8 @@ export function GarmentDetails({ garment, previewUrl, seen, allowCategory, onDon
   const saved = (garment.measurements ?? {}) as GarmentMeasurements;
   const [inputs, setInputs] = useState<Partial<Record<MeasureKey, string>>>(Object.fromEntries(Object.entries(saved).map(([k, v]) => [k, String(v)])));
   const [measuredFlat, setMeasuredFlat] = useState(false);
-  const [stretch, setStretch] = useState<Stretch | "">((garment.stretch as Stretch) ?? "");
+  // Typed values win; otherwise start from what the photo check read
+  const [stretch, setStretch] = useState<Stretch | "">((garment.stretch as Stretch) ?? ((seen?.stretch as Stretch) || ""));
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
 
@@ -145,6 +146,7 @@ export function GarmentDetails({ garment, previewUrl, seen, allowCategory, onDon
 
           <fieldset className="grid gap-3 border border-rule p-4">
             <legend className="label px-1">Garment measurements in cm (optional, most accurate)</legend>
+            <p className="text-[12.5px] text-muted">Leave any empty and we'll estimate it from the size and the photo. Anything you type is used exactly.</p>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               {measures.map((k) => (
                 <Field key={k} label={MEASURE_LABELS[k].label} hint={MEASURE_LABELS[k].around && measuredFlat ? "Laid flat, side to side" : MEASURE_LABELS[k].hint}>

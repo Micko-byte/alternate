@@ -59,7 +59,7 @@ Deno.serve(async (req) => {
   }
 
   let { data: inspection } = await admin.from("garment_inspections").select("categories, items, is_wearable, source_path").eq(keyColumn, key[keyColumn]).maybeSingle();
-  const outdated = !!inspection && !(inspection.items ?? []).some((i: object) => "sleeves" in i);
+  const outdated = !!inspection && !(inspection.items ?? []).some((i: object) => "design_ease" in i);
   if (!inspection || outdated || inspection.source_path !== path) {
     try {
       const fresh = await inspectGarment(await download(admin, bucket, path), hint);
@@ -85,7 +85,9 @@ Deno.serve(async (req) => {
     chosen_item: itemFor(inspection, category)?.type ?? null,
     chosen: (() => {
       const i = itemFor(inspection, category);
-      return i ? { type: i.type, colour: i.colour, length: i.length ?? null, sleeves: i.sleeves ?? null, silhouette: i.silhouette ?? null } : null;
+      return i
+        ? { type: i.type, colour: i.colour, length: i.length ?? null, sleeves: i.sleeves ?? null, silhouette: i.silhouette ?? null, stretch: i.stretch ?? null, design_ease: i.design_ease ?? null }
+        : null;
     })(),
     suggestion: main ? { category: main.category, type: main.type } : null,
     message: !inspection.is_wearable

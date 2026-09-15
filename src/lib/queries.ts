@@ -131,6 +131,8 @@ export function useSubscriptionPlans() {
   });
 }
 
+export type BodyEstimates = { bust_cm: number | null; waist_cm: number | null; hips_cm: number | null; height_min_cm: number | null; height_max_cm: number | null };
+
 export type BodyProfileNotes = { id: string; angle: string; full_body: boolean; arms_visible: boolean; legs_visible: boolean; clothing_fit: string; usable: boolean; issues: string };
 
 /** What all of the shopper's photos show together, and what to add for a better fit. */
@@ -150,9 +152,11 @@ export function useBodyProfile() {
     queryKey: ["body-profile", user?.id],
     enabled: !!user,
     queryFn: async () => {
-      const { data, error } = await supabase.from("body_profiles").select("photo_ids, photos, tips, updated_at").eq("user_id", user!.id).maybeSingle();
+      const { data, error } = await supabase.from("body_profiles").select("photo_ids, photos, tips, body, updated_at").eq("user_id", user!.id).maybeSingle();
       if (error) throw error;
-      return data ? { ...data, photos: (data.photos ?? []) as unknown as BodyProfileNotes[] } : null;
+      if (!data) return null;
+      const body = (data.body ?? {}) as { estimates?: BodyEstimates; height_used?: number | null };
+      return { ...data, photos: (data.photos ?? []) as unknown as BodyProfileNotes[], estimates: body.estimates ?? null, heightUsed: body.height_used ?? null };
     },
   });
 }

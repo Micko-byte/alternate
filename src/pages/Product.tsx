@@ -5,8 +5,8 @@ import { Bell, Heart, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
-import { PRODUCT_SELECT, fitFor, useBodyMeasurements, useBodyPhotos, useCredits, useProfile, useSetupStatus, useSizes, useTryonPrices } from "@/lib/queries";
-import { FEEL_LABELS, areaFits, recommendSize, type GarmentMeasurements, type Stretch } from "@/lib/garmentFit";
+import { PRODUCT_SELECT, fitFor, useBodyMeasurements, useBodyPhotos, useBodyProfile, useCredits, useProfile, useSetupStatus, useSizes, useTryonPrices } from "@/lib/queries";
+import { FEEL_LABELS, areaFits, bodyForSize, estimateGarment, recommendSize, type GarmentMeasurements, type Stretch } from "@/lib/garmentFit";
 import { FITS, SIZE_SYSTEMS, sizeText, type FitStyle } from "@/lib/sizes";
 import { QUALITY_LABELS, startTryon } from "@/lib/tryon";
 import { CATEGORY_SINGULAR, cn, errorMessage, kes, publicMediaUrl, signedUrl } from "@/lib/utils";
@@ -38,6 +38,16 @@ export default function Product() {
   const [fitStyle, setFitStyle] = useState<FitStyle>("regular");
   const [pickedVariant, setPickedVariant] = useState<string | null>(null);
   const body = useBodyMeasurements();
+  const bodyProfile = useBodyProfile();
+  // What the photo check read from this piece: stretch and designed room, used when the store typed no measurements
+  const pieceCheck = useQuery({
+    queryKey: ["piece-check", id],
+    queryFn: async () => {
+      const { data } = await supabase.from("garment_inspections").select("items").eq("product_id", id!).maybeSingle();
+      const items = (data?.items ?? []) as { main: boolean; category: string; silhouette?: string; stretch?: string; design_ease?: { bust: number | null; waist: number | null; hips: number | null } }[];
+      return items.find((i) => i.main) ?? items[0] ?? null;
+    },
+  });
   useEffect(() => {
     if (profile.data?.preferred_fit) setFitStyle(profile.data.preferred_fit);
   }, [profile.data?.preferred_fit]);
@@ -87,12 +97,22 @@ export default function Product() {
   const chosenPhoto = photoId ?? photos.data?.find((ph) => ph.angle === "front")?.id ?? photos.data?.[0]?.id;
   const cost = prices.data?.[quality] ?? 1;
   const hasImage = media.some((m) => m.kind === "image");
-  const stretch = ((p as { stretch?: string | null }).stretch ?? "some") as Stretch;
-  const bodyM = body.data ? { bust: body.data.bust_cm, waist: body.data.waist_cm, hips: body.data.hips_cm } : null;
-  const recommended = recommendSize(p.product_variants, bodyM, fitStyle, stretch);
+  // Typed-in values win; anything missing is estimated (body from the AI's reading of your photos,
+  // sizes from the size chart plus the piece's designed room read from its photo)
+  const stretch = ((p as { stretch?: string | null }).stretch ?? pieceCheck.data?.stretch ?? "some") as Stretch;
+  const typedBody = body.data && (body.data.bust_cm || body.data.waist_cm || body.data.hips_cm) ? { bust: body.data.bust_cm, waist: body.data.waist_cm, hips: body.data.hips_cm } : null;
+  const aiBody = bodyProfile.data?.estimates ? { bust: bodyProfile.data.estimates.bust_cm, waist: bodyProfile.data.estimates.waist_cm, hips: bodyProfile.data.estimates.hips_cm } : null;
+  const bodyM = typedBody ?? (aiBody && (aiBody.bust || aiBody.waist || aiBody.hips) ? aiBody : null);
+  const menswearPiece = (p as { department?: string }).department === "men";
+  const sizedVariants = p.product_variants.map((v) => ({
+    ...v,
+    typed: !!v.measurements,
+    measurements: (v.measurements as GarmentMeasurements | null) ?? estimateGarment(bodyForSize(v.size_system, v.size_min, menswearPiece), pieceCheck.data?.design_ease, pieceCheck.data?.silhouette),
+  }));
+  const recommended = recommendSize(sizedVariants, bodyM, fitStyle, stretch);
   // Size shown and tried on: the one picked, else the measured best fit, else the size-chart match
-  const selected = p.product_variants.find((v) => v.id === pickedVariant && v.stock_qty > 0) ?? recommended ?? result.variant ?? null;
-  const selectedFits = selected ? areaFits(selected.measurements as GarmentMeasurements, bodyM, stretch) : [];
+  const selected = sizedVariants.find((v) => v.id === pickedVariant && v.stock_qty > 0) ?? recommended ?? sizedVariants.find((v) => v.id === result.variant?.id) ?? null;
+  const selectedFits = selected ? areaFits(selected.measurements, bodyM, stretch) : [];
 
   const tryOn = async () => {
     if (!chosenPhoto) return;
@@ -201,12 +221,14 @@ export default function Product() {
                   ))}
                 </tbody>
               </table>
-              <p className="text-[12.5px] text-muted">The try-on draws it exactly this tight. Pick another size to see the difference.</p>
+              <p className="text-[12.5px] text-muted">
+                {selected.typed ? "Store's measurements" : "Estimated from the size and the photo"} · {typedBody ? "your measurements" : "your photos (estimate)"}. The try-on draws it this tight. Pick another size to see the difference.
+              </p>
             </div>
           )}
-          {user && !bodyM?.bust && !bodyM?.waist && !bodyM?.hips && p.product_variants.some((v) => v.measurements) && (
+          {user && !bodyM && (
             <p className="text-[13px] text-muted">
-              This store measured every size. <Link to="/me/setup#measurements" className="text-ink underline underline-offset-4">Add your measurements</Link> to see how each one fits you.
+              <Link to="/account#body" className="text-ink underline underline-offset-4">Add your photos or measurements</Link> to see how each size fits you.
             </p>
           )}
         </div>

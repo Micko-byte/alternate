@@ -106,6 +106,62 @@ export function recommendSize<V extends { id: string; stock_qty: number; measure
   return best?.v ?? null;
 }
 
+// Body measurements (cm) each size is cut for. Same as supabase/functions/_shared/garmentFit.ts.
+const UK_WOMEN: Record<number, [number, number, number]> = {
+  4: [76, 58, 81], 6: [79, 61, 84], 8: [82, 64, 87], 10: [87, 69, 92], 12: [92, 74, 97], 14: [97, 79, 102],
+  16: [102, 84, 107], 18: [107, 89, 112], 20: [112, 94, 117], 22: [117, 99, 122], 24: [122, 104, 127], 26: [127, 109, 132], 28: [132, 114, 137],
+};
+const LETTER_MEN: Record<number, [number, number, number]> = {
+  1: [86, 71, 88], 2: [91, 76, 93], 3: [97, 81, 99], 4: [103, 87, 105], 5: [109, 94, 111], 6: [116, 101, 118], 7: [123, 108, 125], 8: [130, 116, 132],
+};
+const LETTER_WOMEN_UK: Record<number, number> = { 1: 6, 2: 8, 3: 11, 4: 14, 5: 16, 6: 18, 7: 20, 8: 22 };
+
+function ukWomen(value: number): [number, number, number] | null {
+  const sizes = Object.keys(UK_WOMEN).map(Number);
+  const lo = Math.max(...sizes.filter((s) => s <= value), 4);
+  const hi = Math.min(...sizes.filter((s) => s >= value), 28);
+  if (lo === hi) return UK_WOMEN[lo] ?? null;
+  const t = (value - lo) / (hi - lo);
+  return UK_WOMEN[lo].map((v, i) => v + (UK_WOMEN[hi][i] - v) * t) as [number, number, number];
+}
+
+/** The body a size is cut for. */
+export function bodyForSize(system: string | null, value: number | null, menswear: boolean): Body | null {
+  if (!system || value == null) return null;
+  let row: [number, number, number] | null = null;
+  if (system === "uk_women") row = ukWomen(value);
+  else if (system === "letter") row = menswear ? LETTER_MEN[value] ?? null : ukWomen(LETTER_WOMEN_UK[value] ?? 12);
+  else if (system === "waist_in") {
+    const waist = value * 2.54;
+    row = [waist + 16, waist, waist + (menswear ? 14 : 22)];
+  }
+  return row ? { bust: row[0], waist: row[1], hips: row[2] } : null;
+}
+
+const SILHOUETTE_EASE: Record<string, Body> = {
+  bodycon: { bust: -2, waist: -2, hips: -2 },
+  fitted: { bust: 4, waist: 4, hips: 4 },
+  straight: { bust: 8, waist: 12, hips: 6 },
+  a_line: { bust: 6, waist: 6, hips: 25 },
+  flared: { bust: 6, waist: 4, hips: 30 },
+  relaxed: { bust: 14, waist: 16, hips: 14 },
+  oversized: { bust: 24, waist: 28, hips: 22 },
+  wide_leg: { bust: 8, waist: 4, hips: 10 },
+};
+
+/** Garment measurements estimated from the size it's cut for plus its designed room (read from the photo). */
+export function estimateGarment(sizeBody: Body | null, designEase: Partial<Body> | null | undefined, silhouette: string | null | undefined): GarmentMeasurements | null {
+  if (!sizeBody) return null;
+  const fallback = SILHOUETTE_EASE[silhouette ?? ""] ?? { bust: 8, waist: 8, hips: 8 };
+  const out: GarmentMeasurements = {};
+  for (const area of ["bust", "waist", "hips"] as const) {
+    const body = sizeBody[area];
+    const ease = designEase?.[area] ?? fallback[area];
+    if (body != null && ease != null) out[area] = Math.round((body + ease) * 2) / 2;
+  }
+  return Object.keys(out).length ? out : null;
+}
+
 /** Switching between "all the way round" and "laid flat" converts what is already typed, so nothing is doubled twice. */
 export function convertAround(inputs: Partial<Record<MeasureKey, string>>, toFlat: boolean): Partial<Record<MeasureKey, string>> {
   const out: Partial<Record<MeasureKey, string>> = { ...inputs };

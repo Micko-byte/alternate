@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Ruler } from "lucide-react";
 import { toast } from "sonner";
@@ -61,7 +61,7 @@ export function Measurements() {
     await queryClient.invalidateQueries({ queryKey: ["measurements"] });
   };
 
-  const fromPhotos = async () => {
+  const fromPhotos = async (silent = false) => {
     const list = photos.data ?? [];
     const notesById = Object.fromEntries((bodyProfile.data?.photos ?? []).map((n) => [n.id, n]));
     const pick = (angle: string) =>
@@ -70,8 +70,8 @@ export function Measurements() {
         .sort((a, b) => Number(notesById[b.id]?.clothing_fit === "fitted") - Number(notesById[a.id]?.clothing_fit === "fitted"))[0];
     const front = pick("front");
     const side = pick("side") ?? null;
-    if (!height) return toast.error("Add your height in step 1 first. It sets the scale.");
-    if (!front) return toast.error("Add a front photo, head to feet, first.");
+    if (!height) return silent ? undefined : toast.error("Add your height first. It sets the scale.");
+    if (!front) return silent ? undefined : toast.error("Add a front photo, head to feet, first.");
     setBusy("photo");
     try {
       const [{ ensurePartsMap, loadPartsMap }, { measure }] = await Promise.all([import("@/lib/bodyPhoto"), import("@/lib/measure")]);
@@ -89,9 +89,9 @@ export function Measurements() {
         null,
       );
       setNotes(result.notes);
-      toast.success("Measured from your photos");
+      if (!silent) toast.success("Measured from your photos");
     } catch (err) {
-      toast.error(errorMessage(err));
+      if (!silent) toast.error(errorMessage(err));
     } finally {
       setBusy(null);
     }
@@ -115,12 +115,39 @@ export function Measurements() {
     }
   };
 
-  const [suggestion, setSuggestion] = useState<Record<string, number | null> | null>(null);
+  // Nothing measured yet but photos and a height are there: measure straight away, quietly
+  const autoTried = useRef(false);
   useEffect(() => {
-    if (!current.bust && !current.waist && !current.hips) return setSuggestion(null);
-    import("@/lib/measure").then(({ suggestSizes }) => setSuggestion(suggestSizes(current, menswear) as Record<string, number | null>));
+    if (autoTried.current || saved.isLoading || saved.data || !height || !photos.data?.some((p) => p.angle === "front") || bodyProfile.isLoading) return;
+    autoTried.current = true;
+    void fromPhotos(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [current.bust, current.waist, current.hips, menswear]);
+  }, [saved.isLoading, saved.data, height, photos.data, bodyProfile.isLoading]);
+
+  // Profiles read before estimates existed, or before a height change, are re-read once in the background
+  const refreshed = useRef(false);
+  useEffect(() => {
+    const bp = bodyProfile.data;
+    if (refreshed.current || !bp || !photos.data?.length || (bp.estimates && bp.heightUsed === (height ?? null))) return;
+    refreshed.current = true;
+    void supabase.functions.invoke("analyze-body").then(() => queryClient.invalidateQueries({ queryKey: ["body-profile"] }));
+  }, [bodyProfile.data, photos.data, height, queryClient]);
+
+  const estimates = bodyProfile.data?.estimates ?? null;
+  const aiValue: Record<string, number | null> = { bust: estimates?.bust_cm ?? null, waist: estimates?.waist_cm ?? null, hips: estimates?.hips_cm ?? null };
+  const heightOff =
+    height && estimates?.height_min_cm && estimates?.height_max_cm && (height < estimates.height_min_cm - 5 || height > estimates.height_max_cm + 5)
+      ? { min: estimates.height_min_cm, max: estimates.height_max_cm }
+      : null;
+
+  const [suggestion, setSuggestion] = useState<Record<string, number | null> | null>(null);
+  // Sizes from typed or photo-measured values, else from the AI's estimate
+  const forSizes = current.bust || current.waist || current.hips ? current : { bust: aiValue.bust, waist: aiValue.waist, hips: aiValue.hips };
+  useEffect(() => {
+    if (!forSizes.bust && !forSizes.waist && !forSizes.hips) return setSuggestion(null);
+    import("@/lib/measure").then(({ suggestSizes }) => setSuggestion(suggestSizes(forSizes, menswear) as Record<string, number | null>));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [forSizes.bust, forSizes.waist, forSizes.hips, menswear]);
 
   const systemFor = (category: string): SizeSystem => (menswear ? (category === "bottom" ? "waist_in" : "letter") : "uk_women");
 
@@ -143,8 +170,14 @@ export function Measurements() {
   return (
     <div className="grid gap-6">
       <p className="text-muted">
-        Try-ons use these to draw how tightly clothes sit on you. Only you can see them; ALTERNATE staff can't.
+        Try-ons use these to draw how tightly clothes sit on you. Anything you type in is used as it is; anything missing is estimated from your photos. Only you can see them; ALTERNATE staff can't.
       </p>
+
+      {heightOff && (
+        <Notice tone="warn" title="Check your height">
+          Your photos look like someone about {heightOff.min}–{heightOff.max} cm tall, but your height is saved as {height} cm. A wrong height moves hems and measurements.
+        </Notice>
+      )}
 
       <div className="grid grid-cols-3 gap-2">
         {FIELDS.map((f) => (
@@ -158,6 +191,12 @@ export function Measurements() {
                   {sources[f] === "tape" ? "Tape" : `Photo ±${saved.data?.accuracy_cm ?? "?"} cm`}
                 </Pill>
               </>
+            ) : aiValue[f] ? (
+              <>
+                <span className="num text-[28px] leading-none text-muted">~{aiValue[f]}<span className="ml-1 text-[13px]">cm</span></span>
+                <span className="num text-[12px] text-muted">{(aiValue[f]! / 2.54).toFixed(1)} in</span>
+                <Pill tone="accent" className="justify-self-start">AI estimate</Pill>
+              </>
             ) : (
               <span className="text-[13px] text-muted">Not measured yet</span>
             )}
@@ -168,7 +207,7 @@ export function Measurements() {
       {!!notes.length && <Notice tone="warn" title="To make these more accurate">{notes.join(" ")}</Notice>}
 
       <div className="flex flex-wrap items-center gap-3">
-        <Button onClick={fromPhotos} loading={busy === "photo"} disabled={!photos.data?.length}>
+        <Button onClick={() => fromPhotos()} loading={busy === "photo"} disabled={!photos.data?.length}>
           <Ruler className="h-4 w-4" /> {hasAny ? "Measure again from my photos" : "Measure from my photos"}
         </Button>
         <span className="text-[13px] text-muted">Uses your front and side photos and your height. Best in fitted clothes.</span>

@@ -89,6 +89,9 @@ export type InspectionItem = {
   length?: string;
   sleeves?: string;
   silhouette?: string;
+  stretch?: string;
+  /** How much bigger than the body it is designed to be, all the way round (cm); negative = smaller, like bodycon */
+  design_ease?: { bust: number | null; waist: number | null; hips: number | null };
 };
 export type Inspection = { is_wearable: boolean; items: InspectionItem[]; categories: Category[]; costUsd: number };
 
@@ -104,7 +107,7 @@ const INSPECTION_SCHEMA = {
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["type", "category", "colour", "main", "description", "length", "sleeves", "silhouette"],
+        required: ["type", "category", "colour", "main", "description", "length", "sleeves", "silhouette", "stretch", "design_ease"],
         properties: {
           type: { type: "string", description: "Specific type in 1-3 words, e.g. hoodie, quarter-zip, blazer, trench coat, cargo trousers, midi skirt, sneakers, aviator sunglasses, gold hoop earrings" },
           category: { type: "string", enum: [...CATEGORIES] },
@@ -118,6 +121,14 @@ const INSPECTION_SCHEMA = {
           },
           sleeves: { type: "string", enum: ["none", "straps", "short", "elbow", "three_quarter", "long", "n/a"] },
           silhouette: { type: "string", enum: ["bodycon", "fitted", "straight", "a_line", "flared", "relaxed", "oversized", "wide_leg", "n/a"] },
+          stretch: { type: "string", enum: ["none", "some", "high", "n/a"], description: "From the fabric: rigid denim, linen, woven cotton = none; jersey, most knits, stretch denim = some; spandex, ribbed bodycon, leggings = high" },
+          design_ease: {
+            type: "object",
+            additionalProperties: false,
+            description: "How much bigger than the wearer's body this is designed to be, all the way round, in cm, at each area it covers (null where it doesn't). Bodycon about -2, fitted about 4, regular 8-10, relaxed 14, oversized 24+. A flared or A-line skirt has large hip ease.",
+            required: ["bust", "waist", "hips"],
+            properties: { bust: { type: ["number", "null"] }, waist: { type: ["number", "null"] }, hips: { type: ["number", "null"] } },
+          },
         },
       },
     },
@@ -146,7 +157,7 @@ export async function inspectGarment(image: Blob, hint: string): Promise<Inspect
       { type: "input_image", image_url: await blobToDataUrl(image), detail: "high" },
     ],
   });
-  const items = (data.items ?? []).slice(0, 6).map((i) => ({ ...i, length: i.length === "n/a" ? undefined : i.length }));
+  const items = (data.items ?? []).slice(0, 6).map((i) => ({ ...i, length: i.length === "n/a" ? undefined : i.length, stretch: i.stretch === "n/a" ? undefined : i.stretch }));
   return { is_wearable: data.is_wearable, items, categories: [...new Set(items.map((i) => i.category))], costUsd };
 }
 
@@ -159,13 +170,26 @@ export function itemFor(inspection: { items: InspectionItem[] }, requested: stri
 // ------------------------------------------------------------------ body profile
 
 export type PhotoNote = { id: string; angle: string; full_body: boolean; arms_visible: boolean; legs_visible: boolean; clothing_fit: string; usable: boolean; issues: string };
-export type BodyProfile = { summary: string; body: Record<string, string>; photos: PhotoNote[]; tips: string[]; costUsd: number };
+export type BodyEstimates = { bust_cm: number | null; waist_cm: number | null; hips_cm: number | null; height_min_cm: number | null; height_max_cm: number | null };
+export type BodyProfile = { summary: string; body: Record<string, unknown>; photos: PhotoNote[]; tips: string[]; costUsd: number };
 
 const BODY_SCHEMA = {
   type: "object",
   additionalProperties: false,
-  required: ["photos", "body", "summary", "tips"],
+  required: ["photos", "body", "summary", "tips", "estimates"],
   properties: {
+    estimates: {
+      type: "object",
+      additionalProperties: false,
+      required: ["bust_cm", "waist_cm", "hips_cm", "height_min_cm", "height_max_cm"],
+      properties: {
+        bust_cm: { type: ["number", "null"], description: "Bust or chest all the way round, calibrated with the stated height; null if it can't be judged" },
+        waist_cm: { type: ["number", "null"], description: "Natural waist all the way round" },
+        hips_cm: { type: ["number", "null"], description: "Hips at the widest point all the way round" },
+        height_min_cm: { type: ["number", "null"], description: "Lowest plausible height judged from the photos ALONE (head-to-body proportions, doors, skirting boards, furniture), ignoring the stated height" },
+        height_max_cm: { type: ["number", "null"], description: "Highest plausible height judged from the photos alone" },
+      },
+    },
     photos: {
       type: "array",
       items: {
@@ -207,7 +231,8 @@ const BODY_SCHEMA = {
 
 const BODY_RULES = `You build a body reference for a virtual fitting room from several photos of the same adult.
 Describe only what matters for how clothes fit and hang: proportions, shoulder width, chest, waist, hips, arm and leg length and thickness, torso-to-leg ratio, posture.
-Use the stated height and weight to calibrate. Loose clothing hides shape: rely on fitted photos, side views and visible arms and legs; say when something can't be seen.
+Use the stated height and weight to calibrate measurements. Loose clothing hides shape: rely on fitted photos, side views and visible arms and legs; say when something can't be seen.
+Estimate bust or chest, waist and hips in cm as a tailor would from photos. Separately, judge the person's height from the photos alone, as a range, without using the stated height, so a mistyped height can be caught.
 Be factual and neutral. Never comment on attractiveness, health or ideal weight.`;
 
 export async function analyzeBody(photos: { id: string; blob: Blob }[], facts: string): Promise<BodyProfile> {
@@ -218,11 +243,21 @@ export async function analyzeBody(photos: { id: string; blob: Blob }[], facts: s
     body: Record<string, string>;
     summary: string;
     tips: string[];
-  }>({ name: "body_profile", instructions: BODY_RULES, maxTokens: 1200, schema: BODY_SCHEMA, content });
+    estimates: BodyEstimates;
+  }>({ name: "body_profile", instructions: BODY_RULES, maxTokens: 1400, schema: BODY_SCHEMA, content });
   const notes = (data.photos ?? [])
     .filter((n) => n.index >= 1 && n.index <= photos.length)
     .map(({ index, ...n }) => ({ ...n, id: photos[index - 1].id }));
-  return { summary: data.summary, body: data.body, photos: notes, tips: (data.tips ?? []).slice(0, 3), costUsd };
+  const sane = (n: number | null, lo: number, hi: number) => (typeof n === "number" && n >= lo && n <= hi ? Math.round(n) : null);
+  const e = data.estimates ?? ({} as BodyEstimates);
+  const estimates: BodyEstimates = {
+    bust_cm: sane(e.bust_cm, 60, 170),
+    waist_cm: sane(e.waist_cm, 45, 160),
+    hips_cm: sane(e.hips_cm, 65, 180),
+    height_min_cm: sane(e.height_min_cm, 120, 230),
+    height_max_cm: sane(e.height_max_cm, 120, 230),
+  };
+  return { summary: data.summary, body: { ...data.body, estimates }, photos: notes, tips: (data.tips ?? []).slice(0, 3), costUsd };
 }
 
 /** Up-to-date body profile for a shopper: re-analysed only when their active photos change. */
@@ -237,10 +272,14 @@ export async function ensureBodyProfile(admin: SupabaseClient, userId: string) {
   const ids = (photos ?? []).map((p) => p.id).sort();
   if (!ids.length) return null;
 
-  const { data: existing } = await admin.from("body_profiles").select("*").eq("user_id", userId).maybeSingle();
-  if (existing && [...existing.photo_ids].sort().join() === ids.join()) return existing;
+  const [{ data: existing }, { data: profile }] = await Promise.all([
+    admin.from("body_profiles").select("*").eq("user_id", userId).maybeSingle(),
+    admin.from("profiles").select("height_cm, weight_kg, shops_for").eq("id", userId).maybeSingle(),
+  ]);
+  // Re-read when the photos change, the height changes, or the profile predates measurement estimates
+  const body = (existing?.body ?? {}) as { estimates?: unknown; height_used?: number | null };
+  if (existing && [...existing.photo_ids].sort().join() === ids.join() && body.estimates && body.height_used === (profile?.height_cm ?? null)) return existing;
 
-  const { data: profile } = await admin.from("profiles").select("height_cm, weight_kg, shops_for").eq("id", userId).maybeSingle();
   const facts = [
     profile?.height_cm ? `Height ${profile.height_cm} cm.` : "",
     profile?.weight_kg ? `Weight ${profile.weight_kg} kg.` : "",
@@ -252,7 +291,7 @@ export async function ensureBodyProfile(admin: SupabaseClient, userId: string) {
     user_id: userId,
     photo_ids: ids,
     summary: result.summary,
-    body: result.body,
+    body: { ...result.body, height_used: profile?.height_cm ?? null },
     photos: result.photos,
     tips: result.tips,
     cost_usd: Number(result.costUsd.toFixed(5)),

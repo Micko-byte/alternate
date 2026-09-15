@@ -13,7 +13,7 @@ Deno.serve(async (req) => {
   try {
     const profile = await ensureBodyProfile(admin, user.id);
     if (!profile) return json({ photos: [], tips: ["Add a full-body photo from the front"] });
-    return json({ photos: profile.photos, tips: profile.tips, updated_at: profile.updated_at });
+    return json({ photos: profile.photos, tips: profile.tips, estimates: (profile.body as { estimates?: unknown })?.estimates ?? null, updated_at: profile.updated_at });
   } catch (err) {
     console.error("analyze-body", err);
     return json({ error: "We couldn't check your photos right now. Try-ons still work." }, 502);
