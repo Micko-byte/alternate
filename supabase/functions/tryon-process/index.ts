@@ -23,6 +23,7 @@ import {
   type QualityCheck,
 } from "../_shared/ai.ts";
 import { LENGTHS, editableGrid, lengthFromCm, lengthSteps, maskPng, readPartsMap } from "../_shared/body.ts";
+import { measurementRule } from "../_shared/garmentFit.ts";
 
 const IMAGE_MODEL = Deno.env.get("OPENAI_IMAGE_MODEL") ?? "gpt-image-2.5-sunburst";
 const OUTPUT_SIZE = "1024x1536"; // must match the photo and the masks
@@ -52,13 +53,14 @@ type Tryon = {
   size_value: number | null;
   size_label: string | null;
   garment_type: string | null;
+  variant_id: string | null;
   cost_usd: number | null;
   qa: { attempts?: Attempt[] } | null;
 };
 
 type Attempt = { n: number; path: string; check: QualityCheck | null; passed: boolean };
 
-const TRYON_COLUMNS = "id, user_id, body_photo_id, product_id, garment_upload_id, quality, attempts, fit, size_system, size_value, size_label, garment_type, cost_usd, qa";
+const TRYON_COLUMNS = "id, user_id, body_photo_id, product_id, garment_upload_id, quality, attempts, fit, size_system, size_value, size_label, garment_type, variant_id, cost_usd, qa";
 
 // The fit changes only how close the fabric sits, never the length or the design lines
 const FIT_STYLE: Record<string, string> = {
@@ -310,9 +312,15 @@ async function prepare(admin: SupabaseClient, tryon: Tryon) {
   let chosenLength: string | null = null;
   let lengthCm: number | null = null;
   let labelSize: string | null = null;
+  let garmentMeasurements: Record<string, number> | null = null;
+  let stretch: string | null = null;
 
   if (tryon.product_id) {
-    const { data: product } = await admin.from("products").select("id, name, description, category, garment_notes, length, length_cm").eq("id", tryon.product_id).single();
+    const { data: product } = await admin.from("products").select("id, name, description, category, garment_notes, length, length_cm, stretch").eq("id", tryon.product_id).single();
+    if (tryon.variant_id) {
+      const { data: variant } = await admin.from("product_variants").select("measurements").eq("id", tryon.variant_id).maybeSingle();
+      garmentMeasurements = (variant?.measurements as Record<string, number> | null) ?? null;
+    }
     const { data: media } = await admin
       .from("product_media")
       .select("storage_path")
@@ -330,11 +338,12 @@ async function prepare(admin: SupabaseClient, tryon: Tryon) {
     cachedNotes = product.garment_notes ?? "";
     hint = `${product.name}. ${product.description ?? ""}`;
     chosenLength = product.length;
-    lengthCm = product.length_cm;
+    lengthCm = garmentMeasurements?.length ?? product.length_cm;
+    stretch = product.stretch;
   } else {
     const { data: upload } = await admin
       .from("garment_uploads")
-      .select("storage_path, cutout_path, category, source_note, length, length_cm, size_label")
+      .select("storage_path, cutout_path, category, source_note, length, length_cm, size_label, measurements, stretch")
       .eq("id", tryon.garment_upload_id)
       .single();
     if (!upload) throw new Error("Inspiration row missing");
@@ -344,8 +353,10 @@ async function prepare(admin: SupabaseClient, tryon: Tryon) {
     isCutout = !!upload.cutout_path;
     hint = `${tryon.garment_type ?? ""} ${upload.source_note ?? ""}`;
     chosenLength = upload.length;
-    lengthCm = upload.length_cm;
+    garmentMeasurements = (upload.measurements as Record<string, number> | null) ?? null;
+    lengthCm = garmentMeasurements?.length ?? upload.length_cm;
     labelSize = upload.size_label;
+    stretch = upload.stretch;
   }
 
   const key = tryon.product_id ? { product_id: tryon.product_id } : { garment_upload_id: tryon.garment_upload_id };
@@ -449,7 +460,9 @@ async function prepare(admin: SupabaseClient, tryon: Tryon) {
 
   const itemName = garmentType ?? CATEGORY_NAME[category ?? "other"];
   const sized = hasLength;
-  const fitRule = sized ? FIT_STYLE[tryon.fit] ?? FIT_STYLE.regular : "";
+  // Real garment measurements against real body measurements beat general size and fit descriptions
+  const byMeasurement = sized ? measurementRule(garmentMeasurements, measurements, stretch) : "";
+  const fitRule = sized && !byMeasurement ? FIT_STYLE[tryon.fit] ?? FIT_STYLE.regular : "";
   const lengthRule = length ? `LENGTH: the hem must end ${LENGTHS[length].name} on the customer (${lengthNote}). Not longer, not shorter.` : "";
   const sleeveRule = sleeves && !["n/a", ""].includes(sleeves) ? `Sleeves: ${sleeves.replace("_", "-")}, exactly as in image 2.` : "";
   const measured = measurements && (measurements.bust_cm || measurements.waist_cm || measurements.hips_cm)
@@ -468,7 +481,8 @@ async function prepare(admin: SupabaseClient, tryon: Tryon) {
     item?.colour ? `COLOURS must match image 2 exactly: ${item.colour}. Do not recolour, tint or swap any part of the print.` : "Colours must match image 2 exactly. Do not recolour any part of the print.",
     lengthRule,
     sleeveRule,
-    sized ? sizeText : "",
+    sized && !byMeasurement ? sizeText : "",
+    byMeasurement,
     fitRule,
     measured,
     bodySummary ? `About the customer's body, from all their photos (do not reshape it): ${bodySummary}` : "",
@@ -484,7 +498,7 @@ async function prepare(admin: SupabaseClient, tryon: Tryon) {
     `Put ${itemName} (${CATEGORY_NAME[category ?? "other"]}) from image 2 on the customer in image 1. ${zoneRule(category, zone)}`,
     item?.colour ? `Colours: ${item.colour}.` : "",
     length ? `The hem should end ${LENGTHS[length].name}.` : "",
-    sized ? `Fit: ${fitRule}` : "",
+    byMeasurement || (sized ? `Fit: ${fitRule}` : ""),
     "Tattoos and skin marks that stay visible must be unchanged.",
   ]
     .filter(Boolean)

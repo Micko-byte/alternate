@@ -430,9 +430,11 @@ export type Database = {
           id: string
           length: string | null
           length_cm: number | null
+          measurements: Json | null
           size_label: string | null
           source_note: string | null
           storage_path: string
+          stretch: string | null
           user_id: string
         }
         Insert: {
@@ -443,9 +445,11 @@ export type Database = {
           id?: string
           length?: string | null
           length_cm?: number | null
+          measurements?: Json | null
           size_label?: string | null
           source_note?: string | null
           storage_path: string
+          stretch?: string | null
           user_id: string
         }
         Update: {
@@ -456,9 +460,11 @@ export type Database = {
           id?: string
           length?: string | null
           length_cm?: number | null
+          measurements?: Json | null
           size_label?: string | null
           source_note?: string | null
           storage_path?: string
+          stretch?: string | null
           user_id?: string
         }
         Relationships: []
@@ -696,6 +702,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          measurements: Json | null
           product_id: string
           size_label: string
           size_max: number | null
@@ -707,6 +714,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          measurements?: Json | null
           product_id: string
           size_label: string
           size_max?: number | null
@@ -718,6 +726,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          measurements?: Json | null
           product_id?: string
           size_label?: string
           size_max?: number | null
@@ -757,6 +766,7 @@ export type Database = {
           source_caption: string | null
           status: Database["public"]["Enums"]["product_status"]
           store_id: string
+          stretch: string | null
           tags: string[]
           updated_at: string
         }
@@ -780,6 +790,7 @@ export type Database = {
           source_caption?: string | null
           status?: Database["public"]["Enums"]["product_status"]
           store_id: string
+          stretch?: string | null
           tags?: string[]
           updated_at?: string
         }
@@ -803,6 +814,7 @@ export type Database = {
           source_caption?: string | null
           status?: Database["public"]["Enums"]["product_status"]
           store_id?: string
+          stretch?: string | null
           tags?: string[]
           updated_at?: string
         }
@@ -1362,6 +1374,7 @@ export type Database = {
           status: Database["public"]["Enums"]["tryon_status"]
           subscription_id: string | null
           user_id: string
+          variant_id: string | null
         }
         Insert: {
           attempts?: number
@@ -1394,6 +1407,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["tryon_status"]
           subscription_id?: string | null
           user_id: string
+          variant_id?: string | null
         }
         Update: {
           attempts?: number
@@ -1426,6 +1440,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["tryon_status"]
           subscription_id?: string | null
           user_id?: string
+          variant_id?: string | null
         }
         Relationships: [
           {
@@ -1454,6 +1469,13 @@ export type Database = {
             columns: ["subscription_id"]
             isOneToOne: false
             referencedRelation: "user_subscriptions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tryons_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants"
             referencedColumns: ["id"]
           },
         ]
@@ -1706,6 +1728,7 @@ export type Database = {
           _garment_upload_id?: string
           _product_id?: string
           _quality?: Database["public"]["Enums"]["tryon_quality"]
+          _variant_id?: string
         }
         Returns: {
           attempts: number
@@ -1738,6 +1761,7 @@ export type Database = {
           status: Database["public"]["Enums"]["tryon_status"]
           subscription_id: string | null
           user_id: string
+          variant_id: string | null
         }
         SetofOptions: {
           from: "*"

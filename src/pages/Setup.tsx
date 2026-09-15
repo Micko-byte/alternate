@@ -12,6 +12,7 @@ import { ShopsForPicker, SizeFields, sizeKey } from "@/components/SizeFields";
 import { Button, ButtonLink, Field, Input, Notice, PageHeader, Select } from "@/components/ui";
 import { BodyPhotoUploader } from "@/components/BodyPhotoUploader";
 import { Measurements } from "@/components/Measurements";
+import { heightHint } from "@/components/BodyBasics";
 
 const POLICY_VERSION = "2026-09-v1";
 
@@ -104,14 +105,6 @@ function AboutStep() {
       <Button onClick={save} loading={busy} className="justify-self-start">Save</Button>
     </div>
   );
-}
-
-/** Shows 165 cm as 5 ft 5 in, so a wrong height is easy to spot. */
-function heightHint(cm: string) {
-  const n = Number(cm);
-  if (!n || n < 100 || n > 250) return "Used to place hems and read measurements";
-  const inches = Math.round(n / 2.54);
-  return `That's ${Math.floor(inches / 12)} ft ${inches % 12} in. Check it's right.`;
 }
 
 function SizesStep() {

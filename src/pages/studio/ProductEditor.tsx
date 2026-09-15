@@ -10,8 +10,9 @@ import { Button, Field, Input, Notice, PageHeader, Pill, Select, Spinner, Textar
 import { VideoFramePicker } from "@/components/VideoFramePicker";
 import { useStore } from "./types";
 import { GARMENT_BY_CATEGORY, LENGTH_OPTIONS } from "@/lib/garments";
+import { MEASURES_FOR, MEASURE_LABELS, STRETCH_OPTIONS, convertAround, toMeasurements, type MeasureKey } from "@/lib/garmentFit";
 
-type VariantDraft = { id?: string; size_label: string; size_min: string; size_max: string; stock_qty: string };
+type VariantDraft = { id?: string; size_label: string; size_min: string; size_max: string; stock_qty: string; m: Partial<Record<MeasureKey, string>> };
 
 export default function ProductEditor() {
   const { id } = useParams();
@@ -79,7 +80,8 @@ function EditProduct({ id }: { id: string }) {
     },
   });
 
-  const [form, setForm] = useState({ name: "", category: "dress", garmentType: "", length: "", lengthCm: "", department: "women" as Department, sizeSystem: "uk_women" as SizeSystem, price_kes: "", description: "", status: "draft", is_one_of_a_kind: false });
+  const [measuredFlat, setMeasuredFlat] = useState(false);
+  const [form, setForm] = useState({ name: "", category: "dress", garmentType: "", length: "", lengthCm: "", stretch: "", department: "women" as Department, sizeSystem: "uk_women" as SizeSystem, price_kes: "", description: "", status: "draft", is_one_of_a_kind: false });
   const [variants, setVariants] = useState<VariantDraft[]>([]);
   const [removed, setRemoved] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
@@ -95,6 +97,7 @@ function EditProduct({ id }: { id: string }) {
       garmentType: p.garment_type ?? "",
       length: p.length ?? "",
       lengthCm: p.length_cm != null ? String(p.length_cm) : "",
+      stretch: p.stretch ?? "",
       department: p.department,
       sizeSystem: p.product_variants[0]?.size_system ?? (p.department === "men" ? (p.category === "bottom" ? "waist_in" : "letter") : "uk_women"),
       price_kes: String(p.price_kes),
@@ -105,7 +108,14 @@ function EditProduct({ id }: { id: string }) {
     setVariants(
       [...p.product_variants]
         .sort((a, b) => (a.size_min ?? 0) - (b.size_min ?? 0))
-        .map((v) => ({ id: v.id, size_label: v.size_label, size_min: v.size_min?.toString() ?? "", size_max: v.size_max?.toString() ?? "", stock_qty: String(v.stock_qty) })),
+        .map((v) => ({
+          id: v.id,
+          size_label: v.size_label,
+          size_min: v.size_min?.toString() ?? "",
+          size_max: v.size_max?.toString() ?? "",
+          stock_qty: String(v.stock_qty),
+          m: Object.fromEntries(Object.entries((v.measurements ?? {}) as Record<string, number>).map(([k, n]) => [k, String(n)])),
+        })),
     );
     setRemoved([]);
   }, [product.data]);
@@ -211,6 +221,7 @@ function EditProduct({ id }: { id: string }) {
           garment_type: form.garmentType.trim().slice(0, 40) || null,
           length: (LENGTH_OPTIONS[form.category] && form.length ? form.length : null) as never,
           length_cm: Number(form.lengthCm) >= 5 && Number(form.lengthCm) <= 250 ? Number(form.lengthCm) : null,
+          stretch: (form.stretch || null) as never,
           department: form.department,
           price_kes: Number(form.price_kes),
           description: form.description || null,
@@ -232,6 +243,10 @@ function EditProduct({ id }: { id: string }) {
           size_min: v.size_min ? Number(v.size_min) : null,
           size_max: v.size_max ? Number(v.size_max) : null,
           stock_qty: Math.max(0, Number(v.stock_qty) || 0),
+          measurements: toMeasurements(
+            Object.fromEntries(Object.entries(v.m).filter(([k]) => (MEASURES_FOR[form.category] ?? []).includes(k as MeasureKey))),
+            measuredFlat,
+          ) as never,
         };
         const { error: vErr } = v.id ? await supabase.from("product_variants").update(row).eq("id", v.id) : await supabase.from("product_variants").insert(row);
         if (vErr) throw vErr;
@@ -257,7 +272,9 @@ function EditProduct({ id }: { id: string }) {
     navigate("/studio/products");
   };
 
-  const setV = (i: number, k: keyof VariantDraft, value: string) => setVariants((vs) => vs.map((v, j) => (j === i ? { ...v, [k]: value } : v)));
+  const setV = (i: number, k: Exclude<keyof VariantDraft, "m">, value: string) => setVariants((vs) => vs.map((v, j) => (j === i ? { ...v, [k]: value } : v)));
+  const setM = (i: number, k: MeasureKey, value: string) => setVariants((vs) => vs.map((v, j) => (j === i ? { ...v, m: { ...v.m, [k]: value } } : v)));
+  const measureKeys = MEASURES_FOR[form.category] ?? [];
 
   return (
     <div className="grid gap-8">
@@ -382,8 +399,38 @@ function EditProduct({ id }: { id: string }) {
               <span className="label">Sizes &amp; stock</span>
               <span className="text-[13px] text-muted">Label as you write it (M, 12, 32/34), the sizes it fits in {SIZE_SYSTEMS[form.sizeSystem].label}, and how many you have. Leave "fits from" empty for one-size.</span>
             </div>
+            {!!measureKeys.length && (
+              <div className="grid gap-2 border border-rule bg-paper p-3">
+                <span className="text-[13px]">
+                  <span className="font-medium">Measure each size</span> <span className="text-muted">so shoppers see how it fits their body and try-ons draw it the right tightness.</span>
+                </span>
+                <div className="flex flex-wrap items-center gap-4">
+                  <label className="flex cursor-pointer items-center gap-2 text-[13px] text-muted">
+                    <input
+                      type="checkbox"
+                      checked={measuredFlat}
+                      onChange={(e) => {
+                        const flat = e.target.checked;
+                        setMeasuredFlat(flat);
+                        setVariants((vs) => vs.map((v) => ({ ...v, m: convertAround(v.m, flat) })));
+                      }}
+                      className="h-4 w-4 accent-ink"
+                    />
+                    I measure laid flat (we double bust, waist, hips, thigh)
+                  </label>
+                  <label className="flex items-center gap-2 text-[13px] text-muted">
+                    Fabric
+                    <Select value={form.stretch} onChange={(e) => setForm({ ...form, stretch: e.target.value })} className="h-9 w-40">
+                      <option value="">Not sure</option>
+                      {STRETCH_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                    </Select>
+                  </label>
+                </div>
+              </div>
+            )}
             {variants.map((v, i) => (
-              <div key={v.id ?? `new-${i}`} className="grid grid-cols-[1fr_1fr_1fr_80px_auto] items-end gap-2">
+              <div key={v.id ?? `new-${i}`} className="grid gap-2 border-b border-rule pb-3 last:border-0">
+              <div className="grid grid-cols-[1fr_1fr_1fr_80px_auto] items-end gap-2">
                 <Field label="Label"><Input value={v.size_label} onChange={(e) => setV(i, "size_label", e.target.value)} maxLength={20} /></Field>
                 <Field label="Fits from">
                   <Select value={v.size_min} onChange={(e) => setV(i, "size_min", e.target.value)} className="num">
@@ -409,8 +456,19 @@ function EditProduct({ id }: { id: string }) {
                   <Trash2 className="h-4 w-4" />
                 </button>
               </div>
+              {!!measureKeys.length && (
+                <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+                  {measureKeys.map((k) => (
+                    <label key={k} className="grid gap-1">
+                      <span className="text-[11.5px] text-muted" title={MEASURE_LABELS[k].hint}>{MEASURE_LABELS[k].label} cm</span>
+                      <Input type="number" inputMode="decimal" min={1} max={300} value={v.m[k] ?? ""} onChange={(e) => setM(i, k, e.target.value)} className="num h-9" />
+                    </label>
+                  ))}
+                </div>
+              )}
+              </div>
             ))}
-            <Button variant="outline" size="sm" className="justify-self-start" onClick={() => setVariants((vs) => [...vs, { size_label: "", size_min: "", size_max: "", stock_qty: "1" }])}>
+            <Button variant="outline" size="sm" className="justify-self-start" onClick={() => setVariants((vs) => [...vs, { size_label: "", size_min: "", size_max: "", stock_qty: "1", m: {} }])}>
               <Plus className="h-4 w-4" /> Add a size
             </Button>
           </div>

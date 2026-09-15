@@ -134,6 +134,16 @@ export function useSubscriptionPlans() {
 export type BodyProfileNotes = { id: string; angle: string; full_body: boolean; arms_visible: boolean; legs_visible: boolean; clothing_fit: string; usable: boolean; issues: string };
 
 /** What all of the shopper's photos show together, and what to add for a better fit. */
+/** The shopper's bust/chest, waist and hips (tape or photo estimate). Private to them. */
+export function useBodyMeasurements() {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ["measurements", user?.id],
+    enabled: !!user,
+    queryFn: async () => (await supabase.from("body_measurements").select("*").eq("user_id", user!.id).maybeSingle()).data,
+  });
+}
+
 export function useBodyProfile() {
   const { user } = useAuth();
   return useQuery({
@@ -202,9 +212,9 @@ export function useMyStore() {
 }
 
 export const PRODUCT_SELECT =
-  "id, name, description, category, department, price_kes, status, is_one_of_a_kind, store_id, created_at, stores!inner(id, name, slug, status, whatsapp_phone, instagram_handle), product_media(id, kind, storage_path, position, is_tryon_source), product_variants(id, size_label, size_system, size_min, size_max, stock_qty)";
+  "id, name, description, category, department, price_kes, status, is_one_of_a_kind, stretch, store_id, created_at, stores!inner(id, name, slug, status, whatsapp_phone, instagram_handle), product_media(id, kind, storage_path, position, is_tryon_source), product_variants(id, size_label, size_system, size_min, size_max, stock_qty, measurements)";
 
-export type Variant = { id: string; size_label: string; size_system: SizeSystem; size_min: number | null; size_max: number | null; stock_qty: number };
+export type Variant = { id: string; size_label: string; size_system: SizeSystem; size_min: number | null; size_max: number | null; stock_qty: number; measurements?: unknown };
 
 export type FitState = "fits" | "not-in-size" | "needs-size" | "sold-out";
 

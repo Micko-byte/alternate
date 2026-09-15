@@ -21,6 +21,8 @@ export async function startTryon(args: {
   fit?: Database["public"]["Enums"]["fit_style"];
   /** What is being tried on. */
   category?: string | null;
+  /** A specific size of a store piece, to see how that size fits. */
+  variantId?: string | null;
 }) {
   // The engine builds each item's mask from the photo's parts map; older photos get one made first
   const { data: photo } = await supabase.from("body_photos").select("id, user_id, storage_path, parts_map_path").eq("id", args.bodyPhotoId).single();
@@ -34,6 +36,7 @@ export async function startTryon(args: {
     _garment_upload_id: args.garmentUploadId ?? null,
     _quality: args.quality,
     _fit: args.fit ?? null,
+    _variant_id: args.variantId ?? null,
   });
   if (error) throw error;
   const tryon = data as unknown as Database["public"]["Tables"]["tryons"]["Row"];

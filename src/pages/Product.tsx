@@ -5,7 +5,8 @@ import { Bell, Heart, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
-import { PRODUCT_SELECT, fitFor, useBodyPhotos, useCredits, useProfile, useSetupStatus, useSizes, useTryonPrices } from "@/lib/queries";
+import { PRODUCT_SELECT, fitFor, useBodyMeasurements, useBodyPhotos, useCredits, useProfile, useSetupStatus, useSizes, useTryonPrices } from "@/lib/queries";
+import { FEEL_LABELS, areaFits, recommendSize, type GarmentMeasurements, type Stretch } from "@/lib/garmentFit";
 import { FITS, SIZE_SYSTEMS, sizeText, type FitStyle } from "@/lib/sizes";
 import { QUALITY_LABELS, startTryon } from "@/lib/tryon";
 import { CATEGORY_SINGULAR, cn, errorMessage, kes, publicMediaUrl, signedUrl } from "@/lib/utils";
@@ -35,6 +36,8 @@ export default function Product() {
   const [busy, setBusy] = useState(false);
   const profile = useProfile();
   const [fitStyle, setFitStyle] = useState<FitStyle>("regular");
+  const [pickedVariant, setPickedVariant] = useState<string | null>(null);
+  const body = useBodyMeasurements();
   useEffect(() => {
     if (profile.data?.preferred_fit) setFitStyle(profile.data.preferred_fit);
   }, [profile.data?.preferred_fit]);
@@ -84,12 +87,18 @@ export default function Product() {
   const chosenPhoto = photoId ?? photos.data?.find((ph) => ph.angle === "front")?.id ?? photos.data?.[0]?.id;
   const cost = prices.data?.[quality] ?? 1;
   const hasImage = media.some((m) => m.kind === "image");
+  const stretch = ((p as { stretch?: string | null }).stretch ?? "some") as Stretch;
+  const bodyM = body.data ? { bust: body.data.bust_cm, waist: body.data.waist_cm, hips: body.data.hips_cm } : null;
+  const recommended = recommendSize(p.product_variants, bodyM, fitStyle, stretch);
+  // Size shown and tried on: the one picked, else the measured best fit, else the size-chart match
+  const selected = p.product_variants.find((v) => v.id === pickedVariant && v.stock_qty > 0) ?? recommended ?? result.variant ?? null;
+  const selectedFits = selected ? areaFits(selected.measurements as GarmentMeasurements, bodyM, stretch) : [];
 
   const tryOn = async () => {
     if (!chosenPhoto) return;
     setBusy(true);
     try {
-      const tryonId = await startTryon({ bodyPhotoId: chosenPhoto, productId: p.id, quality, fit: fitStyle, category: p.category });
+      const tryonId = await startTryon({ bodyPhotoId: chosenPhoto, productId: p.id, quality, fit: fitStyle, category: p.category, variantId: selected?.id ?? null });
       queryClient.invalidateQueries({ queryKey: ["credits"] });
       navigate(`/try/${tryonId}`);
     } catch (err) {
@@ -154,17 +163,52 @@ export default function Product() {
               </span>
             )}
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Size to try on">
             {p.product_variants.map((v) => {
-              const mine = result.variant?.id === v.id;
+              const isSelected = selected?.id === v.id;
+              const soldOut = v.stock_qty === 0;
               return (
-                <span key={v.id} className={cn("grid min-w-[56px] gap-0.5 border px-3 py-2 text-center", mine ? "border-ink" : "border-rule", v.stock_qty === 0 && "text-muted line-through")}>
+                <button
+                  key={v.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={isSelected}
+                  disabled={soldOut}
+                  onClick={() => setPickedVariant(v.id)}
+                  className={cn("relative grid min-w-[56px] gap-0.5 border px-3 py-2 text-center", isSelected ? "border-ink bg-sunk" : "border-rule hover:border-ink", soldOut && "cursor-not-allowed text-muted line-through")}
+                >
                   <span className="num text-[14px] font-medium">{v.size_label}</span>
-                  <span className="text-[10.5px] text-muted no-underline">{v.stock_qty === 0 ? "Sold out" : `${v.stock_qty} left`}</span>
-                </span>
+                  <span className="text-[10.5px] text-muted no-underline">{soldOut ? "Sold out" : recommended?.id === v.id ? "Best fit" : `${v.stock_qty} left`}</span>
+                </button>
               );
             })}
           </div>
+          {selected && !!selectedFits.length && (
+            <div className="grid gap-2 border border-rule bg-surface p-4">
+              <span className="label text-ink">How size {selected.size_label} fits you</span>
+              <table className="w-full text-left text-[13.5px]">
+                <thead className="label"><tr><th className="py-1 font-semibold">Area</th><th>Garment</th><th>You</th><th>Feel</th></tr></thead>
+                <tbody>
+                  {selectedFits.map((a) => (
+                    <tr key={a.area} className="border-t border-rule">
+                      <td className="py-1.5 capitalize">{a.area === "bust" ? (profile.data?.shops_for === "men" ? "Chest" : "Bust") : a.area}</td>
+                      <td className="num">{a.garment} cm</td>
+                      <td className="num">{a.body} cm</td>
+                      <td className={cn(a.feel === "too_small" ? "text-bad" : a.feel === "skin_tight" ? "text-warn" : "text-ink")}>
+                        {FEEL_LABELS[a.feel]} <span className="num text-muted">({a.ease > 0 ? "+" : ""}{a.ease})</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <p className="text-[12.5px] text-muted">The try-on draws it exactly this tight. Pick another size to see the difference.</p>
+            </div>
+          )}
+          {user && !bodyM?.bust && !bodyM?.waist && !bodyM?.hips && p.product_variants.some((v) => v.measurements) && (
+            <p className="text-[13px] text-muted">
+              This store measured every size. <Link to="/me/setup#measurements" className="text-ink underline underline-offset-4">Add your measurements</Link> to see how each one fits you.
+            </p>
+          )}
         </div>
 
         <TryPanel />
@@ -191,14 +235,14 @@ export default function Product() {
     if (!hasImage) return <Notice title="Try-on coming soon">The store hasn't added a photo for try-on yet.</Notice>;
     if (fit === "sold-out") return <Notice tone="neutral" title="Sold out in every size" />;
     if (!setup.ready) return <Notice tone="accent" title="Finish your fitting profile to try this on" action={<ButtonLink to="/me/setup" variant="accent" size="sm">Set up</ButtonLink>}>Add your photo, age and privacy choices once.</Notice>;
-    if (fit === "needs-size")
+    if (fit === "needs-size" && !pickedVariant)
       return (
         <Notice tone="accent" title={`Add your ${CATEGORY_SINGULAR[p.category]} size (${SIZE_SYSTEMS[result.system ?? "uk_women"].label})`} action={<ButtonLink to="/me/setup#sizes" variant="solid" size="sm">Add size</ButtonLink>}>
           This store sizes it in {SIZE_SYSTEMS[result.system ?? "uk_women"].label}.
         </Notice>
       );
     const fitLabel = FITS.find((f) => f.value === fitStyle)!.label.toLowerCase();
-    if (fit === "not-in-size") {
+    if (fit === "not-in-size" && !pickedVariant) {
       const waiting = alerts.data?.includes(`${result.system}:${result.target}`);
       return (
         <div className="grid gap-4">
@@ -214,7 +258,7 @@ export default function Product() {
     return (
       <div className="grid gap-4 border border-ink bg-surface p-5">
         <div className="flex items-center justify-between">
-          <span className="display text-[26px]">{result.variant?.size_min == null ? "One size. Try it on." : `Size ${result.variant.size_label} for you.`}</span>
+          <span className="display text-[26px]">{selected?.size_min == null ? "One size. Try it on." : `Try on size ${selected.size_label}.`}</span>
           <Link to="/credits" className="text-[13px] text-muted hover:text-ink"><span className="num text-ink">{credits.data ?? 0}</span> credits</Link>
         </div>
         <FitPicker value={fitStyle} onChange={setFitStyle} hint="looser fits size up" />

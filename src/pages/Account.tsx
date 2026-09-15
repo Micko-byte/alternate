@@ -9,6 +9,8 @@ import { Button, ButtonLink, PageHeader, Pill } from "@/components/ui";
 import { FeedbackButton } from "@/components/FeedbackButton";
 import { ThemePicker } from "@/components/ThemeToggle";
 import { InstallAppSection } from "@/components/InstallApp";
+import { BodyBasics } from "@/components/BodyBasics";
+import { Measurements } from "@/components/Measurements";
 
 const CONSENT_LABELS: Record<string, string> = {
   terms: "Terms and privacy policy",
@@ -78,6 +80,18 @@ export default function Account() {
             </>
           )}
           {isAdmin.data && <ButtonLink to="/admin" variant="solid" className="justify-self-start">Admin dashboard</ButtonLink>}
+        </section>
+
+        <section className="grid content-start gap-5 bg-surface p-6 md:col-span-2" id="body">
+          <div className="grid gap-1">
+            <h2 className="display text-[26px]">Your body</h2>
+            <p className="text-muted">Keep these up to date: they decide where hems fall and how tightly clothes sit in your try-ons.</p>
+          </div>
+          <BodyBasics />
+          <div className="grid gap-3 border-t border-rule pt-5">
+            <h3 className="label text-ink">Measurements</h3>
+            <Measurements />
+          </div>
         </section>
 
         <section className="grid content-start gap-3 bg-surface p-6 md:col-span-2">

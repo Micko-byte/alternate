@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { ArrowLeftRight, Check, ImagePlus, Plus, ShieldCheck, Trash2 } from "lucide-react";
+import { ArrowLeftRight, Check, ImagePlus, Pencil, Plus, ShieldCheck, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -16,7 +16,8 @@ import { FitPicker } from "@/components/FitPicker";
 import { useTryonAllowance } from "@/lib/admin";
 import { FeedbackButton } from "@/components/FeedbackButton";
 import type { ParsedInspiration } from "@/lib/garmentCutout";
-import { GARMENTS, GARMENT_BY_CATEGORY, LENGTH_OPTIONS, SIZED_CATEGORIES, closestLength } from "@/lib/garments";
+import { GARMENTS, GARMENT_BY_CATEGORY, LENGTH_OPTIONS, SIZED_CATEGORIES } from "@/lib/garments";
+import { GarmentDetails, type Seen } from "@/components/GarmentDetails";
 
 type Quality = "standard" | "hd" | "studio";
 
@@ -36,6 +37,7 @@ export default function FittingRoom() {
   const [inspirationId, setInspirationId] = useState<string>();
   const [addingPhoto, setAddingPhoto] = useState(false);
   const [pendingInspiration, setPendingInspiration] = useState<File | null>(null);
+  const [editingInspiration, setEditingInspiration] = useState(false);
   const profile = useProfile();
   const [fit, setFit] = useState<FitStyle>("regular");
   const [quality, setQuality] = useState<Quality>("standard");
@@ -55,7 +57,7 @@ export default function FittingRoom() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("garment_uploads")
-        .select("id, storage_path, cutout_path, category, garment_type, source_note, created_at")
+        .select("id, storage_path, cutout_path, category, garment_type, length, size_label, measurements, stretch, source_note, created_at")
         .eq("user_id", user!.id)
         .order("created_at", { ascending: false })
         .limit(24);
@@ -259,7 +261,15 @@ export default function FittingRoom() {
           {!pendingInspiration && inspiration && (
             <UploadZone compact onFile={setPendingInspiration} />
           )}
-          {pendingInspiration ? (
+          {editingInspiration && inspiration && !pendingInspiration ? (
+            <GarmentDetails
+              garment={inspiration}
+              previewUrl={inspiration.url}
+              allowCategory
+              onDone={() => { setEditingInspiration(false); inspirations.refetch(); }}
+              onCancel={() => setEditingInspiration(false)}
+            />
+          ) : pendingInspiration ? (
             <InspirationForm
               file={pendingInspiration}
               onFile={setPendingInspiration}
@@ -274,7 +284,10 @@ export default function FittingRoom() {
                     <img src={inspiration.url} alt="Selected inspiration" className="h-full w-full object-contain" />
                     <div className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-paper/90 px-3 py-2">
                       <span className="label text-ink">{inspiration.garment_type ?? CATEGORY_SINGULAR[inspiration.category ?? "other"]}</span>
-                      <button onClick={() => removeInspiration(inspiration)} className="p-1 text-muted hover:text-bad" aria-label="Delete this inspiration"><Trash2 className="h-4 w-4" /></button>
+                      <span className="flex items-center gap-1">
+                        <button onClick={() => setEditingInspiration(true)} className="flex items-center gap-1 p-1 text-[12px] text-muted hover:text-ink" aria-label="Edit this garment: type, length, size and measurements"><Pencil className="h-3.5 w-3.5" /> Edit</button>
+                        <button onClick={() => removeInspiration(inspiration)} className="p-1 text-muted hover:text-bad" aria-label="Delete this inspiration"><Trash2 className="h-4 w-4" /></button>
+                      </span>
                     </div>
                   </>
                 ) : (
@@ -283,7 +296,7 @@ export default function FittingRoom() {
               </div>
               <div className="flex gap-2 overflow-x-auto pb-1">
                 {inspirations.data?.map((g) => (
-                  <button key={g.id} onClick={() => setInspirationId(g.id)} className={cn("h-24 w-[64px] shrink-0 overflow-hidden bg-sunk outline-offset-2", inspirationId === g.id && "outline outline-2 outline-ink")} aria-label="Use this inspiration" aria-pressed={inspirationId === g.id}>
+                  <button key={g.id} onClick={() => { setInspirationId(g.id); setEditingInspiration(false); }} className={cn("h-24 w-[64px] shrink-0 overflow-hidden bg-sunk outline-offset-2", inspirationId === g.id && "outline outline-2 outline-ink")} aria-label="Use this inspiration" aria-pressed={inspirationId === g.id}>
                     {g.url && <img src={g.url} alt="" className="h-full w-full object-cover" />}
                   </button>
                 ))}
@@ -419,10 +432,7 @@ function InspirationForm({ file, onFile, onSaved, onCancel }: { file: File; onFi
   const [garmentType, setGarmentType] = useState<string | null>(null);
   const [touched, setTouched] = useState(false);
   const [mismatch, setMismatch] = useState<{ id: string; message: string; suggestion: { category: string; type: string } | null } | null>(null);
-  const [details, setDetails] = useState<{ id: string; category: string; seen: { type: string; colour: string; length: string | null; sleeves: string | null; silhouette: string | null } | null } | null>(null);
-  const [length, setLength] = useState<string | null>(null);
-  const [sizeLabel, setSizeLabel] = useState("");
-  const [lengthCm, setLengthCm] = useState("");
+  const [details, setDetails] = useState<{ id: string; category: string; type: string | null; seen: Seen } | null>(null);
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [parsed, setParsed] = useState<ParsedInspiration | null>(null);
@@ -439,9 +449,6 @@ function InspirationForm({ file, onFile, onSaved, onCancel }: { file: File; onFi
     setTouched(false);
     setMismatch(null);
     setDetails(null);
-    setLength(null);
-    setSizeLabel("");
-    setLengthCm("");
     let cancelled = false;
     import("@/lib/garmentCutout")
       .then(({ parseInspiration }) => parseInspiration(file))
@@ -506,9 +513,8 @@ function InspirationForm({ file, onFile, onSaved, onCancel }: { file: File; onFi
         await supabase.from("garment_uploads").update({ garment_type: String(check.chosen_item).slice(0, 40) }).eq("id", id);
       }
       if (LENGTH_OPTIONS[category]) {
-        // Confirm length and size before the first try-on
-        setLength(closestLength(category, check?.chosen?.length));
-        setDetails({ id, category, seen: check?.checked ? check.chosen : null });
+        // Confirm length, size and measurements before the first try-on
+        setDetails({ id, category, type: garmentType ?? check?.chosen_item ?? null, seen: check?.checked ? check.chosen : null });
         return;
       }
       onSaved(id);
@@ -530,24 +536,11 @@ function InspirationForm({ file, onFile, onSaved, onCancel }: { file: File; onFi
     if (error) return toast.error(errorMessage(error));
     if (LENGTH_OPTIONS[mismatch.suggestion.category]) {
       setCategory(mismatch.suggestion.category);
-      setDetails({ id: mismatch.id, category: mismatch.suggestion.category, seen: null });
+      setDetails({ id: mismatch.id, category: mismatch.suggestion.category, type: mismatch.suggestion.type, seen: null });
       setMismatch(null);
       return;
     }
     onSaved(mismatch.id);
-  };
-
-  const saveDetails = async () => {
-    if (!details) return;
-    setBusy(true);
-    const cm = Number(lengthCm);
-    const { error } = await supabase
-      .from("garment_uploads")
-      .update({ length: length as never, size_label: sizeLabel.trim().slice(0, 12) || null, length_cm: cm >= 5 && cm <= 250 ? cm : null })
-      .eq("id", details.id);
-    setBusy(false);
-    if (error) return toast.error(errorMessage(error));
-    onSaved(details.id);
   };
 
   const discardMismatch = async () => {
@@ -557,49 +550,14 @@ function InspirationForm({ file, onFile, onSaved, onCancel }: { file: File; onFi
   };
 
   if (details) {
-    const options = LENGTH_OPTIONS[details.category] ?? [];
-    const seen = details.seen;
-    const noun2 = seen?.type?.toLowerCase() ?? CATEGORY_SINGULAR[details.category];
     return (
-      <div className="grid gap-5">
-        <div className="grid grid-cols-[88px_1fr] items-start gap-4">
-          {preview && <img src={preview} alt="" className="aspect-[3/4] w-full bg-sunk object-cover" />}
-          <div className="grid gap-1">
-            <span className="label">We see</span>
-            <p className="font-medium capitalize">{seen ? `${seen.type}` : noun2}</p>
-            {seen?.colour && <p className="text-[13px] text-muted">{seen.colour}</p>}
-            {seen && (seen.sleeves || seen.silhouette) && (
-              <p className="text-[13px] text-muted">{[seen.sleeves && seen.sleeves !== "n/a" ? `${seen.sleeves.replace("_", "-")} sleeves` : "", seen.silhouette && seen.silhouette !== "n/a" ? seen.silhouette.replace("_", "-") : ""].filter(Boolean).join(" · ")}</p>
-            )}
-          </div>
-        </div>
-
-        <fieldset className="grid gap-2">
-          <legend className="label mb-2">How long is it?</legend>
-          <div className="flex flex-wrap gap-1.5">
-            {options.map((o) => (
-              <button key={o.value} type="button" onClick={() => setLength(o.value)} aria-pressed={length === o.value} className={cn("h-9 border px-3 text-[13px]", length === o.value ? "border-ink bg-ink text-paper" : "border-rule text-muted hover:border-ink hover:text-ink")}>
-                {o.label}
-              </button>
-            ))}
-          </div>
-          <p className="text-[12.5px] text-muted">{seen?.length ? "We picked this from the photo. Change it if it's wrong." : "Pick where it ends on you, or leave it and we'll go by the photo."}</p>
-        </fieldset>
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Size on the label (optional)" hint="e.g. UK 10, M, 32. Smaller than yours looks tighter.">
-            <Input value={sizeLabel} onChange={(e) => setSizeLabel(e.target.value)} maxLength={12} />
-          </Field>
-          <Field label="Length in cm (optional)" hint={["bottom", "skirt"].includes(details.category) ? "From the waistband to the hem" : "From the top of the shoulder to the hem"}>
-            <Input type="number" inputMode="decimal" min={5} max={250} value={lengthCm} onChange={(e) => setLengthCm(e.target.value)} className="num" />
-          </Field>
-        </div>
-
-        <div className="flex gap-2">
-          <Button variant="solid" onClick={saveDetails} loading={busy}>Use this {noun2}</Button>
-          <Button variant="ghost" onClick={() => onSaved(details.id)}>Skip</Button>
-        </div>
-      </div>
+      <GarmentDetails
+        garment={{ id: details.id, category: details.category, garment_type: details.type, length: null, size_label: null, measurements: null, stretch: null }}
+        previewUrl={preview}
+        seen={details.seen}
+        onDone={() => onSaved(details.id)}
+        onCancel={() => onSaved(details.id)}
+      />
     );
   }
 

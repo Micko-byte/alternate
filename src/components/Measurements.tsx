@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { Ruler } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
-import { useBodyPhotos, useBodyProfile, useProfile } from "@/lib/queries";
+import { useBodyMeasurements, useBodyPhotos, useBodyProfile, useProfile } from "@/lib/queries";
 import { SIZE_SYSTEMS, sizeText, type SizeSystem } from "@/lib/sizes";
 import { cn, errorMessage } from "@/lib/utils";
 import { Button, Field, Input, Notice, Pill, Spinner } from "@/components/ui";
@@ -23,11 +23,7 @@ export function Measurements() {
   const menswear = profile.data?.shops_for === "men";
   const upperName = menswear ? "Chest" : "Bust";
 
-  const saved = useQuery({
-    queryKey: ["measurements", user?.id],
-    enabled: !!user,
-    queryFn: async () => (await supabase.from("body_measurements").select("*").eq("user_id", user!.id).maybeSingle()).data,
-  });
+  const saved = useBodyMeasurements();
 
   const [busy, setBusy] = useState<"photo" | "tape" | "sizes" | null>(null);
   const [notes, setNotes] = useState<string[]>([]);

@@ -8,7 +8,7 @@ const PRICE = { input: 10, output: 50 }; // USD per 1M tokens
 const SCHEMA = {
   type: "object",
   additionalProperties: false,
-  required: ["name", "category", "garment_type", "department", "price_kes", "description", "garment_notes", "is_one_of_a_kind", "size_system", "sizes"],
+  required: ["name", "category", "garment_type", "department", "price_kes", "description", "garment_notes", "is_one_of_a_kind", "size_system", "stretch", "sizes"],
   properties: {
     name: { type: "string", description: "Short shop name for the piece, max 60 characters, no emojis or prices" },
     category: { type: "string", enum: ["dress", "top", "bottom", "skirt", "jumpsuit", "outerwear", "set", "shoes", "eyewear", "headwear", "jewellery", "other"], description: "Hoodies, jumpers, quarter-zips and cardigans are top; blazers and coats are outerwear" },
@@ -19,18 +19,35 @@ const SCHEMA = {
     garment_notes: { type: "string", description: "Exact visual description of the garment for virtual try-on, under 70 words" },
     is_one_of_a_kind: { type: "boolean", description: "True for single thrift/mitumba pieces or captions like '1 piece', 'one only'" },
     size_system: { type: ["string", "null"], enum: ["uk_women", "letter", "waist_in", null] },
+    stretch: { type: ["string", "null"], enum: ["none", "some", "high", null], description: "Only if the caption or fabric makes it clear (e.g. 'stretchy', 'bodycon', 'rigid denim')" },
     sizes: {
       type: "array",
       description: "Sizes stated in the caption only. Empty if none are stated.",
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["label", "min", "max", "stock"],
+        required: ["label", "min", "max", "stock", "measurements"],
         properties: {
           label: { type: "string", description: "As the store writes it, e.g. 12, M, 32" },
           min: { type: ["integer", "null"] },
           max: { type: ["integer", "null"] },
           stock: { type: ["integer", "null"] },
+          measurements: {
+            type: "object",
+            additionalProperties: false,
+            description: "Garment measurements in cm from the caption only, else null. Bust, waist, hips and thigh are ALL THE WAY ROUND: double flat or 'pit to pit' numbers. Convert inches to cm.",
+            required: ["bust", "waist", "hips", "thigh", "length", "shoulder", "sleeve", "inseam"],
+            properties: {
+              bust: { type: ["number", "null"] },
+              waist: { type: ["number", "null"] },
+              hips: { type: ["number", "null"] },
+              thigh: { type: ["number", "null"] },
+              length: { type: ["number", "null"] },
+              shoulder: { type: ["number", "null"] },
+              sleeve: { type: ["number", "null"] },
+              inseam: { type: ["number", "null"] },
+            },
+          },
         },
       },
     },
@@ -46,6 +63,7 @@ Rules:
 - If no sizes are stated, return an empty sizes array and size_system null.
 - Stock per size only if the caption says it (e.g. "2 pieces"); otherwise null.
 - Mitumba, thrift, "bale", "1 piece", "one only" → is_one_of_a_kind true and stock 1.
+- Measurements: only copy numbers the caption states, per size. "Pit to pit 50" means bust 100 all the way round; "waist flat 36" means waist 72. Inches × 2.54.
 - If the photo shows several garments, describe the main one the caption is selling.`;
 
 Deno.serve(async (req) => {
@@ -121,6 +139,7 @@ Deno.serve(async (req) => {
       description: draft.description?.slice(0, 2000) || null,
       garment_notes: draft.garment_notes || null,
       is_one_of_a_kind: !!draft.is_one_of_a_kind,
+      stretch: draft.stretch ?? null,
       ai_draft: draft,
       ai_cost_usd: Number(cost.toFixed(5)),
       needs_review: true,
@@ -136,13 +155,14 @@ Deno.serve(async (req) => {
     const seen = new Set<string>();
     const rows = sizes
       .filter((s: { label: string }) => s.label && !seen.has(s.label) && seen.add(s.label))
-      .map((s: { label: string; min: number | null; max: number | null; stock: number | null }) => ({
+      .map((s: { label: string; min: number | null; max: number | null; stock: number | null; measurements?: Record<string, number | null> }) => ({
         product_id: product.id,
         size_label: s.label.slice(0, 20),
         size_system: system,
         size_min: draft.size_system ? s.min : null,
         size_max: draft.size_system ? (s.max ?? s.min) : null,
         stock_qty: Math.max(0, s.stock ?? 1),
+        measurements: cleanMeasurements(s.measurements),
       }));
     const { error: variantError } = await admin.from("product_variants").insert(rows);
     if (variantError) return json({ draft, warning: `Sizes need checking: ${variantError.message}` });
@@ -150,3 +170,10 @@ Deno.serve(async (req) => {
 
   return json({ draft, cost_usd: cost });
 });
+
+/** Keeps only stated, sensible measurements; null when there are none. */
+function cleanMeasurements(m: Record<string, number | null> | undefined) {
+  const out: Record<string, number> = {};
+  for (const [k, v] of Object.entries(m ?? {})) if (typeof v === "number" && v >= 5 && v <= 300) out[k] = Math.round(v * 2) / 2;
+  return Object.keys(out).length ? out : null;
+}
