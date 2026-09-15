@@ -8,6 +8,7 @@ import { errorMessage } from "@/lib/utils";
 import { Button, ButtonLink, PageHeader, Pill } from "@/components/ui";
 import { FeedbackButton } from "@/components/FeedbackButton";
 import { ThemePicker } from "@/components/ThemeToggle";
+import { InstallAppSection } from "@/components/InstallApp";
 
 const CONSENT_LABELS: Record<string, string> = {
   terms: "Terms and privacy policy",
@@ -82,6 +83,11 @@ export default function Account() {
         <section className="grid content-start gap-3 bg-surface p-6 md:col-span-2">
           <h2 className="display text-[26px]">Appearance</h2>
           <ThemePicker />
+        </section>
+
+        <section className="grid content-start gap-3 bg-surface p-6 md:col-span-2">
+          <h2 className="display text-[26px]">ALTERNATE on your phone</h2>
+          <InstallAppSection />
         </section>
 
         <section className="grid content-start gap-3 bg-surface p-6 md:col-span-2">

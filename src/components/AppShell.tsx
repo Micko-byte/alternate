@@ -4,6 +4,7 @@ import { useAuth } from "@/lib/auth";
 import { useCredits, useIsAdmin, useMyStore } from "@/lib/queries";
 import { FeedbackButton } from "@/components/FeedbackButton";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { InstallBanner } from "@/components/InstallApp";
 import { cn } from "@/lib/utils";
 import { Wordmark } from "@/components/Wordmark";
 
@@ -122,6 +123,8 @@ export function AppShell() {
           <span className="label">Nairobi, Kenya · KES</span>
         </div>
       </footer>
+
+      {user && <InstallBanner />}
 
       {user && <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-rule bg-paper pb-[env(safe-area-inset-bottom)] md:hidden" aria-label="Main">
         {[
