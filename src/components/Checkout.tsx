@@ -12,7 +12,7 @@ type Step =
   | { kind: "sending" }
   | { kind: "prompt"; reference: string; startedAt: number }
   | { kind: "card"; reference: string }
-  | { kind: "success"; credits: number }
+  | { kind: "success"; credits: number; reference: string; paidAt: Date }
   | { kind: "failed"; message: string };
 
 const PROMPT_TIMEOUT_MS = 150_000;
@@ -33,8 +33,9 @@ async function invoke<T>(name: string, body: Record<string, unknown>): Promise<T
   return data as T;
 }
 
-/** Buy a credit pack without leaving ALTERNATE. M-Pesa runs in our UI; cards use Paystack's secure window. */
-export function Checkout({ pack, onClose }: { pack: Pack; onClose: () => void }) {
+/** Buy a credit pack without leaving ALTERNATE. M-Pesa runs in our UI; cards use Paystack's secure window.
+ *  `inline` renders it inside a page; otherwise it is an overlay with a close button. */
+export function Checkout({ pack, onClose, inline }: { pack: Pack; onClose?: () => void; inline?: boolean }) {
   const queryClient = useQueryClient();
   const profile = useProfile();
   const [method, setMethod] = useState<"mpesa" | "card">("mpesa");
@@ -49,15 +50,15 @@ export function Checkout({ pack, onClose }: { pack: Pack; onClose: () => void })
 
   useEffect(() => () => window.clearInterval(pollRef.current), []);
 
-  const finish = (credits: number) => {
+  const finish = (credits: number, reference: string) => {
     window.clearInterval(pollRef.current);
-    setStep({ kind: "success", credits });
-    for (const key of ["credits", "ledger", "tryon-allowance"]) queryClient.invalidateQueries({ queryKey: [key] });
+    setStep({ kind: "success", credits, reference, paidAt: new Date() });
+    for (const key of ["credits", "ledger", "payments", "tryon-allowance"]) queryClient.invalidateQueries({ queryKey: [key] });
   };
 
   const check = async (reference: string) => {
     const result = await invoke<{ status: string; message: string | null }>("payments-verify", { reference });
-    if (result.status === "success") finish(pack.credits);
+    if (result.status === "success") finish(pack.credits, reference);
     else if (result.status === "failed") {
       window.clearInterval(pollRef.current);
       setStep({ kind: "failed", message: result.message || "The payment didn't go through. You haven't been charged." });
@@ -116,17 +117,15 @@ export function Checkout({ pack, onClose }: { pack: Pack; onClose: () => void })
   const busy = step.kind === "sending" || step.kind === "prompt" || step.kind === "card";
   const secondsLeft = step.kind === "prompt" ? Math.max(0, Math.ceil((PROMPT_TIMEOUT_MS - (now - step.startedAt)) / 1000)) : 0;
 
-  return (
-    // Not a native <dialog>: Paystack's card window must be able to open above it
-    <div className="fixed inset-0 z-40 grid place-items-end bg-ink/45 sm:place-items-center" role="dialog" aria-modal="true" aria-labelledby="checkout-title">
-      <div className="grid max-h-[92dvh] w-full gap-5 overflow-y-auto border-t border-ink bg-paper p-6 sm:max-w-md sm:border">
+  const panel = (
+      <div className={cn("grid w-full gap-5 bg-paper p-6", inline ? "border border-ink" : "max-h-[92dvh] overflow-y-auto border-t border-ink sm:max-w-md sm:border")}>
         <div className="flex items-start justify-between gap-4">
           <div className="grid gap-1">
             <span className="label">Checkout</span>
             <h2 id="checkout-title" className="display text-[34px]">{pack.credits} credits</h2>
             <span className="num text-[15px] text-muted">{pack.name} · {kes(pack.price_kes)}</span>
           </div>
-          {!busy && (
+          {!busy && onClose && (
             <button onClick={onClose} className="grid h-9 w-9 place-items-center hover:bg-sunk" aria-label="Close checkout">
               <X className="h-4 w-4" />
             </button>
@@ -199,13 +198,28 @@ export function Checkout({ pack, onClose }: { pack: Pack; onClose: () => void })
         )}
 
         {step.kind === "success" && (
-          <div className="grid justify-items-center gap-3 py-4 text-center">
-            <CheckCircle2 className="h-12 w-12 text-good" strokeWidth={1.4} />
-            <p className="display text-[30px]">Payment received</p>
-            <p className="text-muted"><span className="num text-ink">{step.credits}</span> credits added to your account.</p>
-            <div className="mt-2 grid w-full gap-2">
+          <div className="grid gap-5 py-2">
+            <div className="grid justify-items-center gap-3 text-center">
+              <CheckCircle2 className="h-12 w-12 text-good" strokeWidth={1.4} />
+              <p className="display text-[30px]">Payment received</p>
+              <p className="text-muted"><span className="num text-ink">{step.credits}</span> credits added to your account.</p>
+            </div>
+            <dl className="grid gap-2 border-y border-rule py-4 text-[14px]">
+              {[
+                ["Paid", kes(pack.price_kes)],
+                ["Method", method === "mpesa" ? "M-Pesa" : "Card"],
+                ["Date", step.paidAt.toLocaleString("en-KE", { dateStyle: "medium", timeStyle: "short" })],
+                ["Reference", step.reference],
+              ].map(([k, v]) => (
+                <div key={k} className="flex justify-between gap-4">
+                  <dt className="label">{k}</dt>
+                  <dd className="num break-all text-right">{v}</dd>
+                </div>
+              ))}
+            </dl>
+            <div className="grid w-full gap-2">
               <ButtonLink to="/fitting-room" size="lg" onClick={onClose}>Start trying on</ButtonLink>
-              <Button variant="ghost" onClick={onClose}>Close</Button>
+              {onClose ? <Button variant="ghost" onClick={onClose}>Close</Button> : <ButtonLink to="/credits" variant="ghost">Back to credits</ButtonLink>}
             </div>
           </div>
         )}
@@ -215,7 +229,7 @@ export function Checkout({ pack, onClose }: { pack: Pack; onClose: () => void })
             <p className="border border-bad/40 bg-bad-soft p-4 text-[14px] text-bad">{step.message}</p>
             <div className="grid grid-cols-2 gap-2">
               <Button variant="outline" onClick={() => setStep({ kind: "choose" })}>Try again</Button>
-              <Button variant="ghost" onClick={onClose}>Close</Button>
+              {onClose ? <Button variant="ghost" onClick={onClose}>Close</Button> : <ButtonLink to="/credits" variant="ghost">Back</ButtonLink>}
             </div>
           </div>
         )}
@@ -225,6 +239,13 @@ export function Checkout({ pack, onClose }: { pack: Pack; onClose: () => void })
           <span className="font-mono text-[11px] font-semibold uppercase tracking-label">Secured and powered by Paystack</span>
         </div>
       </div>
+  );
+
+  if (inline) return panel;
+  return (
+    // Not a native <dialog>: Paystack's card window must be able to open above it
+    <div className="fixed inset-0 z-40 grid place-items-end bg-black/55 sm:place-items-center" role="dialog" aria-modal="true" aria-labelledby="checkout-title">
+      {panel}
     </div>
   );
 }

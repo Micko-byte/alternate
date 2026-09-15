@@ -1,5 +1,6 @@
 import { createRoot } from "react-dom/client";
 import App from "./App";
+import { ThemeProvider } from "@/lib/theme";
 import { supabaseConfigured } from "@/integrations/supabase/client";
 import "./index.css";
 
@@ -18,4 +19,4 @@ function SetupNeeded() {
   );
 }
 
-createRoot(document.getElementById("root")!).render(supabaseConfigured ? <App /> : <SetupNeeded />);
+createRoot(document.getElementById("root")!).render(<ThemeProvider>{supabaseConfigured ? <App /> : <SetupNeeded />}</ThemeProvider>);

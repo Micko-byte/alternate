@@ -5,6 +5,7 @@ import { useMyStore } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 import { Pill, Spinner } from "@/components/ui";
 import { Wordmark } from "@/components/Wordmark";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import CreateStore from "@/pages/studio/CreateStore";
 
 export function StudioShell() {
@@ -30,7 +31,8 @@ export function StudioShell() {
               <Pill tone={store.data.status === "active" ? "good" : store.data.status === "pending" ? "warn" : "bad"}>{store.data.status}</Pill>
             </div>
           )}
-          <Link to="/shop" className="ml-auto text-[14px] font-medium text-muted hover:text-ink">Back to shop</Link>
+          <ThemeToggle className="ml-auto" />
+          <Link to="/shop" className="text-[14px] font-medium text-muted hover:text-ink">Back to shop</Link>
         </div>
         {store.data && (
           <nav className="mx-auto flex max-w-6xl gap-6 overflow-x-auto px-5" aria-label="Studio">

@@ -1,8 +1,9 @@
-import { NavLink, Outlet, Link, useLocation } from "react-router-dom";
-import { Shirt, ShoppingBag, Sparkles, User } from "lucide-react";
+import { NavLink, Outlet, Link, useLocation, useNavigate } from "react-router-dom";
+import { LogOut, Shirt, ShoppingBag, Sparkles, User } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { useCredits, useIsAdmin, useMyStore } from "@/lib/queries";
 import { FeedbackButton } from "@/components/FeedbackButton";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { cn } from "@/lib/utils";
 import { Wordmark } from "@/components/Wordmark";
 
@@ -17,7 +18,8 @@ const nav = [
 const announcements = ["KES 50 for 4 try-ons · pay with M-Pesa", "Your face is never changed", "Fitted to baggy, in your real size", "Womenswear & menswear", "Made in Nairobi"];
 
 export function AppShell() {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
   const credits = useCredits();
   const store = useMyStore();
   const isAdmin = useIsAdmin();
@@ -58,6 +60,7 @@ export function AppShell() {
             )}
           </nav>}
           <div className="ml-auto flex items-center gap-1">
+            <ThemeToggle />
             {user ? (
               <>
                 <Link to="/credits" className="mr-2 flex items-baseline gap-1.5 px-2 py-1 hover:underline" aria-label={`${credits.data ?? 0} credits`}>
@@ -71,6 +74,9 @@ export function AppShell() {
                 <NavLink to="/account" className="hidden h-10 w-10 place-items-center hover:bg-sunk md:grid" aria-label="Your account">
                   <User className="h-[18px] w-[18px]" strokeWidth={1.6} />
                 </NavLink>
+                <button onClick={() => signOut().then(() => navigate("/", { replace: true }))} className="grid h-10 w-10 place-items-center hover:bg-sunk" aria-label="Log out" title="Log out">
+                  <LogOut className="h-[18px] w-[18px]" strokeWidth={1.6} />
+                </button>
               </>
             ) : (
               <>

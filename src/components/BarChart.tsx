@@ -3,7 +3,7 @@ import { useState } from "react";
 type Datum = { label: string; value: number };
 
 /**
- * Single-series column chart: one hue (#3D5A99, validated), thin columns with a 2px gap,
+ * Single-series column chart: one hue (chart token: #3D5A99 light / #6F8BCB dark, both validated), thin columns with a 2px gap,
  * 4px rounded tops anchored to the baseline, recessive grid, hover tooltip, table fallback.
  */
 export function BarChart({ title, data, format, height = 180 }: { title: string; data: Datum[]; format: (v: number) => string; height?: number }) {
@@ -33,8 +33,8 @@ export function BarChart({ title, data, format, height = 180 }: { title: string;
             const y = pad.top + plotH - (top ? (t / top) * plotH : 0);
             return (
               <g key={t}>
-                <line x1={pad.left} x2={W - pad.right} y1={y} y2={y} stroke="#E4E2DC" strokeWidth={1} />
-                <text x={pad.left - 6} y={y + 4} textAnchor="end" fontSize="10" fill="#686868" fontFamily="IBM Plex Mono, monospace">
+                <line x1={pad.left} x2={W - pad.right} y1={y} y2={y} className="stroke-rule" strokeWidth={1} />
+                <text x={pad.left - 6} y={y + 4} textAnchor="end" fontSize="10" className="fill-muted" fontFamily="IBM Plex Mono, monospace">
                   {format(t)}
                 </text>
               </g>
@@ -50,7 +50,7 @@ export function BarChart({ title, data, format, height = 180 }: { title: string;
                 {h > 0 && (
                   <path
                     d={`M${x},${pad.top + plotH} V${y + r} Q${x},${y} ${x + r},${y} H${x + barW - r} Q${x + barW},${y} ${x + barW},${y + r} V${pad.top + plotH} Z`}
-                    fill="#3D5A99"
+                    className="fill-chart"
                     opacity={hover === null || hover === i ? 1 : 0.45}
                   />
                 )}
@@ -58,14 +58,14 @@ export function BarChart({ title, data, format, height = 180 }: { title: string;
                   <title>{`${d.label}: ${format(d.value)}`}</title>
                 </rect>
                 {i % labelEvery === 0 && (
-                  <text x={x + barW / 2} y={H - 6} textAnchor="middle" fontSize="10" fill="#686868" fontFamily="IBM Plex Mono, monospace">
+                  <text x={x + barW / 2} y={H - 6} textAnchor="middle" fontSize="10" className="fill-muted" fontFamily="IBM Plex Mono, monospace">
                     {d.label}
                   </text>
                 )}
               </g>
             );
           })}
-          <line x1={pad.left} x2={W - pad.right} y1={pad.top + plotH} y2={pad.top + plotH} stroke="#AEAEAE" strokeWidth={1} />
+          <line x1={pad.left} x2={W - pad.right} y1={pad.top + plotH} y2={pad.top + plotH} className="stroke-grey" strokeWidth={1} />
         </svg>
       </div>
       <details className="text-[13px]">

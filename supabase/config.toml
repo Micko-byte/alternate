@@ -31,3 +31,28 @@ verify_jwt = false
 
 [functions.admin-users]
 verify_jwt = false
+
+# Branded auth emails (letterhead, logo, brand colours)
+[auth.email.template.confirmation]
+subject = "Confirm your email for ALTERNATE"
+content_path = "./supabase/templates/confirmation.html"
+
+[auth.email.template.recovery]
+subject = "Reset your ALTERNATE password"
+content_path = "./supabase/templates/recovery.html"
+
+[auth.email.template.magic_link]
+subject = "Your ALTERNATE sign-in link"
+content_path = "./supabase/templates/magic_link.html"
+
+[auth.email.template.email_change]
+subject = "Confirm your new email for ALTERNATE"
+content_path = "./supabase/templates/email_change.html"
+
+[auth.email.template.invite]
+subject = "You're invited to ALTERNATE"
+content_path = "./supabase/templates/invite.html"
+
+[auth.email.template.reauthentication]
+subject = "Your ALTERNATE confirmation code"
+content_path = "./supabase/templates/reauthentication.html"

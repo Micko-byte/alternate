@@ -4,6 +4,7 @@ import { useIsOwner } from "@/lib/admin";
 import { cn } from "@/lib/utils";
 import { Pill, Spinner } from "@/components/ui";
 import { Wordmark } from "@/components/Wordmark";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const tabs = [
   ["/admin", "Overview"],
@@ -28,7 +29,8 @@ export function AdminShell() {
         <div className="page flex h-[72px] items-center gap-5">
           <Wordmark suffix="Admin" />
           <Pill tone={isOwner.data ? "ink" : "accent"}>{isOwner.data ? "Owner" : "Admin"}</Pill>
-          <Link to="/fitting-room" className="label ml-auto hover:text-ink">Back to the app</Link>
+          <ThemeToggle className="ml-auto" />
+          <Link to="/fitting-room" className="label hover:text-ink">Back to the app</Link>
         </div>
         <nav className="page flex gap-7 overflow-x-auto" aria-label="Admin">
           {tabs.map(([to, label]) => (

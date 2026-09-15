@@ -19,6 +19,8 @@ import FittingRoom from "@/pages/FittingRoom";
 import TryResult from "@/pages/TryResult";
 import Wardrobe from "@/pages/Wardrobe";
 import Credits from "@/pages/Credits";
+import CheckoutPage from "@/pages/CheckoutPage";
+import ResetPassword from "@/pages/ResetPassword";
 import Account from "@/pages/Account";
 import { AdminShell } from "@/components/AdminShell";
 import AdminOverview from "@/pages/admin/Overview";
@@ -82,6 +84,7 @@ export default function App() {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route element={<AppShell />}>
               <Route path="/shop" element={<Shop />} />
               <Route path="/shop/:id" element={<Product />} />
@@ -92,6 +95,7 @@ export default function App() {
               <Route path="/try/:id" element={<RequireAuth><TryResult /></RequireAuth>} />
               <Route path="/wardrobe" element={<RequireAuth><Wardrobe /></RequireAuth>} />
               <Route path="/credits" element={<RequireAuth><Credits /></RequireAuth>} />
+              <Route path="/checkout/:packId" element={<RequireAuth><CheckoutPage /></RequireAuth>} />
               <Route path="/account" element={<RequireAuth><Account /></RequireAuth>} />
               <Route path="*" element={<NotFound />} />
             </Route>

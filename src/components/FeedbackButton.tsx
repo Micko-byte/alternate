@@ -59,7 +59,7 @@ export function FeedbackButton({ tryonId, variant = "icon", label = "Feedback" }
         <Button variant="outline" onClick={() => setOpen(true)}><MessageSquare className="h-4 w-4" /> {label}</Button>
       )}
 
-      <dialog ref={dialog} onClose={() => setOpen(false)} className="w-[min(560px,calc(100vw-2rem))] border border-ink bg-paper p-0 text-ink backdrop:bg-ink/40">
+      <dialog ref={dialog} onClose={() => setOpen(false)} className="w-[min(560px,calc(100vw-2rem))] border border-ink bg-paper p-0 text-ink backdrop:bg-black/55">
         <form method="dialog" onSubmit={(e) => { e.preventDefault(); if (message.trim().length >= 3) send(); }} className="grid gap-5 p-6">
           <div className="flex items-start justify-between gap-4">
             <div className="grid gap-1">

@@ -1,23 +1,28 @@
 import type { Config } from "tailwindcss";
 
 // Layout language after peregrineclothing.co.uk; type from FID & Co. (Nohemi + Satoshi).
+// Colours are theme tokens (RGB channels in src/index.css), so light and dark swap in one place.
+const token = (name: string) => `rgb(var(--${name}) / <alpha-value>)`;
+
 export default {
+  darkMode: "class",
   content: ["./index.html", "./src/**/*.{ts,tsx}"],
   theme: {
     extend: {
       colors: {
-        paper: "#FFFFFF",
-        surface: "#FFFFFF",
-        sunk: "#F3F2EE",
-        ink: "#191710",
-        muted: "#686868",
-        grey: "#AEAEAE",
-        rule: "#E4E2DC",
-        accent: { DEFAULT: "#222A41", deep: "#161C2E", soft: "#E7E9EF" },
-        mustard: { DEFAULT: "#DBAE49", soft: "#F6EDD5" },
-        good: { DEFAULT: "#2E6B4F", soft: "#E3EFE8" },
-        warn: { DEFAULT: "#8A6414", soft: "#F6EDD5" },
-        bad: { DEFAULT: "#A8322A", soft: "#F7E3E1" },
+        paper: token("paper"),
+        surface: token("surface"),
+        sunk: token("sunk"),
+        ink: token("ink"),
+        muted: token("muted"),
+        grey: token("grey"),
+        rule: token("rule"),
+        chart: token("chart"),
+        accent: { DEFAULT: token("accent"), deep: token("accent-deep"), soft: token("accent-soft") },
+        mustard: { DEFAULT: token("mustard"), soft: token("mustard-soft") },
+        good: { DEFAULT: token("good"), soft: token("good-soft") },
+        warn: { DEFAULT: token("warn"), soft: token("warn-soft") },
+        bad: { DEFAULT: token("bad"), soft: token("bad-soft") },
       },
       fontFamily: {
         display: ['"Nohemi"', '"Satoshi"', "system-ui", "sans-serif"],

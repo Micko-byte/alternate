@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { ImagePlus, Ruler, ScanFace, ShoppingBag, type LucideIcon } from "lucide-react";
 import { buttonClass } from "@/components/ui";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { cn } from "@/lib/utils";
 
 /**
@@ -109,8 +110,12 @@ export default function Onboarding() {
           ))}
         </div>
 
-        <div className="absolute left-5 top-5 bg-paper/90 px-3 py-2 lg:left-8 lg:top-8">
-          <img src="/brand/alternate-mark.png" alt="ALTERNATE" className="h-9 w-auto" />
+        <div className="absolute inset-x-5 top-5 flex items-start justify-between lg:inset-x-8 lg:top-8">
+          <div className="bg-paper/90 px-3 py-2">
+            <img src="/brand/alternate-mark.png" alt="ALTERNATE" className="h-9 w-auto dark:hidden" />
+            <img src="/brand/alternate-mark-white.png" alt="" aria-hidden className="hidden h-9 w-auto dark:block" />
+          </div>
+          <ThemeToggle className="bg-paper/90" />
         </div>
 
         {/* Progress bars */}

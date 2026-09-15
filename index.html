@@ -4,6 +4,18 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#FFFFFF" />
+    <script>
+      (function () {
+        try {
+          var c = localStorage.getItem("alternate-theme");
+          var dark = c === "dark" || ((c === null || c === "system") && window.matchMedia("(prefers-color-scheme: dark)").matches);
+          if (dark) {
+            document.documentElement.classList.add("dark");
+            document.querySelector('meta[name="theme-color"]').setAttribute("content", "#121110");
+          }
+        } catch (e) {}
+      })();
+    </script>
     <title>ALTERNATE — see it on you before you pay</title>
     <meta name="description" content="Try on dresses from Kenyan Instagram and TikTok stores on your own photo, in your size, before you buy." />
     <meta property="og:title" content="ALTERNATE — see it on you before you pay" />

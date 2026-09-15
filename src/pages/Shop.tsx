@@ -52,7 +52,7 @@ export default function Shop() {
       <PageHeader eyebrow={category === "all" ? "New in" : CATEGORY_LABELS[category] ?? category} title={department === "men" ? "Menswear" : department === "women" ? "Womenswear" : "Shop Nairobi's stores"}>
         {user && (
           <label className="flex cursor-pointer items-center gap-3 text-[14px] font-medium">
-            <input type="checkbox" checked={onlyMine} onChange={(e) => setOnlyMine(e.target.checked)} className="h-4 w-4 accent-[#222A41]" />
+            <input type="checkbox" checked={onlyMine} onChange={(e) => setOnlyMine(e.target.checked)} className="h-4 w-4 accent-ink" />
             Only pieces in my size
           </label>
         )}

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light only">
+  <meta name="supported-color-schemes" content="light only">
+  <title>Your sign-in link</title>
+  <style>
+    @media (max-width: 600px) {
+      .shell { width: 100% !important; }
+      .pad { padding-left: 24px !important; padding-right: 24px !important; }
+      .title { font-size: 30px !important; line-height: 34px !important; }
+    }
+  </style>
+</head>
+<body style="margin:0;padding:0;background:#F3F2EE;-webkit-text-size-adjust:100%;">
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;">Your sign-in link for ALTERNATE.</div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#F3F2EE" style="background:#F3F2EE;">
+    <tr><td align="center" style="padding:32px 12px;">
+      <table role="presentation" class="shell" width="560" cellpadding="0" cellspacing="0" border="0" style="width:560px;max-width:560px;">
+
+        <!-- Letterhead -->
+        <tr><td bgcolor="#FFFFFF" style="background:#FFFFFF;border:1px solid #191710;border-bottom:0;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+            <tr><td height="6" bgcolor="#222A41" style="background:#222A41;font-size:0;line-height:0;">&nbsp;</td></tr>
+            <tr><td class="pad" style="padding:28px 40px 22px 40px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+                <td valign="middle">
+                  <a href="https://alternate-two.vercel.app" target="_blank"><img src="https://alternate-two.vercel.app/brand/alternate-logo.png" width="92" height="68" alt="ALTERNATE" style="display:block;border:0;width:92px;height:68px;"></a>
+                </td>
+                <td valign="middle" align="right" style="font-family:'IBM Plex Mono', 'Courier New', Courier, monospace;font-size:11px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:#686868;">Virtual fitting room<br>Nairobi, Kenya</td>
+              </tr></table>
+            </td></tr>
+            <tr><td class="pad" style="padding:0 40px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td height="1" bgcolor="#191710" style="background:#191710;font-size:0;line-height:0;">&nbsp;</td></tr></table></td></tr>
+          </table>
+        </td></tr>
+
+        <!-- Body -->
+        <tr><td bgcolor="#FFFFFF" style="background:#FFFFFF;border-left:1px solid #191710;border-right:1px solid #191710;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+            <tr><td class="pad" style="padding:32px 40px 0 40px;font-family:'IBM Plex Mono', 'Courier New', Courier, monospace;font-size:11px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:#222A41;">
+              <span style="display:inline-block;width:8px;height:8px;background:#DBAE49;margin-right:8px;vertical-align:1px;"></span>Sign in
+            </td></tr>
+            <tr><td class="pad title" style="padding:12px 40px 0 40px;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;font-size:36px;line-height:40px;font-weight:700;letter-spacing:-0.02em;color:#191710;">Your sign-in link</td></tr>
+            <tr><td class="pad" style="padding:16px 40px 24px 40px;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;font-size:15px;line-height:24px;color:#191710;">Use the button below to sign in to ALTERNATE. No password needed.</td></tr>
+            
+          <tr><td style="padding:8px 40px 8px 40px;">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
+              <td bgcolor="#222A41" style="background:#222A41;">
+                <a href="{{ .ConfirmationURL }}" target="_blank" style="display:inline-block;padding:16px 28px;font-family:'IBM Plex Mono', 'Courier New', Courier, monospace;font-size:11px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;font-size:12px;color:#FFFFFF;text-decoration:none;">Sign in &rarr;</a>
+              </td>
+            </tr></table>
+          </td></tr>
+          <tr><td style="padding:20px 40px 0 40px;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;font-size:13px;line-height:20px;color:#686868;">
+            Button not working? Paste this link into your browser:<br>
+            <a href="{{ .ConfirmationURL }}" target="_blank" style="color:#222A41;word-break:break-all;">{{ .ConfirmationURL }}</a>
+          </td></tr>
+            <tr><td class="pad" style="padding:28px 40px 36px 40px;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;font-size:13px;line-height:20px;color:#686868;">The link expires in an hour and works once. If this wasn't you, you can ignore this email. Nothing will change.</td></tr>
+          </table>
+        </td></tr>
+
+        <!-- Footer -->
+        <tr><td bgcolor="#191710" style="background:#191710;border:1px solid #191710;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+            <td class="pad" style="padding:22px 40px;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;font-size:12px;line-height:19px;color:#AEAEAE;">
+              <span style="font-family:'IBM Plex Mono', 'Courier New', Courier, monospace;font-size:11px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:#FFFFFF;">ALTERNATE</span><br>
+              Try clothes on before you buy, in your real size.<br>
+              <a href="https://alternate-two.vercel.app" target="_blank" style="color:#FFFFFF;text-decoration:underline;">alternate-two.vercel.app</a>
+            </td>
+          </tr></table>
+        </td></tr>
+        <tr><td align="center" style="padding:18px 24px 0 24px;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;font-size:11px;line-height:17px;color:#686868;">
+          You're getting this because someone used this address on ALTERNATE.<br>We will never ask for your password or M-Pesa PIN by email.
+        </td></tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>

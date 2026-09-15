@@ -7,6 +7,7 @@ import { useConsents, useIsAdmin, useMyStore, useProfile, useSetupStatus } from 
 import { errorMessage } from "@/lib/utils";
 import { Button, ButtonLink, PageHeader, Pill } from "@/components/ui";
 import { FeedbackButton } from "@/components/FeedbackButton";
+import { ThemePicker } from "@/components/ThemeToggle";
 
 const CONSENT_LABELS: Record<string, string> = {
   terms: "Terms and privacy policy",
@@ -47,7 +48,7 @@ export default function Account() {
       <PageHeader eyebrow="Account" title={profile.data?.display_name || "Your account"}>
         <div className="flex flex-wrap gap-2">
           <FeedbackButton variant="button" label="Send feedback" />
-          <Button variant="outline" onClick={() => signOut().then(() => navigate("/"))}>Sign out</Button>
+          <Button variant="outline" onClick={() => signOut().then(() => navigate("/"))}>Log out</Button>
         </div>
       </PageHeader>
 
@@ -76,6 +77,11 @@ export default function Account() {
             </>
           )}
           {isAdmin.data && <ButtonLink to="/admin" variant="solid" className="justify-self-start">Admin dashboard</ButtonLink>}
+        </section>
+
+        <section className="grid content-start gap-3 bg-surface p-6 md:col-span-2">
+          <h2 className="display text-[26px]">Appearance</h2>
+          <ThemePicker />
         </section>
 
         <section className="grid content-start gap-3 bg-surface p-6 md:col-span-2">

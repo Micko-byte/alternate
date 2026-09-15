@@ -488,7 +488,7 @@ function InspirationForm({ file, onFile, onSaved, onCancel }: { file: File; onFi
       </fieldset>
       {cutout && (
         <label className="flex cursor-pointer items-center gap-2 text-[13px] text-muted">
-          <input type="checkbox" checked={useWhole} onChange={(e) => setUseWhole(e.target.checked)} className="h-4 w-4 accent-[#222A41]" />
+          <input type="checkbox" checked={useWhole} onChange={(e) => setUseWhole(e.target.checked)} className="h-4 w-4 accent-ink" />
           The cut-out missed part of it. Use the whole photo instead.
         </label>
       )}

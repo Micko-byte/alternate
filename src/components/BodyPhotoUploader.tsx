@@ -109,7 +109,7 @@ export function BodyPhotoUploader({ onAdded, onCancel }: { onAdded?: (photoId: s
             {!prepared.bodyFound && <Notice tone="warn" title="We couldn't see a full body">Use a photo with your whole body in the frame for a better fit.</Notice>}
             {!prepared.faceFound && <Notice tone="warn" title="We couldn't find a face">Face lock works best when your face is clearly visible.</Notice>}
             <label className="flex cursor-pointer gap-3">
-              <input type="checkbox" className="mt-1 h-4 w-4 accent-[#222A41]" checked={confirmSelf} onChange={(e) => setConfirmSelf(e.target.checked)} />
+              <input type="checkbox" className="mt-1 h-4 w-4 accent-ink" checked={confirmSelf} onChange={(e) => setConfirmSelf(e.target.checked)} />
               <span>This is a photo of me, and I'm 18 or older.</span>
             </label>
             <div className="flex flex-wrap gap-2">

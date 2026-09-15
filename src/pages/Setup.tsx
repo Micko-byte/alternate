@@ -168,7 +168,7 @@ function PrivacyStep() {
         <label key={i.type} className="flex cursor-pointer gap-3">
           <input
             type="checkbox"
-            className="mt-1 h-4 w-4 shrink-0 accent-[#222A41]"
+            className="mt-1 h-4 w-4 shrink-0 accent-ink"
             checked={active.has(i.type) || !!checked[i.type]}
             disabled={active.has(i.type)}
             onChange={(e) => setChecked({ ...checked, [i.type]: e.target.checked })}

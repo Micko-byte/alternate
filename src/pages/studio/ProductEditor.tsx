@@ -346,7 +346,7 @@ function EditProduct({ id }: { id: string }) {
               </Select>
             </Field>
             <label className="flex items-end gap-2 pb-3">
-              <input type="checkbox" checked={form.is_one_of_a_kind} onChange={(e) => setForm({ ...form, is_one_of_a_kind: e.target.checked })} className="h-4 w-4 accent-[#222A41]" />
+              <input type="checkbox" checked={form.is_one_of_a_kind} onChange={(e) => setForm({ ...form, is_one_of_a_kind: e.target.checked })} className="h-4 w-4 accent-ink" />
               One of a kind (mitumba)
             </label>
           </div>

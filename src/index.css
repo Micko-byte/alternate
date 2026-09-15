@@ -24,9 +24,54 @@
 }
 
 @layer base {
+  /* Theme tokens: RGB channels, consumed by tailwind.config.ts */
   :root {
     color-scheme: light;
+    --paper: 255 255 255;
+    --surface: 255 255 255;
+    --sunk: 243 242 238;
+    --ink: 25 23 16;
+    --muted: 104 104 104;
+    --grey: 174 174 174;
+    --rule: 228 226 220;
+    --chart: 61 90 153;
+    --accent: 34 42 65;
+    --accent-deep: 22 28 46;
+    --accent-soft: 231 233 239;
+    --mustard: 219 174 73;
+    --mustard-soft: 246 237 213;
+    --good: 46 107 79;
+    --good-soft: 227 239 232;
+    --warn: 138 100 20;
+    --warn-soft: 246 237 213;
+    --bad: 168 50 42;
+    --bad-soft: 247 227 225;
   }
+
+  /* Dark: warm near-black, tuned for contrast (not an inversion) */
+  :root.dark {
+    color-scheme: dark;
+    --paper: 18 17 16;
+    --surface: 27 26 24;
+    --sunk: 36 34 32;
+    --ink: 243 241 236;
+    --muted: 168 164 156;
+    --grey: 110 106 99;
+    --rule: 48 46 42;
+    --chart: 111 139 203;
+    --accent: 83 106 164;
+    --accent-deep: 66 86 140;
+    --accent-soft: 31 38 56;
+    --mustard: 226 184 88;
+    --mustard-soft: 58 48 26;
+    --good: 91 199 155;
+    --good-soft: 22 41 31;
+    --warn: 227 174 91;
+    --warn-soft: 46 36 19;
+    --bad: 240 138 128;
+    --bad-soft: 51 26 24;
+  }
+
   html {
     -webkit-tap-highlight-color: transparent;
   }
@@ -66,6 +111,31 @@
   .page {
     @apply mx-auto w-full max-w-[1440px] px-5 md:px-10;
   }
+}
+
+/* Theme switch: browsers with View Transitions get a circular reveal from the toggle;
+   others get a short colour cross-fade. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+::view-transition-new(root) {
+  animation: theme-reveal 0.6s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+@keyframes theme-reveal {
+  from {
+    clip-path: circle(0 at var(--theme-x, 50%) var(--theme-y, 0%));
+  }
+  to {
+    clip-path: circle(var(--theme-r, 150vmax) at var(--theme-x, 50%) var(--theme-y, 0%));
+  }
+}
+html.theme-fade,
+html.theme-fade *,
+html.theme-fade *::before,
+html.theme-fade *::after {
+  transition: background-color 0.45s ease, border-color 0.45s ease, color 0.45s ease, fill 0.45s ease, stroke 0.45s ease !important;
 }
 
 @keyframes grow {
