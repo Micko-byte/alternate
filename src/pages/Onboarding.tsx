@@ -15,7 +15,7 @@ const SLIDES: { image: string; kicker: string; title: string; body: string; icon
     image: "/onboarding/1.jpg",
     kicker: "Virtual fitting room",
     title: "See it on you before you pay.",
-    body: "Add one full-body photo, then try on clothes from Nairobi's stores. Drawn on you.",
+    body: "Add your photos, then try on clothes from Nairobi's stores. Drawn on your real body.",
     icon: ScanFace,
     tone: "bg-sunk text-ink",
   },
@@ -152,9 +152,14 @@ export default function Onboarding() {
           <Link to={withNext("/auth")} className={buttonClass("outline", "lg", "w-full")}>
             I already have an account
           </Link>
-          <Link to="/auth?mode=signup&as=store" className="label justify-self-center py-2 text-ink underline underline-offset-4 lg:justify-self-start">
-            Selling clothes? Open a store
-          </Link>
+          <div className="flex flex-wrap justify-center gap-x-5 lg:justify-start">
+            <Link to="/auth?mode=signup&as=store" className="label py-2 text-ink underline underline-offset-4">
+              Selling clothes? Open a store
+            </Link>
+            <Link to="/welcome" className="label py-2 text-ink underline underline-offset-4">
+              See how it works
+            </Link>
+          </div>
         </div>
       </section>
     </div>

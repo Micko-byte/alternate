@@ -1,6 +1,6 @@
 ---
 name: alternate-tryon
-description: How ALTERNATE's AI virtual try-on works end to end — garment zones and masks, the clothes parser, cut-outs, size and fit rules, the GPT Image prompt, credits, and how to test changes. Use whenever changing try-on quality, masks, prompts, sizes/fits, the fitting room, product sizing, or the tryon-process edge function.
+description: How ALTERNATE's AI virtual try-on works end to end — garment zones and masks (clothes, shoes, glasses, hats, jewellery), the clothes parser, cut-outs, garment inspections, body profiles from all photos, the quality check and redo loop, size and fit rules, the GPT Image prompt, credits and plans, and how to test changes. Use whenever changing try-on quality, masks, prompts, sizes/fits, the fitting room, product sizing, or the tryon-process edge function.
 ---
 
 # ALTERNATE try-on
@@ -12,17 +12,23 @@ A shopper's photo + a garment (store product or uploaded inspiration) → a real
 1. **Body photo upload** — `src/lib/bodyPhoto.ts` (browser)
    - Normalised to **1024×1536 PNG**. The engine output size is `1024x1536`; photo and masks MUST match it.
    - Clothes parser `src/lib/garmentParser.ts` (Xenova/segformer_b2_clothes, q8, ~29 MB, cached) labels: Background, Hat, Hair, Sunglasses, Upper-clothes, Skirt, Pants, Dress, Belt, Left/Right-shoe, Face, Left/Right-leg, Left/Right-arm, Bag, Scarf.
-   - Saves one **edit mask per zone** to `body-photos/{user}/masks/{photo}-{upper|lower|full|face}.png`.
+   - Saves one **edit mask per zone** to `body-photos/{user}/masks/{photo}-{upper|lower|full|face|feet|eyes|head|jewellery}.png`.
+   - Photos from before accessories existed get `feet/eyes/head/jewellery` masks made on demand by `ensureAccessoryMasks` (called from `startTryon` when the item needs one). Mask paths must sit in the owner's folder (DB check constraint).
+   - After upload the browser calls `analyze-body`: GPT-6 Astra reads ALL active photos (≤6) with height/weight and saves `body_profiles` (summary, per-photo notes: angle, arms/legs visible, fit, usable, issues; tips). Re-run only when the set of active photos changes.
    - Mask semantics: **alpha 0 = may change, alpha 255 = keep**. Face/hair/hat/sunglasses/bag are never editable.
 2. **Inspiration upload** — `src/lib/garmentCutout.ts` + `InspirationForm` in `src/pages/FittingRoom.tsx`
-   - Shopper picks what they want from the photo (top / trouser / dress…). Parser cuts out only those classes onto white → `garment-uploads/{user}/{id}-cutout.png` (`garment_uploads.cutout_path`). "Use whole photo" is the fallback.
+   - Shopper picks a category and optionally a type (`src/lib/garments.ts`: hoodie, quarter-zip, blazer, cargo trousers, sneakers, sunglasses, earrings…). The parser pre-selects its best guess (`guessCategory`) and cuts out only those classes onto white → `garment_uploads.cutout_path`. Jewellery always uses the whole photo.
+   - Right after saving, `inspect-garment` (server) lists what the ORIGINAL photo really contains → `garment_inspections` (server-only table). If the chosen category isn't there, the form offers the detected item instead. `request_tryon` also refuses a mismatch (`private.category_matches`: top↔outerwear and set↔top/bottom/skirt count as matches).
 3. **Request** — `public.request_tryon(_body_photo_id, _product_id | _garment_upload_id, _quality, _fit)` (SQL, security definer)
-   - Enforces 18+, consents, own photo, size rule, credits; charges once; reuses in-progress/succeeded identical try-ons.
+   - Enforces 18+, consents, own photo, size rule, garment inspection, test cap; charges a monthly plan first (within its daily limit, Africa/Nairobi day) and credit packs otherwise; reuses in-progress/succeeded identical try-ons; refunds this shopper's try-ons stuck for 15+ minutes.
 4. **Generate** — `supabase/functions/tryon-process/index.ts`
-   - Zone from category: top/outerwear → `upper`; bottom/skirt → `lower`; everything else → `full`.
-   - Sends person PNG + garment (cut-out if present) + zone mask to OpenAI `images/edits` (`gpt-image-2.5-sunburst`; quality standard→medium, hd→high, studio→max).
-   - GPT-6 Astra writes a garment description once per product (cached in `products.garment_notes`).
-   - Stores result, `edit_mask_path`, `engine`, `cost_usd`. Any error → `refund_tryon`.
+   - Zone from category: top/outerwear → `upper`; bottom/skirt → `lower`; shoes → `feet`; eyewear → `eyes`; headwear → `head`; jewellery → `jewellery`; everything else → `full`.
+   - Inspection (cached by source image) must contain the category, else a shopper-readable `UserError` and refund. The matching inspected item's description becomes the garment notes (cached on products).
+   - Sends person PNG + garment + up to N reference photos of the same shopper (picked from the body profile for the zone: side view, arms/legs visible, fitted) + zone mask, `input_fidelity=high` (dropped automatically if the model rejects it).
+   - Tiers: standard = high quality, 1 reference, 2 attempts; hd = high, 2 references, 2 attempts; studio = max, 3 references, 3 attempts. Accessory zones use no references.
+   - **Quality check** (`checkResult` in `_shared/ai.ts`): Astra compares original, item and result → garment_matches, identity, pose, anatomy (limbs/hands), rest unchanged, photo quality, score, problems. Pass = garment + pose + anatomy + photo quality + score ≥ 0.72.
+   - Failed check → attempt saved to `tryon-work/{user}/{tryon}/attempt-n.png`, the function calls itself with the service key (each attempt gets its own time limit) and the next prompt includes the problems to fix. After the last attempt the best one is kept; if its garment is wrong or score < 0.45, `UserError` + refund.
+   - Stores result, `qa` (all attempts), `identity_score` (best score), `reference_photo_ids`, `edit_mask_path`, `engine`, `cost_usd` (all attempts). Technical errors are saved as `Technical: …` and shown to shoppers as a generic message.
 5. **View** — `src/components/FaceLockImage.tsx` pastes the original photo back wherever the tryon's `edit_mask_path` is opaque ("Keep the rest of me"). "AI version" shows the raw output.
 
 ## Zones — what each may change
@@ -32,8 +38,12 @@ A shopper's photo + a garment (store product or uploaded inspiration) → a real
 | upper | Upper-clothes, Scarf, Dress, arms | Pants, Skirt, legs, shoes, face/hair, bag |
 | lower | Pants, Skirt, Belt, Dress, legs (wider ±9 cells for wide/baggy legs) | Upper-clothes, Scarf, arms/hands (incl. what they hold), face/hair, bag |
 | full | all clothes + arms + legs | face/hair, bag |
+| feet | shoes + ankles | everything else |
+| eyes | eye band from temple to temple | everything else |
+| head | hair/hat and the space above, never below the brow | face, everything else |
+| jewellery | ears, neck to collarbone, wrists/hands | face, everything else |
 
-Grid is 256×384 (1 cell ≈ 4 px). If a new garment type is added, update `zoneFor` in BOTH `garmentParser.ts` and `tryon-process`, and `garmentClasses` for cut-outs.
+Grid is 256×384 (1 cell ≈ 4 px). If a new garment category is added: enum migration on its own, `private.category_name`/`category_matches`, `CATEGORIES`/`CATEGORY_NAME`/`categoryMatches` in `_shared/ai.ts`, `zoneFor` in BOTH `garmentParser.ts` and `tryon-process`, `garmentClasses`, `GARMENTS` in `src/lib/garments.ts`, `CATEGORY_LABELS/SINGULAR` in utils, and the `draft-product` schema.
 
 ## Sizes and fits (keep SQL and TS identical)
 
@@ -69,12 +79,15 @@ Grid is 256×384 (1 cell ≈ 4 px). If a new garment type is added, update `zone
 
 ## Costs (measured)
 
-- HD try-on on gpt-image-2.5-sunburst ≈ **$0.068 (KES ~9)** including image inputs.
-- Parser and cut-outs run in the browser: no server cost.
-- Credits: standard 1, hd 3, studio 5; Starter pack KES 50 = 4 credits (tables `tryon_prices`, `credit_packs`).
+- One high-quality generation on gpt-image-2.5-sunburst ≈ **$0.068 (KES ~9)** with 2 input images; each reference photo adds image-input tokens.
+- Astra calls: inspection ≈ $0.01–0.02 (once per image), quality check ≈ $0.02 per attempt, body profile ≈ $0.05–0.08 (once per photo set).
+- Budget ≈ KES 17 per checked Standard try-on including redos (used by the admin Prices "keep / credit" estimate).
+- Parser, cut-outs and masks run in the browser: no server cost.
+- Credits: standard 1, hd 2, studio 4. Packs: Single 1 = KES 50, 5 = KES 225, 12 = KES 480. Plans (30 days, no auto-renew): Lite KES 499 / 15 credits / 5 a day; Plus KES 999 / 35 / 10; Pro KES 1,999 / 70 / 20. All editable in Admin → Settings → Prices. Referred shoppers' payments (packs and plans) give the store `store_finance.referral_rate` (20%).
 
 ## Gotchas
 
 - Old body photos (before garment zones) only have `edit_mask_path` + `face_mask_path`; the engine falls back to the full mask. Ask shoppers to re-upload for top-only / trouser-only locking.
+- Edge functions have a wall-clock limit; never loop several generations inside one call — use the self-call continuation.
 - Secrets (`OPENAI_API_KEY`, `PAYSTACK_SECRET_KEY`) are set by the owner, never typed by the assistant.
 - Vite needs a dev-server restart after adding dependencies (stale optimized deps).

@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { NavLink, Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import { LogOut, Shirt, ShoppingBag, Sparkles, User } from "lucide-react";
 import { useAuth } from "@/lib/auth";
@@ -16,16 +17,16 @@ const nav = [
   { to: "/wardrobe", label: "Wardrobe" },
 ];
 
-const announcements = ["KES 50 for 4 try-ons · pay with M-Pesa", "Your face is never changed", "Fitted to baggy, in your real size", "Womenswear & menswear", "Made in Nairobi"];
+const announcements = ["Plans from KES 499 a month · pay with M-Pesa", "Your face is never changed", "Every try-on is quality checked", "Clothes, shoes, glasses & jewellery", "Made in Nairobi"];
 
-export function AppShell() {
+export function AppShell({ children }: { children?: ReactNode }) {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const credits = useCredits();
   const store = useMyStore();
   const isAdmin = useIsAdmin();
   const { pathname, search } = useLocation();
-  const fullBleed = pathname === "/";
+  const fullBleed = pathname === "/" || pathname === "/welcome";
 
   return (
     <div className={cn("flex min-h-dvh flex-col md:pb-0", user && "pb-16")}>
@@ -94,7 +95,7 @@ export function AppShell() {
       </header>
 
       <main className={cn("flex-1", !fullBleed && "page py-10 md:py-14")}>
-        <Outlet />
+        {children ?? <Outlet />}
       </main>
 
       <footer className="border-t border-rule bg-paper">

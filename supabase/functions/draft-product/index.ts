@@ -8,10 +8,11 @@ const PRICE = { input: 10, output: 50 }; // USD per 1M tokens
 const SCHEMA = {
   type: "object",
   additionalProperties: false,
-  required: ["name", "category", "department", "price_kes", "description", "garment_notes", "is_one_of_a_kind", "size_system", "sizes"],
+  required: ["name", "category", "garment_type", "department", "price_kes", "description", "garment_notes", "is_one_of_a_kind", "size_system", "sizes"],
   properties: {
     name: { type: "string", description: "Short shop name for the piece, max 60 characters, no emojis or prices" },
-    category: { type: "string", enum: ["dress", "top", "bottom", "skirt", "jumpsuit", "outerwear", "set", "other"] },
+    category: { type: "string", enum: ["dress", "top", "bottom", "skirt", "jumpsuit", "outerwear", "set", "shoes", "eyewear", "headwear", "jewellery", "other"], description: "Hoodies, jumpers, quarter-zips and cardigans are top; blazers and coats are outerwear" },
+    garment_type: { type: "string", description: "Specific type in 1-3 words, e.g. hoodie, quarter-zip, blazer, cargo trousers, sneakers" },
     department: { type: "string", enum: ["women", "men", "unisex"] },
     price_kes: { type: ["integer", "null"], description: "Price in Kenyan shillings from the caption, or null if no price is given" },
     description: { type: "string", description: "One or two plain sentences for shoppers: fabric, fit, colour" },
@@ -114,6 +115,7 @@ Deno.serve(async (req) => {
     .update({
       name: String(draft.name || "New piece").slice(0, 120),
       category: draft.category,
+      garment_type: String(draft.garment_type || "").slice(0, 40) || null,
       department: draft.department,
       price_kes: Math.max(0, draft.price_kes ?? 0),
       description: draft.description?.slice(0, 2000) || null,

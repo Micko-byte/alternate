@@ -93,15 +93,56 @@ export function useSetupStatus() {
   };
 }
 
-export function useCredits() {
+export type Wallet = {
+  credits: number;
+  spendable: number;
+  plan: { id: string; name: string; code: string; credits_left: number; credits_total: number; daily_limit: number | null; used_today: number; ends_at: string } | null;
+  paid_until: string | null;
+};
+
+/** Pack credits plus this month's plan credits. */
+export function useWallet() {
   const { user } = useAuth();
   return useQuery({
-    queryKey: ["credits", user?.id],
+    queryKey: ["credits", user?.id, "wallet"],
     enabled: !!user,
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("credit_balance");
+      const { data, error } = await supabase.rpc("my_wallet");
       if (error) throw error;
-      return data ?? 0;
+      return data as unknown as Wallet;
+    },
+  });
+}
+
+/** Everything the shopper can spend right now (plan credits + pack credits). */
+export function useCredits() {
+  const wallet = useWallet();
+  return { ...wallet, data: wallet.data?.spendable } as Omit<typeof wallet, "data"> & { data: number | undefined };
+}
+
+export function useSubscriptionPlans() {
+  return useQuery({
+    queryKey: ["subscription-plans"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("subscription_plans").select("*").order("sort_order");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
+export type BodyProfileNotes = { id: string; angle: string; full_body: boolean; arms_visible: boolean; legs_visible: boolean; clothing_fit: string; usable: boolean; issues: string };
+
+/** What all of the shopper's photos show together, and what to add for a better fit. */
+export function useBodyProfile() {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ["body-profile", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("body_profiles").select("photo_ids, photos, tips, updated_at").eq("user_id", user!.id).maybeSingle();
+      if (error) throw error;
+      return data ? { ...data, photos: (data.photos ?? []) as unknown as BodyProfileNotes[] } : null;
     },
   });
 }

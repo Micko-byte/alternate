@@ -2,9 +2,9 @@ import { useQuery } from "@tanstack/react-query";
 import { Lock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
-import { useCreditPacks, useCredits, useTryonPrices } from "@/lib/queries";
+import { useCreditPacks, useSubscriptionPlans, useTryonPrices, useWallet } from "@/lib/queries";
 import { QUALITY_LABELS } from "@/lib/tryon";
-import { kes } from "@/lib/utils";
+import { cn, kes } from "@/lib/utils";
 import { ButtonLink, PageHeader, Pill } from "@/components/ui";
 
 const ENTRY_LABELS: Record<string, string> = {
@@ -14,15 +14,25 @@ const ENTRY_LABELS: Record<string, string> = {
   adjustment: "Added by ALTERNATE",
 };
 
+const dateText = (iso: string) => new Date(iso).toLocaleDateString("en-KE", { day: "numeric", month: "short" });
+
 export default function Credits() {
   const { user } = useAuth();
-  const balance = useCredits();
+  const wallet = useWallet();
   const packs = useCreditPacks();
+  const plans = useSubscriptionPlans();
   const prices = useTryonPrices();
+  const w = wallet.data;
+
   const payments = useQuery({
     queryKey: ["payments", user?.id],
     queryFn: async () => {
-      const { data } = await supabase.from("payments").select("id, amount_kes, credits, status, metadata, provider_reference, created_at").eq("user_id", user!.id).order("created_at", { ascending: false }).limit(20);
+      const { data } = await supabase
+        .from("payments")
+        .select("id, amount_kes, credits, status, metadata, provider_reference, created_at, subscription_plans(name)")
+        .eq("user_id", user!.id)
+        .order("created_at", { ascending: false })
+        .limit(20);
       return data ?? [];
     },
   });
@@ -35,24 +45,90 @@ export default function Credits() {
     },
   });
 
+  const activePlans = plans.data?.filter((p) => p.is_active) ?? [];
+  const activePacks = packs.data?.filter((p) => p.is_active) ?? [];
+
   return (
-    <div className="grid gap-10">
-      <PageHeader eyebrow="Credits" title="Pay as you try">
-        <div className="grid justify-items-end">
-          <span className="num text-[44px] leading-none">{balance.data ?? 0}</span>
-          <span className="label">credits left</span>
+    <div className="grid gap-12">
+      <PageHeader eyebrow="Credits" title="Plans & credits">
+        <div className="grid justify-items-end gap-1">
+          <span className="num text-[44px] leading-none">{w?.spendable ?? 0}</span>
+          <span className="label">credits to spend</span>
+          {w?.plan && (
+            <span className="text-right text-[12.5px] text-muted">
+              <span className="num text-ink">{w.plan.credits_left}</span> {w.plan.name} · <span className="num text-ink">{w.credits}</span> pack
+            </span>
+          )}
         </div>
       </PageHeader>
 
+      {w?.plan && (
+        <section className="grid gap-4 border border-ink bg-surface p-6 md:grid-cols-[1fr_auto] md:items-end">
+          <div className="grid gap-3">
+            <span className="label">Your plan</span>
+            <span className="display text-[40px]">{w.plan.name}</span>
+            <div className="h-1.5 max-w-md bg-sunk" aria-hidden>
+              <div className="h-full bg-ink" style={{ width: `${(w.plan.credits_left / w.plan.credits_total) * 100}%` }} />
+            </div>
+            <p className="text-[14px] text-muted">
+              <span className="num text-ink">{w.plan.credits_left}</span> of {w.plan.credits_total} credits left until {dateText(w.plan.ends_at)}
+              {w.plan.daily_limit ? <> · <span className="num text-ink">{w.plan.used_today}</span> of {w.plan.daily_limit} try-ons used today</> : null}
+              {w.paid_until && w.paid_until !== w.plan.ends_at ? <> · next month already paid, to {dateText(w.paid_until)}</> : null}
+            </p>
+          </div>
+          {activePlans.find((p) => p.code === w.plan?.code) && (
+            <ButtonLink to={`/checkout/plan/${activePlans.find((p) => p.code === w.plan?.code)!.id}`} variant="outline">Pay for next month</ButtonLink>
+          )}
+        </section>
+      )}
+
+      {!!activePlans.length && (
+        <section className="grid gap-5">
+          <div className="grid gap-2">
+            <h2 className="display text-[clamp(34px,4vw,52px)]">Monthly plans</h2>
+            <p className="max-w-[60ch] text-muted">Pay once for 30 days of try-ons with M-Pesa or card. Nothing renews by itself; pay again when you want another month.</p>
+          </div>
+          <div className="grid gap-3 md:grid-cols-3">
+            {activePlans.map((p, i) => (
+              <article key={p.id} className={cn("grid content-between gap-6 border p-6", i === 1 ? "border-ink bg-ink text-paper" : "border-rule bg-surface")}>
+                <div className="grid gap-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className={cn("label", i === 1 && "text-paper/70")}>{p.name}</span>
+                    {i === 1 && <span className="bg-mustard px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-label text-ink">Most chosen</span>}
+                  </div>
+                  <p className="flex items-baseline gap-1.5">
+                    <span className="display text-[44px]">{kes(p.price_kes)}</span>
+                    <span className={cn("text-[14px]", i === 1 ? "text-paper/70" : "text-muted")}>/ month</span>
+                  </p>
+                  <ul className={cn("grid gap-1.5 text-[14px]", i === 1 ? "text-paper/85" : "text-muted")}>
+                    <li><span className="num">{p.monthly_credits}</span> credits ({p.monthly_credits} Standard try-ons)</li>
+                    {p.daily_limit && <li>Up to <span className="num">{p.daily_limit}</span> try-ons a day</li>}
+                    <li>About <span className="num">{kes(Math.round(p.price_kes / p.monthly_credits))}</span> a try-on</li>
+                    {p.blurb && <li>{p.blurb}</li>}
+                  </ul>
+                </div>
+                <ButtonLink to={`/checkout/plan/${p.id}`} size="lg" variant={i === 1 ? "outline" : "solid"} className={i === 1 ? "border-paper text-paper hover:bg-paper hover:text-ink" : undefined}>
+                  Choose {p.name}
+                </ButtonLink>
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
+
       <div className="grid gap-6 md:grid-cols-[1fr_300px]">
-        <div className="grid content-start gap-4">
-          {packs.data?.filter((p) => p.is_active).map((p) => (
-            <div key={p.id} className="flex flex-wrap items-center justify-between gap-4 border border-ink bg-surface p-6">
+        <section className="grid content-start gap-4">
+          <div className="grid gap-2">
+            <h2 className="display text-[clamp(30px,3.4vw,44px)]">Pay as you go</h2>
+            <p className="text-muted">Credits that never expire. One credit is one Standard try-on.</p>
+          </div>
+          {activePacks.map((p) => (
+            <div key={p.id} className="flex flex-wrap items-center justify-between gap-4 border border-rule bg-surface p-5">
               <div className="grid gap-1">
                 <span className="label">{p.name}</span>
-                <span className="display text-[34px]">{p.credits} credits</span>
+                <span className="display text-[30px]">{p.credits === 1 ? "One try-on" : `${p.credits} credits`}</span>
                 <span className="flex items-center gap-1.5 text-[13px] text-muted">
-                  <Lock className="h-3.5 w-3.5" /> M-Pesa or card · powered by Paystack
+                  <Lock className="h-3.5 w-3.5" /> {p.credits > 1 ? `${kes(Math.round(p.price_kes / p.credits))} each · ` : ""}M-Pesa or card
                 </span>
               </div>
               <ButtonLink to={`/checkout/${p.id}`} size="lg">
@@ -60,16 +136,21 @@ export default function Credits() {
               </ButtonLink>
             </div>
           ))}
-        </div>
+        </section>
         <aside className="grid content-start gap-3 border border-rule bg-surface p-5">
-          <span className="label">What a credit buys</span>
+          <span className="label">What a try-on costs</span>
           {(["standard", "hd", "studio"] as const).map((q) => (
-            <div key={q} className="flex items-baseline justify-between border-b border-rule pb-2 last:border-0">
-              <span>{QUALITY_LABELS[q].name} try-on</span>
-              <span className="num">{prices.data?.[q] ?? "–"} cr</span>
+            <div key={q} className="grid gap-0.5 border-b border-rule pb-2 last:border-0">
+              <div className="flex items-baseline justify-between">
+                <span>{QUALITY_LABELS[q].name}</span>
+                <span className="num">{prices.data?.[q] ?? "–"} cr</span>
+              </div>
+              <span className="text-[12.5px] text-muted">{QUALITY_LABELS[q].blurb}</span>
             </div>
           ))}
-          <p className="text-[13px] text-muted">Failed try-ons are refunded automatically. Trying the same piece again with the same photo is free.</p>
+          <p className="text-[13px] text-muted">
+            Plan credits are used first. Failed try-ons are refunded automatically. If a store brought you to ALTERNATE, 20% of what you pay goes to that store.
+          </p>
         </aside>
       </div>
 
@@ -81,11 +162,12 @@ export default function Credits() {
               <tbody>
                 {payments.data.map((pm) => {
                   const method = (pm.metadata as { method?: string } | null)?.method;
+                  const plan = (pm as { subscription_plans?: { name: string } | null }).subscription_plans;
                   return (
                     <tr key={pm.id} className="border-t border-rule first:border-0">
                       <td className="px-4 py-3">
                         <div className="grid">
-                          <span>{pm.credits} credits · {method === "card" ? "Card" : method === "mpesa" ? "M-Pesa" : "Paystack"}</span>
+                          <span>{plan ? `${plan.name} plan, 1 month` : `${pm.credits} credits`} · {method === "card" ? "Card" : method === "mpesa" ? "M-Pesa" : "Paystack"}</span>
                           <span className="num text-[11px] text-muted">{pm.provider_reference}</span>
                         </div>
                       </td>
@@ -102,7 +184,7 @@ export default function Credits() {
       )}
 
       <section className="grid gap-3">
-        <h2 className="display text-[28px]">History</h2>
+        <h2 className="display text-[28px]">Pack credit history</h2>
         <div className="border border-rule bg-surface">
           {history.data?.length ? (
             history.data.map((h) => (

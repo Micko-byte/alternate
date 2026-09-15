@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Download, Flag, ThumbsDown, ThumbsUp } from "lucide-react";
+import { Download, Flag, ShieldCheck, ThumbsDown, ThumbsUp } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useIsAdmin } from "@/lib/queries";
@@ -70,7 +70,11 @@ export function TryonView({ id }: { id: string }) {
   if (tryon.isLoading) return <div className="grid place-items-center py-24"><Spinner /></div>;
   if (!tryon.data) return <Notice title="Try-on not found" />;
   const t = tryon.data;
-  const title = t.products?.name ?? "Your inspiration";
+  const title = t.products?.name ?? (t.garment_type ? `Your ${t.garment_type.toLowerCase()}` : "Your inspiration");
+  const qa = t.qa as { attempts?: { n: number; passed: boolean }[]; passed?: boolean } | null;
+  const attemptsSoFar = qa?.attempts?.length ?? 0;
+  // Messages written for shoppers are shown as they are; technical ones get a plain explanation
+  const failure = t.error_message && !t.error_message.startsWith("Technical:") && !/OpenAI|missing|not set|Could not read/i.test(t.error_message) ? t.error_message : null;
 
   const rate = async (rating: 1 | -1) => {
     const { error } = await supabase.from("tryons").update({ rating }).eq("id", t.id);
@@ -106,8 +110,12 @@ export function TryonView({ id }: { id: string }) {
           <div className="grid aspect-[2/3] place-items-center bg-sunk">
             <div className="grid gap-3 text-center">
               <Spinner className="mx-auto h-6 w-6" />
-              <span className="display text-[40px]">Fitting…</span>
-              <span className="text-[14px] text-muted">Usually 30–90 seconds. You can leave this page.</span>
+              <span className="display text-[40px]">{attemptsSoFar ? "Improving…" : "Fitting…"}</span>
+              <span className="max-w-[30ch] text-[14px] text-muted">
+                {attemptsSoFar
+                  ? "Our quality check wasn't happy with the first result, so we're redoing it."
+                  : "Usually 1–2 minutes. Every result is checked before you see it. You can leave this page."}
+              </span>
             </div>
           </div>
         )}
@@ -138,7 +146,7 @@ export function TryonView({ id }: { id: string }) {
 
         {status === "failed" && (
           <Notice tone="bad" title="We couldn't create this try-on">
-            Your {t.credits_charged} {t.credits_charged === 1 ? "credit was" : "credits were"} refunded. Try a clearer photo of the clothes, or a different quality.
+            {failure ?? `Your ${t.credits_charged} ${t.credits_charged === 1 ? "credit was" : "credits were"} refunded. Try a clearer photo of the clothes, or a different quality.`}
           </Notice>
         )}
 
@@ -150,6 +158,12 @@ export function TryonView({ id }: { id: string }) {
 
         {status === "succeeded" && (
           <>
+            {qa?.passed && (
+              <p className="flex items-center gap-2 text-[13px] text-muted">
+                <ShieldCheck className="h-4 w-4 text-good" /> Checked for the right item, your pose, natural limbs and photo quality
+                {attemptsSoFar > 1 ? `, best of ${attemptsSoFar} attempts` : ""}.
+              </p>
+            )}
             <div className="flex flex-wrap items-center gap-2">
               <span className="label mr-2">View</span>
               {[true, false].map((v) => (
@@ -189,6 +203,7 @@ export function TryonView({ id }: { id: string }) {
             <dd>Engine: <span className="num">{t.engine ?? "—"}</span></dd>
             <dd>Cost: <span className="num">{t.cost_usd != null ? `$${t.cost_usd} (≈ ${kes(Math.round(Number(t.cost_usd) * 129.4 * 100) / 100)})` : "—"}</span></dd>
             <dd>Attempts: <span className="num">{t.attempts}</span></dd>
+            {qa?.attempts && <dd className="max-h-32 overflow-y-auto">Quality checks: <span className="num">{JSON.stringify(qa.attempts.map((a) => ({ n: a.n, passed: a.passed, ...((a as { check?: object }).check ?? {}) })))}</span></dd>}
             {t.garment_instruction && <dd className="max-h-32 overflow-y-auto">Prompt: {t.garment_instruction}</dd>}
             {t.error_message && <dd className="text-bad">Error: {t.error_message}</dd>}
           </dl>

@@ -89,7 +89,7 @@ export default function Product() {
     if (!chosenPhoto) return;
     setBusy(true);
     try {
-      const tryonId = await startTryon({ bodyPhotoId: chosenPhoto, productId: p.id, quality, fit: fitStyle });
+      const tryonId = await startTryon({ bodyPhotoId: chosenPhoto, productId: p.id, quality, fit: fitStyle, category: p.category });
       queryClient.invalidateQueries({ queryKey: ["credits"] });
       navigate(`/try/${tryonId}`);
     } catch (err) {

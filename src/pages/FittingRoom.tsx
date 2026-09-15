@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { ArrowLeftRight, ImagePlus, Plus, Trash2 } from "lucide-react";
+import { ArrowLeftRight, Check, ImagePlus, Plus, ShieldCheck, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
-import { useBodyPhotos, useCredits, useProfile, useSetupStatus, useSizes, useTryonPrices } from "@/lib/queries";
+import { useBodyPhotos, useBodyProfile, useCredits, useProfile, useSetupStatus, useSizes, useTryonPrices, type BodyProfileNotes } from "@/lib/queries";
 import { SIZE_SYSTEMS, defaultSystemFor, sizeText, type FitStyle } from "@/lib/sizes";
 import { QUALITY_LABELS, startTryon } from "@/lib/tryon";
 import { CATEGORY_SINGULAR, cn, errorMessage, extensionOf } from "@/lib/utils";
@@ -16,8 +16,8 @@ import { FitPicker } from "@/components/FitPicker";
 import { useTryonAllowance } from "@/lib/admin";
 import { FeedbackButton } from "@/components/FeedbackButton";
 import type { ParsedInspiration } from "@/lib/garmentCutout";
+import { GARMENTS, GARMENT_BY_CATEGORY, SIZED_CATEGORIES } from "@/lib/garments";
 
-const SIZED = ["dress", "top", "bottom", "skirt", "jumpsuit", "outerwear"];
 type Quality = "standard" | "hd" | "studio";
 
 export default function FittingRoom() {
@@ -25,6 +25,7 @@ export default function FittingRoom() {
   const queryClient = useQueryClient();
   const setup = useSetupStatus();
   const photos = useBodyPhotos();
+  const bodyProfile = useBodyProfile();
   const sizes = useSizes();
   const prices = useTryonPrices();
   const credits = useCredits();
@@ -54,7 +55,7 @@ export default function FittingRoom() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("garment_uploads")
-        .select("id, storage_path, cutout_path, category, source_note, created_at")
+        .select("id, storage_path, cutout_path, category, garment_type, source_note, created_at")
         .eq("user_id", user!.id)
         .order("created_at", { ascending: false })
         .limit(24);
@@ -76,6 +77,12 @@ export default function FittingRoom() {
   useEffect(() => {
     if (profile.data?.preferred_fit) setFit(profile.data.preferred_fit);
   }, [profile.data?.preferred_fit]);
+
+  const profileStale = !!photos.data?.length && bodyProfile.isSuccess && (bodyProfile.data?.photo_ids?.length ?? 0) !== photos.data.length;
+  useEffect(() => {
+    if (!profileStale) return;
+    void supabase.functions.invoke("analyze-body").then(() => queryClient.invalidateQueries({ queryKey: ["body-profile"] }));
+  }, [profileStale, queryClient]);
 
   // Paste a screenshot straight into the fitting room
   useEffect(() => {
@@ -100,7 +107,7 @@ export default function FittingRoom() {
 
   const inspiration = inspirations.data?.find((g) => g.id === inspirationId);
   const category = inspiration?.category ?? null;
-  const needsSize = !!category && SIZED.includes(category);
+  const needsSize = !!category && SIZED_CATEGORIES.includes(category);
   const mySize = category ? (sizes.data ?? []).find((sz) => sz.category === category) : undefined;
   const askSystem = category ? defaultSystemFor(category, profile.data?.shops_for) : "uk_women";
   const cost = prices.data?.[quality] ?? 1;
@@ -125,7 +132,7 @@ export default function FittingRoom() {
     if (!photoId || !inspirationId) return;
     setBusy(true);
     try {
-      const id = await startTryon({ bodyPhotoId: photoId, garmentUploadId: inspirationId, quality, fit });
+      const id = await startTryon({ bodyPhotoId: photoId, garmentUploadId: inspirationId, quality, fit, category });
       queryClient.invalidateQueries({ queryKey: ["credits"] });
       queryClient.invalidateQueries({ queryKey: ["tryon-allowance"] });
       recent.refetch();
@@ -184,6 +191,7 @@ export default function FittingRoom() {
                 ))}
                 <AddTile label="Photo" disabled={!canUpload} onClick={() => setAddingPhoto(true)} />
               </div>
+              {!!photos.data?.length && <PhotoChecklist notes={bodyProfile.data?.photos} tips={bodyProfile.data?.tips} checking={profileStale} />}
             </>
           )}
         </div>
@@ -265,7 +273,7 @@ export default function FittingRoom() {
                   <>
                     <img src={inspiration.url} alt="Selected inspiration" className="h-full w-full object-contain" />
                     <div className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-paper/90 px-3 py-2">
-                      <span className="label text-ink">{CATEGORY_SINGULAR[inspiration.category ?? "other"]}</span>
+                      <span className="label text-ink">{inspiration.garment_type ?? CATEGORY_SINGULAR[inspiration.category ?? "other"]}</span>
                       <button onClick={() => removeInspiration(inspiration)} className="p-1 text-muted hover:text-bad" aria-label="Delete this inspiration"><Trash2 className="h-4 w-4" /></button>
                     </div>
                   </>
@@ -309,6 +317,36 @@ export default function FittingRoom() {
           </div>
         </section>
       )}
+    </div>
+  );
+}
+
+/** Which kinds of photo the AI has to work from. Every photo is used for every try-on. */
+function PhotoChecklist({ notes, tips, checking }: { notes?: BodyProfileNotes[]; tips?: string[]; checking: boolean }) {
+  const usable = (notes ?? []).filter((n) => n.usable);
+  const items = [
+    { label: "Front, head to feet", done: usable.some((n) => n.angle === "front" && n.full_body) },
+    { label: "Side view", done: usable.some((n) => n.angle === "side") },
+    { label: "Arms showing", done: usable.some((n) => n.arms_visible) },
+    { label: "Legs showing", done: usable.some((n) => n.legs_visible) },
+    { label: "Fitted clothes", done: usable.some((n) => n.clothing_fit === "fitted") },
+  ];
+  const issues = (notes ?? []).filter((n) => !n.usable || n.issues).map((n) => n.issues).filter(Boolean);
+  return (
+    <div className="grid gap-2 border border-rule bg-surface p-3">
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="label text-ink">More photos, better fit</span>
+        {checking && <span className="flex items-center gap-1.5 text-[11px] text-muted"><Spinner className="h-3 w-3" /> Reading your photos</span>}
+      </div>
+      <ul className="flex flex-wrap gap-1.5">
+        {items.map((i) => (
+          <li key={i.label} className={cn("flex h-7 items-center gap-1 border px-2 text-[12px]", i.done ? "border-good/40 bg-good-soft text-good" : "border-rule text-muted")}>
+            {i.done ? <Check className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />} {i.label}
+          </li>
+        ))}
+      </ul>
+      {!!tips?.length && <p className="text-[12.5px] text-muted">{tips.join(" · ")}</p>}
+      {!!issues.length && <p className="text-[12.5px] text-warn">{issues.slice(0, 2).join(" · ")}</p>}
     </div>
   );
 }
@@ -378,6 +416,9 @@ function InspirationForm({ file, onFile, onSaved, onCancel }: { file: File; onFi
   const { user } = useAuth();
   const [preview, setPreview] = useState<string>();
   const [category, setCategory] = useState("top");
+  const [garmentType, setGarmentType] = useState<string | null>(null);
+  const [touched, setTouched] = useState(false);
+  const [mismatch, setMismatch] = useState<{ id: string; message: string; suggestion: { category: string; type: string } | null } | null>(null);
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [parsed, setParsed] = useState<ParsedInspiration | null>(null);
@@ -391,10 +432,18 @@ function InspirationForm({ file, onFile, onSaved, onCancel }: { file: File; onFi
     setParsed(null);
     setParsing(true);
     setUseWhole(false);
+    setTouched(false);
+    setMismatch(null);
     let cancelled = false;
     import("@/lib/garmentCutout")
       .then(({ parseInspiration }) => parseInspiration(file))
-      .then((p) => !cancelled && setParsed(p))
+      .then(async (p) => {
+        if (cancelled) return;
+        setParsed(p);
+        const { guessCategory } = await import("@/lib/garmentCutout");
+        const guess = guessCategory(p);
+        if (guess) setCategory((c) => (touchedRef.current ? c : guess));
+      })
       .catch(() => !cancelled && setParsed(null))
       .finally(() => !cancelled && setParsing(false));
     return () => {
@@ -403,8 +452,11 @@ function InspirationForm({ file, onFile, onSaved, onCancel }: { file: File; onFi
     };
   }, [file]);
 
+  const touchedRef = useRef(false);
+  touchedRef.current = touched;
+
   useEffect(() => {
-    if (!parsed) {
+    if (!parsed || category === "jewellery") {
       setCutout(parsing ? undefined : null);
       return;
     }
@@ -433,8 +485,18 @@ function InspirationForm({ file, onFile, onSaved, onCancel }: { file: File; onFi
       }
       const { error } = await supabase
         .from("garment_uploads")
-        .insert({ id, user_id: user!.id, storage_path: path, cutout_path: cutoutPath, category: category as never, source_note: note || null });
+        .insert({ id, user_id: user!.id, storage_path: path, cutout_path: cutoutPath, category: category as never, garment_type: garmentType, source_note: note || null });
       if (error) throw error;
+
+      // The server checks what the photo really shows before anyone pays
+      const { data: check } = await supabase.functions.invoke("inspect-garment", { body: { garment_upload_id: id } });
+      if (check?.checked && (!check.matches || !check.is_wearable)) {
+        setMismatch({ id, message: check.message, suggestion: check.is_wearable ? check.suggestion : null });
+        return;
+      }
+      if (check?.checked && !garmentType && check.chosen_item) {
+        await supabase.from("garment_uploads").update({ garment_type: String(check.chosen_item).slice(0, 40) }).eq("id", id);
+      }
       onSaved(id);
     } catch (err) {
       toast.error(errorMessage(err));
@@ -443,7 +505,42 @@ function InspirationForm({ file, onFile, onSaved, onCancel }: { file: File; onFi
     }
   };
 
-  const noun = CATEGORY_SINGULAR[category];
+  const noun = garmentType?.toLowerCase() ?? CATEGORY_SINGULAR[category];
+
+  const useSuggestion = async () => {
+    if (!mismatch?.suggestion) return;
+    const { error } = await supabase
+      .from("garment_uploads")
+      .update({ category: mismatch.suggestion.category as never, garment_type: mismatch.suggestion.type.slice(0, 40) })
+      .eq("id", mismatch.id);
+    if (error) return toast.error(errorMessage(error));
+    onSaved(mismatch.id);
+  };
+
+  const discardMismatch = async () => {
+    if (!mismatch) return;
+    await supabase.from("garment_uploads").delete().eq("id", mismatch.id);
+    setMismatch(null);
+  };
+
+  if (mismatch) {
+    const label = mismatch.suggestion ? mismatch.suggestion.type : null;
+    return (
+      <div className="grid gap-4">
+        {preview && <img src={preview} alt="Your inspiration photo" className="aspect-[3/4] w-full bg-sunk object-contain" />}
+        <Notice tone="warn" title="That doesn't match">
+          {mismatch.message} Try-ons only draw what's really in the photo.
+        </Notice>
+        <div className="flex flex-wrap gap-2">
+          {label && <Button variant="solid" onClick={useSuggestion}>Try on the {label.toLowerCase()}</Button>}
+          <Button variant="outline" onClick={discardMismatch}>Choose again</Button>
+          <Button variant="ghost" onClick={() => discardMismatch().then(onCancel)}>Cancel</Button>
+        </div>
+      </div>
+    );
+  }
+
+  const groupOf = GARMENT_BY_CATEGORY[category];
 
   return (
     <div className="grid gap-4">
@@ -469,22 +566,51 @@ function InspirationForm({ file, onFile, onSaved, onCancel }: { file: File; onFi
               <img src={cutout.url} alt={`Just the ${noun}`} className="h-full w-full object-contain" />
             ) : (
               <span className="p-4 text-center text-[13px] text-muted">
-                {cutout ? "Using the whole photo" : `We couldn't find a ${noun} in this photo, so we'll use the whole photo.`}
+                {cutout ? "Using the whole photo" : category === "jewellery" ? "Jewellery is small, so we'll use the whole photo." : `We couldn't find the ${noun} on its own, so we'll use the whole photo.`}
               </span>
             )}
           </div>
           <figcaption className="label text-ink">What we'll try on</figcaption>
         </figure>
       </div>
-      <fieldset className="grid gap-2">
+      <fieldset className="grid gap-3">
         <legend className="label mb-2">What do you want from this photo?</legend>
-        <div className="flex flex-wrap gap-1.5">
-          {Object.entries(CATEGORY_SINGULAR).map(([k, v]) => (
-            <button key={k} type="button" onClick={() => setCategory(k)} aria-pressed={category === k} className={cn("h-9 border px-3 font-mono text-[11px] font-semibold uppercase tracking-label", category === k ? "border-ink bg-ink text-paper" : "border-rule text-muted hover:border-ink hover:text-ink")}>
-              {v}
-            </button>
-          ))}
-        </div>
+        {(["Clothing", "Shoes & accessories"] as const).map((group) => (
+          <div key={group} className="grid gap-1.5">
+            <span className="text-[12px] text-muted">{group}</span>
+            <div className="flex flex-wrap gap-1.5">
+              {GARMENTS.filter((g) => g.group === group).map((g) => (
+                <button
+                  key={g.category}
+                  type="button"
+                  onClick={() => { setCategory(g.category); setGarmentType(null); setTouched(true); }}
+                  aria-pressed={category === g.category}
+                  className={cn("h-9 border px-3 font-mono text-[11px] font-semibold uppercase tracking-label", category === g.category ? "border-ink bg-ink text-paper" : "border-rule text-muted hover:border-ink hover:text-ink")}
+                >
+                  {g.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
+        {groupOf && (
+          <div className="grid gap-1.5 border-t border-rule pt-3">
+            <span className="text-[12px] text-muted">Which {groupOf.label.toLowerCase()}? (optional, helps accuracy)</span>
+            <div className="flex flex-wrap gap-1.5">
+              {groupOf.types.map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => setGarmentType(garmentType === t ? null : t)}
+                  aria-pressed={garmentType === t}
+                  className={cn("h-8 border px-2.5 text-[12.5px]", garmentType === t ? "border-ink bg-ink text-paper" : "border-rule text-muted hover:border-ink hover:text-ink")}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </fieldset>
       {cutout && (
         <label className="flex cursor-pointer items-center gap-2 text-[13px] text-muted">
@@ -492,11 +618,12 @@ function InspirationForm({ file, onFile, onSaved, onCancel }: { file: File; onFi
           The cut-out missed part of it. Use the whole photo instead.
         </label>
       )}
+      <p className="flex items-center gap-1.5 text-[12.5px] text-muted"><ShieldCheck className="h-3.5 w-3.5" /> We check what's in the photo, so you only pay for try-ons that make sense.</p>
       <Field label="Details (optional)">
         <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. the beige pleated trousers" maxLength={200} />
       </Field>
       <div className="flex gap-2">
-        <Button variant="solid" onClick={save} loading={busy} disabled={cutout === undefined}>Use this {noun}</Button>
+        <Button variant="solid" onClick={save} loading={busy} disabled={cutout === undefined}>{busy ? "Checking the photo…" : `Use this ${noun}`}</Button>
         <Button variant="ghost" onClick={onCancel}>Cancel</Button>
       </div>
     </div>

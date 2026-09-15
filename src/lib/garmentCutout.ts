@@ -1,6 +1,6 @@
 // Cuts just the chosen garment out of an inspiration photo (e.g. only the trousers,
 // not the model's T-shirt or the jacket in their hand), on white, cropped with padding.
-import { count, dilate, garmentClasses, parseImage, select, type PartMap } from "@/lib/garmentParser";
+import { L, count, dilate, garmentClasses, parseImage, select, type PartMap } from "@/lib/garmentParser";
 import { canvasToBlob } from "@/lib/bodyPhoto";
 
 const MAX_SIDE = 1024;
@@ -21,10 +21,29 @@ export async function parseInspiration(file: File): Promise<ParsedInspiration> {
   return { canvas, map: await parseImage(canvas, gridW, gridH) };
 }
 
+/** Best guess at what the photo is mainly showing, from the clothes parser (free, instant). The server checks again. */
+export function guessCategory(parsed: ParsedInspiration): string | null {
+  const { map } = parsed;
+  const total = map.width * map.height;
+  const areas: [string, number][] = [
+    ["dress", count(select(map, [L.Dress]))],
+    ["top", count(select(map, [L["Upper-clothes"]]))],
+    ["bottom", count(select(map, [L.Pants]))],
+    ["skirt", count(select(map, [L.Skirt]))],
+    ["shoes", count(select(map, [L["Left-shoe"], L["Right-shoe"]])) * 2.5],
+    ["headwear", count(select(map, [L.Hat])) * 2.5],
+    ["eyewear", count(select(map, [L.Sunglasses])) * 4],
+  ];
+  const [best, area] = areas.sort((a, b) => b[1] - a[1])[0];
+  return area > total * 0.02 ? best : null;
+}
+
 /** Returns a PNG of only that garment, or null if it can't be found in the photo. */
 export async function cutoutGarment(parsed: ParsedInspiration, category: string): Promise<{ blob: Blob; url: string } | null> {
   const { canvas, map } = parsed;
-  const garment = dilate(select(map, garmentClasses(category)), map.width, map.height, 1);
+  const classes = garmentClasses(category);
+  if (!classes.length) return null;
+  const garment = dilate(select(map, classes), map.width, map.height, 1);
   if (count(garment) < map.width * map.height * 0.015) return null;
 
   let minX = map.width, minY = map.height, maxX = 0, maxY = 0;

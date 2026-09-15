@@ -29,6 +29,12 @@ verify_jwt = false
 [functions.draft-product]
 verify_jwt = false
 
+[functions.inspect-garment]
+verify_jwt = false
+
+[functions.analyze-body]
+verify_jwt = false
+
 [functions.admin-users]
 verify_jwt = false
 

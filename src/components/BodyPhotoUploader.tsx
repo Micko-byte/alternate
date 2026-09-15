@@ -37,7 +37,17 @@ export function BodyPhotoUploader({ onAdded, onCancel }: { onAdded?: (photoId: s
     try {
       const id = crypto.randomUUID();
       const base = `${user!.id}/masks/${id}`;
-      const paths = { photo: `${user!.id}/${id}.png`, full: `${base}-full.png`, upper: `${base}-upper.png`, lower: `${base}-lower.png`, face: `${base}-face.png` };
+      const paths = {
+        photo: `${user!.id}/${id}.png`,
+        full: `${base}-full.png`,
+        upper: `${base}-upper.png`,
+        lower: `${base}-lower.png`,
+        face: `${base}-face.png`,
+        feet: `${base}-feet.png`,
+        eyes: `${base}-eyes.png`,
+        head: `${base}-head.png`,
+        jewellery: `${base}-jewellery.png`,
+      };
       const bucket = supabase.storage.from("body-photos");
       const files: [string, Blob][] = [
         [paths.photo, prepared.photo],
@@ -45,6 +55,10 @@ export function BodyPhotoUploader({ onAdded, onCancel }: { onAdded?: (photoId: s
         [paths.upper, prepared.masks.upper],
         [paths.lower, prepared.masks.lower],
         [paths.face, prepared.masks.face],
+        [paths.feet, prepared.masks.feet],
+        [paths.eyes, prepared.masks.eyes],
+        [paths.head, prepared.masks.head],
+        [paths.jewellery, prepared.masks.jewellery],
       ];
       for (const [path, blob] of files) {
         const { error } = await bucket.upload(path, blob, { contentType: "image/png" });
@@ -59,6 +73,10 @@ export function BodyPhotoUploader({ onAdded, onCancel }: { onAdded?: (photoId: s
         mask_upper_path: paths.upper,
         mask_lower_path: paths.lower,
         face_mask_path: paths.face,
+        mask_feet_path: paths.feet,
+        mask_eyes_path: paths.eyes,
+        mask_head_path: paths.head,
+        mask_jewellery_path: paths.jewellery,
         width: 1024,
         height: 1536,
         confirmed_self: true,
@@ -68,6 +86,8 @@ export function BodyPhotoUploader({ onAdded, onCancel }: { onAdded?: (photoId: s
       setPrepared(null);
       setConfirmSelf(false);
       await queryClient.invalidateQueries({ queryKey: ["body-photos"] });
+      // Read all photos together in the background: body shape, limbs, and what to add next
+      void supabase.functions.invoke("analyze-body").then(() => queryClient.invalidateQueries({ queryKey: ["body-profile"] }));
       onAdded?.(id);
     } catch (err) {
       toast.error(errorMessage(err));
@@ -81,6 +101,7 @@ export function BodyPhotoUploader({ onAdded, onCancel }: { onAdded?: (photoId: s
       <ul className="grid gap-1 text-[14px] text-muted">
         <li>Stand straight, head to feet in the frame, arms slightly away from your body.</li>
         <li>Good light, plain wall, fitted clothes. Only photos of yourself.</li>
+        <li>More photos, more accurate fit: add a side view, one showing your arms, and one in shorts or fitted trousers.</li>
       </ul>
       <div className="grid gap-4 sm:grid-cols-[140px_1fr]">
         <Field label="Angle">

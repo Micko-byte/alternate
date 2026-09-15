@@ -6,7 +6,7 @@ import { useProfile } from "@/lib/queries";
 import { cn, kes } from "@/lib/utils";
 import { Button, ButtonLink, Field, Input, Spinner } from "@/components/ui";
 
-type Pack = { id: string; name: string; credits: number; price_kes: number };
+export type CheckoutItem = { kind: "pack" | "plan"; id: string; name: string; credits: number; price_kes: number };
 type Step =
   | { kind: "choose" }
   | { kind: "sending" }
@@ -33,9 +33,10 @@ async function invoke<T>(name: string, body: Record<string, unknown>): Promise<T
   return data as T;
 }
 
-/** Buy a credit pack without leaving ALTERNATE. M-Pesa runs in our UI; cards use Paystack's secure window.
+/** Buy a credit pack or a month of a plan without leaving ALTERNATE. M-Pesa runs in our UI; cards use Paystack's secure window.
  *  `inline` renders it inside a page; otherwise it is an overlay with a close button. */
-export function Checkout({ pack, onClose, inline }: { pack: Pack; onClose?: () => void; inline?: boolean }) {
+export function Checkout({ item: pack, onClose, inline }: { item: CheckoutItem; onClose?: () => void; inline?: boolean }) {
+  const target = pack.kind === "plan" ? { plan_id: pack.id } : { pack_id: pack.id };
   const queryClient = useQueryClient();
   const profile = useProfile();
   const [method, setMethod] = useState<"mpesa" | "card">("mpesa");
@@ -83,7 +84,7 @@ export function Checkout({ pack, onClose, inline }: { pack: Pack; onClose?: () =
   const payMpesa = async () => {
     setStep({ kind: "sending" });
     try {
-      const res = await invoke<{ reference: string }>("payments-init", { pack_id: pack.id, method: "mpesa", phone });
+      const res = await invoke<{ reference: string }>("payments-init", { ...target, method: "mpesa", phone });
       const startedAt = Date.now();
       setStep({ kind: "prompt", reference: res.reference, startedAt });
       startPolling(res.reference, startedAt);
@@ -98,7 +99,7 @@ export function Checkout({ pack, onClose, inline }: { pack: Pack; onClose?: () =
   const payCard = async () => {
     setStep({ kind: "sending" });
     try {
-      const res = await invoke<{ reference: string; access_code: string }>("payments-init", { pack_id: pack.id, method: "card" });
+      const res = await invoke<{ reference: string; access_code: string }>("payments-init", { ...target, method: "card" });
       setStep({ kind: "card", reference: res.reference });
       const { default: Paystack } = await import("@paystack/inline-js");
       new Paystack().resumeTransaction(res.access_code, {
@@ -122,8 +123,8 @@ export function Checkout({ pack, onClose, inline }: { pack: Pack; onClose?: () =
         <div className="flex items-start justify-between gap-4">
           <div className="grid gap-1">
             <span className="label">Checkout</span>
-            <h2 id="checkout-title" className="display text-[34px]">{pack.credits} credits</h2>
-            <span className="num text-[15px] text-muted">{pack.name} · {kes(pack.price_kes)}</span>
+            <h2 id="checkout-title" className="display text-[34px]">{pack.kind === "plan" ? `${pack.name} plan` : `${pack.credits} credits`}</h2>
+            <span className="num text-[15px] text-muted">{pack.kind === "plan" ? `1 month · ${pack.credits} credits` : pack.name} · {kes(pack.price_kes)}</span>
           </div>
           {!busy && onClose && (
             <button onClick={onClose} className="grid h-9 w-9 place-items-center hover:bg-sunk" aria-label="Close checkout">
@@ -202,7 +203,7 @@ export function Checkout({ pack, onClose, inline }: { pack: Pack; onClose?: () =
             <div className="grid justify-items-center gap-3 text-center">
               <CheckCircle2 className="h-12 w-12 text-good" strokeWidth={1.4} />
               <p className="display text-[30px]">Payment received</p>
-              <p className="text-muted"><span className="num text-ink">{step.credits}</span> credits added to your account.</p>
+              <p className="text-muted"><span className="num text-ink">{step.credits}</span> {pack.kind === "plan" ? `${pack.name} plan credits are ready for 30 days.` : "credits added to your account."}</p>
             </div>
             <dl className="grid gap-2 border-y border-rule py-4 text-[14px]">
               {[

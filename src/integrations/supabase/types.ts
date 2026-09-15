@@ -72,6 +72,10 @@ export type Database = {
           height: number | null
           id: string
           is_active: boolean
+          mask_eyes_path: string | null
+          mask_feet_path: string | null
+          mask_head_path: string | null
+          mask_jewellery_path: string | null
           mask_lower_path: string | null
           mask_upper_path: string | null
           storage_path: string
@@ -87,6 +91,10 @@ export type Database = {
           height?: number | null
           id?: string
           is_active?: boolean
+          mask_eyes_path?: string | null
+          mask_feet_path?: string | null
+          mask_head_path?: string | null
+          mask_jewellery_path?: string | null
           mask_lower_path?: string | null
           mask_upper_path?: string | null
           storage_path: string
@@ -102,11 +110,48 @@ export type Database = {
           height?: number | null
           id?: string
           is_active?: boolean
+          mask_eyes_path?: string | null
+          mask_feet_path?: string | null
+          mask_head_path?: string | null
+          mask_jewellery_path?: string | null
           mask_lower_path?: string | null
           mask_upper_path?: string | null
           storage_path?: string
           user_id?: string
           width?: number | null
+        }
+        Relationships: []
+      }
+      body_profiles: {
+        Row: {
+          body: Json
+          cost_usd: number | null
+          photo_ids: string[]
+          photos: Json
+          summary: string | null
+          tips: string[]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          body?: Json
+          cost_usd?: number | null
+          photo_ids?: string[]
+          photos?: Json
+          summary?: string | null
+          tips?: string[]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          body?: Json
+          cost_usd?: number | null
+          photo_ids?: string[]
+          photos?: Json
+          summary?: string | null
+          tips?: string[]
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -286,11 +331,63 @@ export type Database = {
           },
         ]
       }
+      garment_inspections: {
+        Row: {
+          categories: Database["public"]["Enums"]["garment_category"][]
+          cost_usd: number | null
+          created_at: string
+          garment_upload_id: string | null
+          id: string
+          is_wearable: boolean
+          items: Json
+          product_id: string | null
+          source_path: string
+        }
+        Insert: {
+          categories?: Database["public"]["Enums"]["garment_category"][]
+          cost_usd?: number | null
+          created_at?: string
+          garment_upload_id?: string | null
+          id?: string
+          is_wearable?: boolean
+          items?: Json
+          product_id?: string | null
+          source_path: string
+        }
+        Update: {
+          categories?: Database["public"]["Enums"]["garment_category"][]
+          cost_usd?: number | null
+          created_at?: string
+          garment_upload_id?: string | null
+          id?: string
+          is_wearable?: boolean
+          items?: Json
+          product_id?: string | null
+          source_path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "garment_inspections_garment_upload_id_fkey"
+            columns: ["garment_upload_id"]
+            isOneToOne: true
+            referencedRelation: "garment_uploads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "garment_inspections_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: true
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       garment_uploads: {
         Row: {
           category: Database["public"]["Enums"]["garment_category"] | null
           created_at: string
           cutout_path: string | null
+          garment_type: string | null
           id: string
           source_note: string | null
           storage_path: string
@@ -300,6 +397,7 @@ export type Database = {
           category?: Database["public"]["Enums"]["garment_category"] | null
           created_at?: string
           cutout_path?: string | null
+          garment_type?: string | null
           id?: string
           source_note?: string | null
           storage_path: string
@@ -309,6 +407,7 @@ export type Database = {
           category?: Database["public"]["Enums"]["garment_category"] | null
           created_at?: string
           cutout_path?: string | null
+          garment_type?: string | null
           id?: string
           source_note?: string | null
           storage_path?: string
@@ -418,6 +517,7 @@ export type Database = {
           provider_reference: string
           referral_store_id: string | null
           status: Database["public"]["Enums"]["payment_status"]
+          subscription_plan_id: string | null
           updated_at: string
           user_id: string
         }
@@ -433,6 +533,7 @@ export type Database = {
           provider_reference: string
           referral_store_id?: string | null
           status?: Database["public"]["Enums"]["payment_status"]
+          subscription_plan_id?: string | null
           updated_at?: string
           user_id: string
         }
@@ -448,6 +549,7 @@ export type Database = {
           provider_reference?: string
           referral_store_id?: string | null
           status?: Database["public"]["Enums"]["payment_status"]
+          subscription_plan_id?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -464,6 +566,13 @@ export type Database = {
             columns: ["referral_store_id"]
             isOneToOne: false
             referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_subscription_plan_id_fkey"
+            columns: ["subscription_plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
             referencedColumns: ["id"]
           },
         ]
@@ -588,6 +697,7 @@ export type Database = {
           department: Database["public"]["Enums"]["department"]
           description: string | null
           garment_notes: string | null
+          garment_type: string | null
           id: string
           import_source: string | null
           is_one_of_a_kind: boolean
@@ -608,6 +718,7 @@ export type Database = {
           department?: Database["public"]["Enums"]["department"]
           description?: string | null
           garment_notes?: string | null
+          garment_type?: string | null
           id?: string
           import_source?: string | null
           is_one_of_a_kind?: boolean
@@ -628,6 +739,7 @@ export type Database = {
           department?: Database["public"]["Enums"]["department"]
           description?: string | null
           garment_notes?: string | null
+          garment_type?: string | null
           id?: string
           import_source?: string | null
           is_one_of_a_kind?: boolean
@@ -1107,6 +1219,48 @@ export type Database = {
         }
         Relationships: []
       }
+      subscription_plans: {
+        Row: {
+          blurb: string | null
+          code: string
+          created_at: string
+          daily_limit: number | null
+          id: string
+          is_active: boolean
+          monthly_credits: number
+          name: string
+          period_days: number
+          price_kes: number
+          sort_order: number
+        }
+        Insert: {
+          blurb?: string | null
+          code: string
+          created_at?: string
+          daily_limit?: number | null
+          id?: string
+          is_active?: boolean
+          monthly_credits: number
+          name: string
+          period_days?: number
+          price_kes: number
+          sort_order?: number
+        }
+        Update: {
+          blurb?: string | null
+          code?: string
+          created_at?: string
+          daily_limit?: number | null
+          id?: string
+          is_active?: boolean
+          monthly_credits?: number
+          name?: string
+          period_days?: number
+          price_kes?: number
+          sort_order?: number
+        }
+        Relationships: []
+      }
       tryon_prices: {
         Row: {
           credits: number
@@ -1136,12 +1290,15 @@ export type Database = {
           feedback: string | null
           fit: Database["public"]["Enums"]["fit_style"]
           garment_instruction: string | null
+          garment_type: string | null
           garment_upload_id: string | null
           id: string
           identity_score: number | null
           product_id: string | null
+          qa: Json | null
           quality: Database["public"]["Enums"]["tryon_quality"]
           rating: number | null
+          reference_photo_ids: string[]
           result_path: string | null
           shared_path: string | null
           size_label: string | null
@@ -1149,6 +1306,7 @@ export type Database = {
           size_value: number | null
           started_at: string | null
           status: Database["public"]["Enums"]["tryon_status"]
+          subscription_id: string | null
           user_id: string
         }
         Insert: {
@@ -1164,12 +1322,15 @@ export type Database = {
           feedback?: string | null
           fit?: Database["public"]["Enums"]["fit_style"]
           garment_instruction?: string | null
+          garment_type?: string | null
           garment_upload_id?: string | null
           id?: string
           identity_score?: number | null
           product_id?: string | null
+          qa?: Json | null
           quality?: Database["public"]["Enums"]["tryon_quality"]
           rating?: number | null
+          reference_photo_ids?: string[]
           result_path?: string | null
           shared_path?: string | null
           size_label?: string | null
@@ -1177,6 +1338,7 @@ export type Database = {
           size_value?: number | null
           started_at?: string | null
           status?: Database["public"]["Enums"]["tryon_status"]
+          subscription_id?: string | null
           user_id: string
         }
         Update: {
@@ -1192,12 +1354,15 @@ export type Database = {
           feedback?: string | null
           fit?: Database["public"]["Enums"]["fit_style"]
           garment_instruction?: string | null
+          garment_type?: string | null
           garment_upload_id?: string | null
           id?: string
           identity_score?: number | null
           product_id?: string | null
+          qa?: Json | null
           quality?: Database["public"]["Enums"]["tryon_quality"]
           rating?: number | null
+          reference_photo_ids?: string[]
           result_path?: string | null
           shared_path?: string | null
           size_label?: string | null
@@ -1205,6 +1370,7 @@ export type Database = {
           size_value?: number | null
           started_at?: string | null
           status?: Database["public"]["Enums"]["tryon_status"]
+          subscription_id?: string | null
           user_id?: string
         }
         Relationships: [
@@ -1227,6 +1393,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tryons_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "user_subscriptions"
             referencedColumns: ["id"]
           },
         ]
@@ -1272,6 +1445,60 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      user_subscriptions: {
+        Row: {
+          created_at: string
+          credits_total: number
+          credits_used: number
+          daily_limit: number | null
+          ends_at: string
+          id: string
+          payment_id: string | null
+          plan_id: string
+          starts_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          credits_total: number
+          credits_used?: number
+          daily_limit?: number | null
+          ends_at: string
+          id?: string
+          payment_id?: string | null
+          plan_id: string
+          starts_at: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          credits_total?: number
+          credits_used?: number
+          daily_limit?: number | null
+          ends_at?: string
+          id?: string
+          payment_id?: string | null
+          plan_id?: string
+          starts_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_subscriptions_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: true
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_subscriptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
@@ -1394,6 +1621,7 @@ export type Database = {
           provider_reference: string
           referral_store_id: string | null
           status: Database["public"]["Enums"]["payment_status"]
+          subscription_plan_id: string | null
           updated_at: string
           user_id: string
         }
@@ -1408,6 +1636,7 @@ export type Database = {
       is_admin: { Args: never; Returns: boolean }
       is_owner: { Args: never; Returns: boolean }
       my_tryon_allowance: { Args: never; Returns: Json }
+      my_wallet: { Args: never; Returns: Json }
       owner_set_admin: {
         Args: { _email: string; _grant: boolean }
         Returns: undefined
@@ -1437,12 +1666,15 @@ export type Database = {
           feedback: string | null
           fit: Database["public"]["Enums"]["fit_style"]
           garment_instruction: string | null
+          garment_type: string | null
           garment_upload_id: string | null
           id: string
           identity_score: number | null
           product_id: string | null
+          qa: Json | null
           quality: Database["public"]["Enums"]["tryon_quality"]
           rating: number | null
+          reference_photo_ids: string[]
           result_path: string | null
           shared_path: string | null
           size_label: string | null
@@ -1450,6 +1682,7 @@ export type Database = {
           size_value: number | null
           started_at: string | null
           status: Database["public"]["Enums"]["tryon_status"]
+          subscription_id: string | null
           user_id: string
         }
         SetofOptions: {
@@ -1502,6 +1735,10 @@ export type Database = {
         | "outerwear"
         | "set"
         | "other"
+        | "shoes"
+        | "eyewear"
+        | "headwear"
+        | "jewellery"
       media_kind: "image" | "video"
       order_status:
         | "pending_payment"
@@ -1693,6 +1930,10 @@ export const Constants = {
         "outerwear",
         "set",
         "other",
+        "shoes",
+        "eyewear",
+        "headwear",
+        "jewellery",
       ],
       media_kind: ["image", "video"],
       order_status: [

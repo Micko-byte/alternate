@@ -1,4 +1,4 @@
-// Starts a credit-pack payment without leaving ALTERNATE:
+// Starts a payment for a credit pack or a monthly plan without leaving ALTERNATE:
 //  - method "mpesa": Paystack Charge API sends an M-Pesa STK prompt to the shopper's phone
 //  - method "card":  returns an access code for Paystack's secure card window (InlineJS) over our page
 import { adminClient, callerFrom, corsHeaders, json } from "../_shared/http.ts";
@@ -14,26 +14,31 @@ Deno.serve(async (req) => {
   const key = paystackKey();
   if (!key) return json({ error: "Payments aren't switched on yet. Ask an admin for test credits." }, 503);
 
-  const { pack_id, method, phone } = await req.json().catch(() => ({}));
+  const { pack_id, plan_id, method, phone } = await req.json().catch(() => ({}));
   if (method !== "mpesa" && method !== "card") return json({ error: "Choose M-Pesa or card" }, 400);
 
   const msisdn = method === "mpesa" ? kenyanPhone(phone) : null;
   if (method === "mpesa" && !msisdn) return json({ error: "Enter a Kenyan M-Pesa number, like 0712 345 678" }, 400);
 
-  const { data: pack } = await admin
-    .from("credit_packs")
-    .select("id, name, credits, price_kes")
-    .eq("id", pack_id)
-    .eq("is_active", true)
-    .maybeSingle();
-  if (!pack) return json({ error: "That credit pack isn't available" }, 404);
+  // What is being bought: a credit pack, or a month of a plan (its credits land when payment is confirmed)
+  let item: { id: string; credits: number; price_kes: number; kind: "pack" | "plan" } | null = null;
+  if (plan_id) {
+    const { data: plan } = await admin.from("subscription_plans").select("id, monthly_credits, price_kes").eq("id", plan_id).eq("is_active", true).maybeSingle();
+    if (plan) item = { id: plan.id, credits: plan.monthly_credits, price_kes: plan.price_kes, kind: "plan" };
+    if (!item) return json({ error: "That plan isn't available" }, 404);
+  } else {
+    const { data: pack } = await admin.from("credit_packs").select("id, credits, price_kes").eq("id", pack_id).eq("is_active", true).maybeSingle();
+    if (pack) item = { ...pack, kind: "pack" };
+    if (!item) return json({ error: "That credit pack isn't available" }, 404);
+  }
 
   const reference = `ALT-${crypto.randomUUID()}`;
   const { error: insertError } = await admin.from("payments").insert({
     user_id: user.id,
-    credit_pack_id: pack.id,
-    credits: pack.credits,
-    amount_kes: pack.price_kes,
+    credit_pack_id: item.kind === "pack" ? item.id : null,
+    subscription_plan_id: item.kind === "plan" ? item.id : null,
+    credits: item.credits,
+    amount_kes: item.price_kes,
     provider_reference: reference,
     metadata: { method, phone_last4: msisdn ? msisdn.slice(-4) : null },
   });
@@ -46,10 +51,10 @@ Deno.serve(async (req) => {
 
   const common = {
     email: user.email,
-    amount: pack.price_kes * 100,
+    amount: item.price_kes * 100,
     currency: "KES",
     reference,
-    metadata: { user_id: user.id, pack_id: pack.id, credits: pack.credits },
+    metadata: { user_id: user.id, [item.kind === "plan" ? "plan_id" : "pack_id"]: item.id, credits: item.credits },
   };
 
   if (method === "mpesa") {

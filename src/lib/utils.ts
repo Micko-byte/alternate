@@ -52,6 +52,10 @@ export const CATEGORY_LABELS: Record<string, string> = {
   jumpsuit: "Jumpsuits",
   outerwear: "Jackets",
   set: "Sets & suits",
+  shoes: "Shoes",
+  eyewear: "Glasses",
+  headwear: "Hats",
+  jewellery: "Jewellery",
   other: "Other",
 };
 
@@ -63,6 +67,10 @@ export const CATEGORY_SINGULAR: Record<string, string> = {
   jumpsuit: "jumpsuit",
   outerwear: "jacket",
   set: "set",
+  shoes: "shoes",
+  eyewear: "glasses",
+  headwear: "hat",
+  jewellery: "jewellery",
   other: "clothing",
 };
 

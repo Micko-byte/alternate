@@ -10,6 +10,7 @@ import { AppShell } from "@/components/AppShell";
 import { StudioShell } from "@/components/StudioShell";
 import { RequireAuth } from "@/components/Guards";
 import Onboarding from "@/pages/Onboarding";
+import Landing from "@/pages/Landing";
 import Auth from "@/pages/Auth";
 import Shop from "@/pages/Shop";
 import Product from "@/pages/Product";
@@ -47,7 +48,12 @@ function ReferralCapture() {
   return null;
 }
 
-/** Signed out: the welcome carousel. Signed in: straight into the app. */
+/** Phones and the installed app get the swipeable welcome; bigger screens get the landing page. */
+function preferOnboarding() {
+  return window.matchMedia("(display-mode: standalone)").matches || window.matchMedia("(max-width: 1023px)").matches;
+}
+
+/** Signed out: landing page or welcome carousel. Signed in: straight into the app. */
 function Home() {
   const { user, loading } = useAuth();
   const setup = useSetupStatus();
@@ -58,7 +64,7 @@ function Home() {
       </div>
     );
   }
-  if (!user) return <Onboarding />;
+  if (!user) return preferOnboarding() ? <Onboarding /> : <AppShell><Landing /></AppShell>;
   return <Navigate to={setup.ready ? "/fitting-room" : "/me/setup"} replace />;
 }
 
@@ -86,6 +92,7 @@ export default function App() {
             <Route path="/auth" element={<Auth />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route element={<AppShell />}>
+              <Route path="/welcome" element={<Landing />} />
               <Route path="/shop" element={<Shop />} />
               <Route path="/shop/:id" element={<Product />} />
               <Route path="/s/:slug" element={<StorePage />} />
@@ -95,6 +102,7 @@ export default function App() {
               <Route path="/try/:id" element={<RequireAuth><TryResult /></RequireAuth>} />
               <Route path="/wardrobe" element={<RequireAuth><Wardrobe /></RequireAuth>} />
               <Route path="/credits" element={<RequireAuth><Credits /></RequireAuth>} />
+              <Route path="/checkout/plan/:planId" element={<RequireAuth><CheckoutPage /></RequireAuth>} />
               <Route path="/checkout/:packId" element={<RequireAuth><CheckoutPage /></RequireAuth>} />
               <Route path="/account" element={<RequireAuth><Account /></RequireAuth>} />
               <Route path="*" element={<NotFound />} />

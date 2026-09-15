@@ -9,6 +9,7 @@ import { DEPARTMENTS, SIZE_SYSTEMS, type Department, type SizeSystem } from "@/l
 import { Button, Field, Input, Notice, PageHeader, Pill, Select, Spinner, Textarea } from "@/components/ui";
 import { VideoFramePicker } from "@/components/VideoFramePicker";
 import { useStore } from "./types";
+import { GARMENT_BY_CATEGORY } from "@/lib/garments";
 
 type VariantDraft = { id?: string; size_label: string; size_min: string; size_max: string; stock_qty: string };
 
@@ -78,7 +79,7 @@ function EditProduct({ id }: { id: string }) {
     },
   });
 
-  const [form, setForm] = useState({ name: "", category: "dress", department: "women" as Department, sizeSystem: "uk_women" as SizeSystem, price_kes: "", description: "", status: "draft", is_one_of_a_kind: false });
+  const [form, setForm] = useState({ name: "", category: "dress", garmentType: "", department: "women" as Department, sizeSystem: "uk_women" as SizeSystem, price_kes: "", description: "", status: "draft", is_one_of_a_kind: false });
   const [variants, setVariants] = useState<VariantDraft[]>([]);
   const [removed, setRemoved] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
@@ -91,6 +92,7 @@ function EditProduct({ id }: { id: string }) {
     setForm({
       name: p.name,
       category: p.category,
+      garmentType: (p as { garment_type?: string | null }).garment_type ?? "",
       department: p.department,
       sizeSystem: p.product_variants[0]?.size_system ?? (p.department === "men" ? (p.category === "bottom" ? "waist_in" : "letter") : "uk_women"),
       price_kes: String(p.price_kes),
@@ -204,6 +206,7 @@ function EditProduct({ id }: { id: string }) {
         .update({
           name: form.name.trim(),
           category: form.category as never,
+          garment_type: form.garmentType.trim().slice(0, 40) || null,
           department: form.department,
           price_kes: Number(form.price_kes),
           description: form.description || null,
@@ -335,6 +338,12 @@ function EditProduct({ id }: { id: string }) {
             </Field>
             <Field label="Price (KES)"><Input type="number" min={0} value={form.price_kes} onChange={(e) => setForm({ ...form, price_kes: e.target.value })} className="num" /></Field>
           </div>
+          <Field label="Exactly what it is" hint="e.g. hoodie, quarter-zip, blazer, cargo trousers. Helps the try-on draw it right.">
+            <Input list="garment-types" value={form.garmentType} maxLength={40} onChange={(e) => setForm({ ...form, garmentType: e.target.value })} />
+            <datalist id="garment-types">
+              {(GARMENT_BY_CATEGORY[form.category]?.types ?? []).map((t) => <option key={t} value={t} />)}
+            </datalist>
+          </Field>
           <Field label="Description"><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} maxLength={2000} placeholder="Fabric, fit, length, care…" /></Field>
           <div className="grid grid-cols-2 gap-4">
             <Field label="Status">

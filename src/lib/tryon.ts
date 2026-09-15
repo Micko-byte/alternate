@@ -4,9 +4,9 @@ import type { Database } from "@/integrations/supabase/types";
 type Quality = Database["public"]["Enums"]["tryon_quality"];
 
 export const QUALITY_LABELS: Record<Quality, { name: string; blurb: string }> = {
-  standard: { name: "Standard", blurb: "Quick look" },
-  hd: { name: "HD", blurb: "Sharper fabric and print" },
-  studio: { name: "Studio", blurb: "Our most realistic" },
+  standard: { name: "Standard", blurb: "High quality, checked, redone once if needed" },
+  hd: { name: "HD", blurb: "Uses more of your photos for a truer fit" },
+  studio: { name: "Studio", blurb: "Maximum detail, best of up to 3 attempts" },
 };
 
 /**
@@ -19,7 +19,17 @@ export async function startTryon(args: {
   garmentUploadId?: string;
   quality: Quality;
   fit?: Database["public"]["Enums"]["fit_style"];
+  /** What is being tried on; shoes and accessories may need the photo's masks made first. */
+  category?: string | null;
 }) {
+  if (args.category) {
+    const [{ zoneFor }, { ensureAccessoryMasks }] = await Promise.all([import("@/lib/garmentParser"), import("@/lib/bodyPhoto")]);
+    const zone = zoneFor(args.category);
+    if (["feet", "eyes", "head", "jewellery"].includes(zone)) {
+      const { data: photo } = await supabase.from("body_photos").select("*").eq("id", args.bodyPhotoId).single();
+      if (photo) await ensureAccessoryMasks(photo, zone);
+    }
+  }
   const { data, error } = await supabase.rpc("request_tryon", {
     _body_photo_id: args.bodyPhotoId,
     _product_id: args.productId ?? null,

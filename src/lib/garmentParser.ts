@@ -13,12 +13,16 @@ export const L = Object.fromEntries(LABELS.map((l, i) => [l, i])) as Record<(typ
 
 export type PartMap = { width: number; height: number; labels: Uint8Array };
 
-export type Zone = "upper" | "lower" | "full";
+export type Zone = "upper" | "lower" | "full" | "feet" | "eyes" | "head" | "jewellery";
 
 /** Which part of the body a garment type replaces. */
 export function zoneFor(category: string | null | undefined): Zone {
   if (category === "top" || category === "outerwear") return "upper";
   if (category === "bottom" || category === "skirt") return "lower";
+  if (category === "shoes") return "feet";
+  if (category === "eyewear") return "eyes";
+  if (category === "headwear") return "head";
+  if (category === "jewellery") return "jewellery";
   return "full";
 }
 
@@ -122,6 +126,15 @@ export function garmentClasses(category: string): number[] {
       return [L.Skirt, L.Belt];
     case "dress":
       return [L.Dress, L["Upper-clothes"], L.Skirt, L.Belt];
+    case "shoes":
+      return [L["Left-shoe"], L["Right-shoe"]];
+    case "eyewear":
+      return [L.Sunglasses];
+    case "headwear":
+      return [L.Hat];
+    case "jewellery":
+      // Too small for the parser: the whole photo is used
+      return [];
     default:
       return [L["Upper-clothes"], L.Pants, L.Skirt, L.Dress, L.Belt, L.Scarf];
   }

@@ -42,7 +42,7 @@ export async function confirmPayment(admin: SupabaseClient, reference: string) {
   if (tx.status === "success") {
     if (tx.currency !== "KES" || Number(tx.amount) !== payment.amount_kes * 100) {
       await admin.from("payments").update({ status: "failed", metadata: { mismatch: { currency: tx.currency, amount: tx.amount } } }).eq("id", payment.id);
-      return { status: "failed" as const, message: "The amount paid didn't match the pack price." };
+      return { status: "failed" as const, message: "The amount paid didn't match the price." };
     }
     // A slow payment that was marked failed can still be credited when Paystack confirms it
     if (payment.status !== "pending") await admin.from("payments").update({ status: "pending" }).eq("id", payment.id);

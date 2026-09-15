@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useIsOwner } from "@/lib/admin";
 import { errorMessage } from "@/lib/utils";
 import { Button, Field, Input, Notice, PageHeader, Pill } from "@/components/ui";
+import { PricingEditor } from "./PricingEditor";
 
 export default function AdminSettings() {
   const isOwner = useIsOwner();
@@ -47,6 +48,8 @@ export default function AdminSettings() {
   return (
     <div className="grid max-w-4xl gap-10">
       <PageHeader eyebrow="Admin · settings" title="Controls" />
+
+      <PricingEditor />
 
       <section className="grid gap-4 border border-rule bg-surface p-6">
         <div className="grid gap-1">
