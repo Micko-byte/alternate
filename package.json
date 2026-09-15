@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@huggingface/transformers": "^4.2.0",
+    "@paystack/inline-js": "^2.25.0",
     "@supabase/supabase-js": "^2.88.0",
     "@tanstack/react-query": "^5.83.0",
     "clsx": "^2.1.1",

@@ -1,13 +1,13 @@
-import { useEffect, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useSearchParams } from "react-router-dom";
-import { toast } from "sonner";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Lock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { useCreditPacks, useCredits, useTryonPrices } from "@/lib/queries";
 import { QUALITY_LABELS } from "@/lib/tryon";
-import { errorMessage, kes } from "@/lib/utils";
-import { Button, Notice, PageHeader } from "@/components/ui";
+import { kes } from "@/lib/utils";
+import { Button, PageHeader } from "@/components/ui";
+import { Checkout } from "@/components/Checkout";
 
 const ENTRY_LABELS: Record<string, string> = {
   purchase: "Bought credits",
@@ -18,13 +18,10 @@ const ENTRY_LABELS: Record<string, string> = {
 
 export default function Credits() {
   const { user } = useAuth();
-  const queryClient = useQueryClient();
-  const [params, setParams] = useSearchParams();
   const balance = useCredits();
   const packs = useCreditPacks();
   const prices = useTryonPrices();
-  const [buying, setBuying] = useState<string>();
-  const [checking, setChecking] = useState(false);
+  const [checkoutPack, setCheckoutPack] = useState<{ id: string; name: string; credits: number; price_kes: number }>();
 
   const history = useQuery({
     queryKey: ["ledger", user?.id],
@@ -33,44 +30,6 @@ export default function Credits() {
       return data ?? [];
     },
   });
-
-  const reference = params.get("reference") ?? params.get("trxref");
-  useEffect(() => {
-    if (!reference) return;
-    setChecking(true);
-    supabase.functions
-      .invoke("payments-verify", { body: { reference } })
-      .then(({ data, error }) => {
-        if (error) throw error;
-        if (data.status === "success") toast.success("Payment received. Your credits are ready.");
-        else if (data.status === "failed") toast.error("The payment didn't go through. You weren't charged.");
-        else toast("Payment is still processing. Credits appear as soon as M-Pesa confirms.");
-      })
-      .catch((err) => toast.error(errorMessage(err)))
-      .finally(() => {
-        setChecking(false);
-        setParams({}, { replace: true });
-        queryClient.invalidateQueries({ queryKey: ["credits"] });
-        queryClient.invalidateQueries({ queryKey: ["ledger"] });
-      });
-  }, [reference, setParams, queryClient]);
-
-  const buy = async (packId: string) => {
-    setBuying(packId);
-    const { data, error } = await supabase.functions.invoke("payments-init", { body: { pack_id: packId, return_url: `${window.location.origin}/credits` } });
-    if (error || !data?.authorization_url) {
-      setBuying(undefined);
-      let message = errorMessage(error);
-      try {
-        const body = await (error as { context?: Response })?.context?.json();
-        if (body?.error) message = body.error;
-      } catch {
-        /* keep generic message */
-      }
-      return toast.error(message);
-    }
-    window.location.href = data.authorization_url;
-  };
 
   return (
     <div className="grid gap-10">
@@ -81,19 +40,19 @@ export default function Credits() {
         </div>
       </PageHeader>
 
-      {checking && <Notice tone="accent" title="Checking your payment…" />}
-
       <div className="grid gap-6 md:grid-cols-[1fr_300px]">
         <div className="grid content-start gap-4">
           {packs.data?.filter((p) => p.is_active).map((p) => (
             <div key={p.id} className="flex flex-wrap items-center justify-between gap-4 border border-ink bg-surface p-6">
               <div className="grid gap-1">
-                <span className="label text-accent">{p.name}</span>
+                <span className="label">{p.name}</span>
                 <span className="display text-[34px]">{p.credits} credits</span>
-                <span className="text-muted">Pay with M-Pesa or card</span>
+                <span className="flex items-center gap-1.5 text-[13px] text-muted">
+                  <Lock className="h-3.5 w-3.5" /> M-Pesa or card · powered by Paystack
+                </span>
               </div>
-              <Button variant="accent" size="lg" onClick={() => buy(p.id)} loading={buying === p.id}>
-                Pay {kes(p.price_kes)}
+              <Button size="lg" onClick={() => setCheckoutPack(p)}>
+                Buy · {kes(p.price_kes)}
               </Button>
             </div>
           ))}
@@ -128,6 +87,7 @@ export default function Credits() {
           )}
         </div>
       </section>
+      {checkoutPack && <Checkout pack={checkoutPack} onClose={() => setCheckoutPack(undefined)} />}
     </div>
   );
 }

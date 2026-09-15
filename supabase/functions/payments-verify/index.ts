@@ -1,4 +1,4 @@
-// Called when the shopper returns from Paystack, so credits appear without waiting for the webhook.
+// Polled by the checkout while the shopper completes M-Pesa or card, so credits appear immediately.
 import { adminClient, callerFrom, corsHeaders, json } from "../_shared/http.ts";
 import { confirmPayment } from "../_shared/paystack.ts";
 
@@ -22,7 +22,7 @@ Deno.serve(async (req) => {
 
   try {
     const result = await confirmPayment(admin, reference);
-    return json({ status: result.status });
+    return json(result);
   } catch (err) {
     return json({ error: err instanceof Error ? err.message : "Could not check the payment" }, 500);
   }
