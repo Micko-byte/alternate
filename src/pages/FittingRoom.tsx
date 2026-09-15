@@ -16,7 +16,7 @@ import { FitPicker } from "@/components/FitPicker";
 import { useTryonAllowance } from "@/lib/admin";
 import { FeedbackButton } from "@/components/FeedbackButton";
 import type { ParsedInspiration } from "@/lib/garmentCutout";
-import { GARMENTS, GARMENT_BY_CATEGORY, SIZED_CATEGORIES } from "@/lib/garments";
+import { GARMENTS, GARMENT_BY_CATEGORY, LENGTH_OPTIONS, SIZED_CATEGORIES, closestLength } from "@/lib/garments";
 
 type Quality = "standard" | "hd" | "studio";
 
@@ -419,6 +419,10 @@ function InspirationForm({ file, onFile, onSaved, onCancel }: { file: File; onFi
   const [garmentType, setGarmentType] = useState<string | null>(null);
   const [touched, setTouched] = useState(false);
   const [mismatch, setMismatch] = useState<{ id: string; message: string; suggestion: { category: string; type: string } | null } | null>(null);
+  const [details, setDetails] = useState<{ id: string; category: string; seen: { type: string; colour: string; length: string | null; sleeves: string | null; silhouette: string | null } | null } | null>(null);
+  const [length, setLength] = useState<string | null>(null);
+  const [sizeLabel, setSizeLabel] = useState("");
+  const [lengthCm, setLengthCm] = useState("");
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [parsed, setParsed] = useState<ParsedInspiration | null>(null);
@@ -434,6 +438,10 @@ function InspirationForm({ file, onFile, onSaved, onCancel }: { file: File; onFi
     setUseWhole(false);
     setTouched(false);
     setMismatch(null);
+    setDetails(null);
+    setLength(null);
+    setSizeLabel("");
+    setLengthCm("");
     let cancelled = false;
     import("@/lib/garmentCutout")
       .then(({ parseInspiration }) => parseInspiration(file))
@@ -497,6 +505,12 @@ function InspirationForm({ file, onFile, onSaved, onCancel }: { file: File; onFi
       if (check?.checked && !garmentType && check.chosen_item) {
         await supabase.from("garment_uploads").update({ garment_type: String(check.chosen_item).slice(0, 40) }).eq("id", id);
       }
+      if (LENGTH_OPTIONS[category]) {
+        // Confirm length and size before the first try-on
+        setLength(closestLength(category, check?.chosen?.length));
+        setDetails({ id, category, seen: check?.checked ? check.chosen : null });
+        return;
+      }
       onSaved(id);
     } catch (err) {
       toast.error(errorMessage(err));
@@ -514,7 +528,26 @@ function InspirationForm({ file, onFile, onSaved, onCancel }: { file: File; onFi
       .update({ category: mismatch.suggestion.category as never, garment_type: mismatch.suggestion.type.slice(0, 40) })
       .eq("id", mismatch.id);
     if (error) return toast.error(errorMessage(error));
+    if (LENGTH_OPTIONS[mismatch.suggestion.category]) {
+      setCategory(mismatch.suggestion.category);
+      setDetails({ id: mismatch.id, category: mismatch.suggestion.category, seen: null });
+      setMismatch(null);
+      return;
+    }
     onSaved(mismatch.id);
+  };
+
+  const saveDetails = async () => {
+    if (!details) return;
+    setBusy(true);
+    const cm = Number(lengthCm);
+    const { error } = await supabase
+      .from("garment_uploads")
+      .update({ length: length as never, size_label: sizeLabel.trim().slice(0, 12) || null, length_cm: cm >= 5 && cm <= 250 ? cm : null })
+      .eq("id", details.id);
+    setBusy(false);
+    if (error) return toast.error(errorMessage(error));
+    onSaved(details.id);
   };
 
   const discardMismatch = async () => {
@@ -522,6 +555,53 @@ function InspirationForm({ file, onFile, onSaved, onCancel }: { file: File; onFi
     await supabase.from("garment_uploads").delete().eq("id", mismatch.id);
     setMismatch(null);
   };
+
+  if (details) {
+    const options = LENGTH_OPTIONS[details.category] ?? [];
+    const seen = details.seen;
+    const noun2 = seen?.type?.toLowerCase() ?? CATEGORY_SINGULAR[details.category];
+    return (
+      <div className="grid gap-5">
+        <div className="grid grid-cols-[88px_1fr] items-start gap-4">
+          {preview && <img src={preview} alt="" className="aspect-[3/4] w-full bg-sunk object-cover" />}
+          <div className="grid gap-1">
+            <span className="label">We see</span>
+            <p className="font-medium capitalize">{seen ? `${seen.type}` : noun2}</p>
+            {seen?.colour && <p className="text-[13px] text-muted">{seen.colour}</p>}
+            {seen && (seen.sleeves || seen.silhouette) && (
+              <p className="text-[13px] text-muted">{[seen.sleeves && seen.sleeves !== "n/a" ? `${seen.sleeves.replace("_", "-")} sleeves` : "", seen.silhouette && seen.silhouette !== "n/a" ? seen.silhouette.replace("_", "-") : ""].filter(Boolean).join(" · ")}</p>
+            )}
+          </div>
+        </div>
+
+        <fieldset className="grid gap-2">
+          <legend className="label mb-2">How long is it?</legend>
+          <div className="flex flex-wrap gap-1.5">
+            {options.map((o) => (
+              <button key={o.value} type="button" onClick={() => setLength(o.value)} aria-pressed={length === o.value} className={cn("h-9 border px-3 text-[13px]", length === o.value ? "border-ink bg-ink text-paper" : "border-rule text-muted hover:border-ink hover:text-ink")}>
+                {o.label}
+              </button>
+            ))}
+          </div>
+          <p className="text-[12.5px] text-muted">{seen?.length ? "We picked this from the photo. Change it if it's wrong." : "Pick where it ends on you, or leave it and we'll go by the photo."}</p>
+        </fieldset>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Size on the label (optional)" hint="e.g. UK 10, M, 32. Smaller than yours looks tighter.">
+            <Input value={sizeLabel} onChange={(e) => setSizeLabel(e.target.value)} maxLength={12} />
+          </Field>
+          <Field label="Length in cm (optional)" hint={["bottom", "skirt"].includes(details.category) ? "From the waistband to the hem" : "From the top of the shoulder to the hem"}>
+            <Input type="number" inputMode="decimal" min={5} max={250} value={lengthCm} onChange={(e) => setLengthCm(e.target.value)} className="num" />
+          </Field>
+        </div>
+
+        <div className="flex gap-2">
+          <Button variant="solid" onClick={saveDetails} loading={busy}>Use this {noun2}</Button>
+          <Button variant="ghost" onClick={() => onSaved(details.id)}>Skip</Button>
+        </div>
+      </div>
+    );
+  }
 
   if (mismatch) {
     const label = mismatch.suggestion ? mismatch.suggestion.type : null;

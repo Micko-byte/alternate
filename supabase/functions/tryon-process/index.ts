@@ -18,12 +18,14 @@ import {
   ensureBodyProfile,
   inspectGarment,
   itemFor,
+  type InspectionItem,
   type PhotoNote,
   type QualityCheck,
 } from "../_shared/ai.ts";
+import { LENGTHS, editableGrid, lengthFromCm, lengthSteps, maskPng, readPartsMap } from "../_shared/body.ts";
 
 const IMAGE_MODEL = Deno.env.get("OPENAI_IMAGE_MODEL") ?? "gpt-image-2.5-sunburst";
-const OUTPUT_SIZE = "1024x1536"; // must match the photo and mask made in the browser
+const OUTPUT_SIZE = "1024x1536"; // must match the photo and the masks
 
 // Every tier renders at high quality or better; higher tiers add reference photos and attempts
 const TIER: Record<string, { quality: string; references: number; attempts: number }> = {
@@ -58,12 +60,13 @@ type Attempt = { n: number; path: string; check: QualityCheck | null; passed: bo
 
 const TRYON_COLUMNS = "id, user_id, body_photo_id, product_id, garment_upload_id, quality, attempts, fit, size_system, size_value, size_label, garment_type, cost_usd, qa";
 
+// The fit changes only how close the fabric sits, never the length or the design lines
 const FIT_STYLE: Record<string, string> = {
-  fitted: "a fitted, close-to-the-body fit",
-  regular: "a regular, true-to-size fit",
-  relaxed: "a relaxed fit with easy room through the body",
-  oversized: "an oversized fit: dropped shoulders, extra width and length",
-  baggy: "a baggy fit: very loose and roomy, wide through the body and legs, fabric falling in soft folds",
+  fitted: "FIT: FITTED, skin-tight like bodycon. The fabric hugs the bust, waist, hips and thighs and follows every curve with no loose fabric or gaps, with slight tension across the bust and hips. Design lines such as an A-line skirt stay, but everything that can sit close does.",
+  regular: "FIT: REGULAR, true to size. The fabric follows the body's shape with a little room (about 2-4 cm), skimming rather than clinging, with soft natural folds. Clearly less tight than a fitted look.",
+  relaxed: "FIT: RELAXED. Easy room through the body (about 6-10 cm), fabric falls away from the waist and hips instead of following them.",
+  oversized: "FIT: OVERSIZED. Dropped shoulders, visibly extra width through the body and sleeves; the body's curves are not visible through the fabric.",
+  baggy: "FIT: BAGGY. Very loose and roomy, wide through the body and legs, fabric falling in deep soft folds.",
 };
 
 const LETTERS = ["", "XS", "S", "M", "L", "XL", "XXL", "3XL", "4XL"];
@@ -209,7 +212,7 @@ async function runAttempt(admin: SupabaseClient, tryon: Tryon) {
     let check: QualityCheck | null = null;
     try {
       const checked = await checkResult(
-        { customer: prepared.person, garment: prepared.garment, result: new Blob([generated.png], { type: "image/png" }) },
+        { customer: prepared.person, garment: prepared.garment, result: new Blob([generated.png as Uint8Array<ArrayBuffer>], { type: "image/png" }) },
         prepared.task,
       );
       check = checked.check;
@@ -283,20 +286,18 @@ async function prepare(admin: SupabaseClient, tryon: Tryon) {
 
   const { data: photo } = await admin
     .from("body_photos")
-    .select("id, storage_path, edit_mask_path, mask_upper_path, mask_lower_path, mask_feet_path, mask_eyes_path, mask_head_path, mask_jewellery_path")
+    .select("id, storage_path, parts_map_path, edit_mask_path, mask_upper_path, mask_lower_path, mask_feet_path, mask_eyes_path, mask_head_path, mask_jewellery_path")
     .eq("id", tryon.body_photo_id)
     .single();
   if (!photo) throw new Error("Body photo row missing");
 
-  const [person, { data: profile }, { data: sizeRows }] = await Promise.all([
+  const [person, { data: profile }, { data: sizeRows }, { data: measurements }] = await Promise.all([
     download(admin, "body-photos", photo.storage_path),
-    admin.from("profiles").select("height_cm, weight_kg").eq("id", tryon.user_id).maybeSingle(),
+    admin.from("profiles").select("height_cm, shops_for").eq("id", tryon.user_id).maybeSingle(),
     admin.from("user_sizes").select("category, size_system, size_value").eq("user_id", tryon.user_id),
+    admin.from("body_measurements").select("bust_cm, waist_cm, hips_cm, sources, accuracy_cm").eq("user_id", tryon.user_id).maybeSingle(),
   ]);
-  const usualSize = (category: string | null) => {
-    const row = sizeRows?.find((r) => r.category === category);
-    return row ? sizeName(row.size_system, row.size_value) : null;
-  };
+  const usualRow = (category: string | null) => sizeRows?.find((r) => r.category === category) ?? null;
 
   // ---- the item, and a server check of what the photo really shows
   let garment: Blob;
@@ -306,9 +307,12 @@ async function prepare(admin: SupabaseClient, tryon: Tryon) {
   let hint: string;
   let isCutout = false;
   let cachedNotes = "";
+  let chosenLength: string | null = null;
+  let lengthCm: number | null = null;
+  let labelSize: string | null = null;
 
   if (tryon.product_id) {
-    const { data: product } = await admin.from("products").select("id, name, description, category, garment_notes").eq("id", tryon.product_id).single();
+    const { data: product } = await admin.from("products").select("id, name, description, category, garment_notes, length, length_cm").eq("id", tryon.product_id).single();
     const { data: media } = await admin
       .from("product_media")
       .select("storage_path")
@@ -325,21 +329,32 @@ async function prepare(admin: SupabaseClient, tryon: Tryon) {
     category = product.category;
     cachedNotes = product.garment_notes ?? "";
     hint = `${product.name}. ${product.description ?? ""}`;
+    chosenLength = product.length;
+    lengthCm = product.length_cm;
   } else {
-    const { data: upload } = await admin.from("garment_uploads").select("storage_path, cutout_path, category, source_note").eq("id", tryon.garment_upload_id).single();
+    const { data: upload } = await admin
+      .from("garment_uploads")
+      .select("storage_path, cutout_path, category, source_note, length, length_cm, size_label")
+      .eq("id", tryon.garment_upload_id)
+      .single();
     if (!upload) throw new Error("Inspiration row missing");
     garment = await download(admin, "garment-uploads", upload.cutout_path ?? upload.storage_path);
     inspectedPath = upload.storage_path;
     category = upload.category;
     isCutout = !!upload.cutout_path;
     hint = `${tryon.garment_type ?? ""} ${upload.source_note ?? ""}`;
+    chosenLength = upload.length;
+    lengthCm = upload.length_cm;
+    labelSize = upload.size_label;
   }
 
   const key = tryon.product_id ? { product_id: tryon.product_id } : { garment_upload_id: tryon.garment_upload_id };
   const keyColumn = tryon.product_id ? "product_id" : "garment_upload_id";
   const keyValue = tryon.product_id ?? tryon.garment_upload_id;
   let { data: inspection } = await admin.from("garment_inspections").select("categories, items, is_wearable, source_path").eq(keyColumn, keyValue).maybeSingle();
-  if (!inspection || inspection.source_path !== inspectedPath) {
+  // Re-check photos inspected before length, sleeves and silhouette were read
+  const outdated = !!inspection && !(inspection.items ?? []).some((i: InspectionItem) => "sleeves" in i);
+  if (!inspection || outdated || inspection.source_path !== inspectedPath) {
     const original = tryon.product_id || !isCutout ? garment : await download(admin, "garment-uploads", inspectedPath);
     const fresh = await inspectGarment(original, hint);
     costUsd += fresh.costUsd;
@@ -356,17 +371,60 @@ async function prepare(admin: SupabaseClient, tryon: Tryon) {
         : `This photo shows ${shows}, not ${CATEGORY_NAME[category ?? "other"]}. Your credits are back. Choose what the photo shows and try again.`,
     );
   }
-  const item = itemFor(inspection, category);
+  const item: InspectionItem | null = itemFor(inspection, category);
   const garmentType = tryon.garment_type ?? item?.type ?? null;
   const notes = cachedNotes || item?.description || "";
   if (tryon.product_id && !cachedNotes && notes) await admin.from("products").update({ garment_notes: notes }).eq("id", tryon.product_id);
 
-  // ---- mask for the zone this item changes
+  // ---- length: chosen by the shopper or store > measured length in cm > as designed (read from the photo)
+  const hasLength = !["shoes", "eyewear", "headwear", "jewellery"].includes(category ?? "");
+  const designLength = item?.length && LENGTHS[item.length] ? item.length : null;
+  let length: string | null = null;
+  let lengthNote = "";
+  if (hasLength) {
+    if (chosenLength) {
+      length = chosenLength;
+      lengthNote = "as chosen";
+    } else if (lengthCm && profile?.height_cm) {
+      const measured = lengthFromCm(category ?? "dress", lengthCm, profile.height_cm);
+      // A height typed wrongly would move the hem a long way: trust the design when they disagree badly
+      if (designLength && Math.abs(lengthSteps(designLength, measured)) > 2) {
+        length = designLength;
+        lengthNote = "as designed";
+      } else {
+        length = measured;
+        lengthNote = `${lengthCm} cm long on someone ${profile.height_cm} cm tall`;
+      }
+    } else if (designLength) {
+      length = designLength;
+      lengthNote = "as designed";
+    }
+  }
+
+  // ---- size on the garment compared with what they normally wear
   const zone = zoneFor(category);
-  const maskPath = (photo as Record<string, string | null>)[MASK_COLUMN[zone]] ?? (zone === "upper" || zone === "lower" ? photo.edit_mask_path : null);
-  if (!maskPath) throw new UserError("Your photo needs a quick update before trying on this kind of item. Open the fitting room and try again. Your credits are back.");
-  if (!maskPath.startsWith(`${tryon.user_id}/`)) throw new Error("Mask outside the owner's folder");
-  const mask = await download(admin, "body-photos", maskPath);
+  const usual = usualRow(category);
+  const sizeText = describeSize(tryon, usual, labelSize);
+
+  // ---- mask: built for this exact item from the photo's parts map (older photos: stored zone masks)
+  const sleeves = item?.sleeves ?? "";
+  const coversArms = ["three_quarter", "long"].includes(sleeves) || (category === "outerwear" && sleeves !== "none" && sleeves !== "short");
+  const wide = ["a_line", "flared", "oversized", "wide_leg", "relaxed"].includes(item?.silhouette ?? "") || ["oversized", "baggy"].includes(tryon.fit);
+  let maskPath: string | null;
+  let mask: Blob;
+  if (photo.parts_map_path && photo.parts_map_path.startsWith(`${tryon.user_id}/`)) {
+    const parts = readPartsMap(new Uint8Array(await (await download(admin, "body-photos", photo.parts_map_path)).arrayBuffer()));
+    const png = maskPng(editableGrid(parts, { zone, coversArms, length, wide }));
+    maskPath = `${tryon.user_id}/masks/tryon-${tryon.id}.png`;
+    const { error } = await admin.storage.from("body-photos").upload(maskPath, png, { contentType: "image/png", upsert: true });
+    if (error) throw new Error(`Saving mask failed: ${error.message}`);
+    mask = new Blob([png as Uint8Array<ArrayBuffer>], { type: "image/png" });
+  } else {
+    maskPath = (photo as Record<string, string | null>)[MASK_COLUMN[zone]] ?? (zone === "upper" || zone === "lower" ? photo.edit_mask_path : null);
+    if (!maskPath) throw new UserError("Your photo needs a quick update before trying on this kind of item. Open the fitting room and try again. Your credits are back.");
+    if (!maskPath.startsWith(`${tryon.user_id}/`)) throw new Error("Mask outside the owner's folder");
+    mask = await download(admin, "body-photos", maskPath);
+  }
 
   // ---- body profile from all photos, and the most useful other photos as references
   const tier = TIER[tryon.quality] ?? TIER.standard;
@@ -389,42 +447,83 @@ async function prepare(admin: SupabaseClient, tryon: Tryon) {
     console.error("body profile unavailable", tryon.id, err);
   }
 
-  const measurements = [
-    profile?.height_cm ? `${profile.height_cm} cm tall` : "",
-    profile?.weight_kg ? `${profile.weight_kg} kg` : "",
-    usualSize(category) ? `normally wears ${usualSize(category)}` : "",
-  ].filter(Boolean);
-  const wornSize = tryon.product_id ? (tryon.size_label ? `size ${tryon.size_label}` : sizeName(tryon.size_system, tryon.size_value)) : null;
-  const style = FIT_STYLE[tryon.fit] ?? FIT_STYLE.regular;
-  const sized = !["shoes", "eyewear", "headwear", "jewellery"].includes(category ?? "");
-  const fit = !sized
-    ? ""
-    : wornSize
-      ? `Show the garment in ${wornSize}${usualSize(category) && wornSize !== usualSize(category) ? ` (sized up from their usual ${usualSize(category)})` : ""}, worn with ${style}. It must hang exactly as that size would on this body: not tighter, looser, shorter or longer than it really would.`
-      : `Style it with ${style}, as the garment would realistically look in the customer's usual size with that fit.`;
   const itemName = garmentType ?? CATEGORY_NAME[category ?? "other"];
+  const sized = hasLength;
+  const fitRule = sized ? FIT_STYLE[tryon.fit] ?? FIT_STYLE.regular : "";
+  const lengthRule = length ? `LENGTH: the hem must end ${LENGTHS[length].name} on the customer (${lengthNote}). Not longer, not shorter.` : "";
+  const sleeveRule = sleeves && !["n/a", ""].includes(sleeves) ? `Sleeves: ${sleeves.replace("_", "-")}, exactly as in image 2.` : "";
+  const measured = measurements && (measurements.bust_cm || measurements.waist_cm || measurements.hips_cm)
+    ? `For judging how tightly fabric sits only: bust ${measurements.bust_cm ?? "?"} cm, waist ${measurements.waist_cm ?? "?"} cm, hips ${measurements.hips_cm ?? "?"} cm.`
+    : "";
 
   const prompt = [
     "Virtual try-on for a clothing shop.",
-    `Image 1 is the customer. Image 2 shows ${isCutout ? "only the item, cut out on white" : "the item"}: ${itemName}${garmentName ? ` "${garmentName}"` : ""}.`,
+    `Image 1 is the customer. Image 2 shows ${isCutout ? "only the item, cut out (its background is not part of it)" : "the item"}: ${itemName}${garmentName ? ` "${garmentName}"` : ""}.`,
     references.length
-      ? `Images 3${references.length > 1 ? `-${references.length + 2}` : ""} are the same customer from other angles. Use them only to understand their real body: shoulder width, arm and leg length and thickness, torso and hips, so the item sits correctly. Do not copy their clothes, pose or background.`
+      ? `Images 3${references.length > 1 ? `-${references.length + 2}` : ""} are the same customer from other angles, only for understanding their real body (shoulders, bust, waist, hips, arm and leg shape). Do not copy their clothes, pose or background.`
       : "",
     zoneRule(category, zone),
+    "BODY: never change the customer's body. Their height, build, bust, waist, hips, arms and legs keep exactly the outline and proportions in image 1. Only the clothing changes.",
     notes ? `The item: ${notes}` : "",
-    bodySummary ? `The customer's body, from all their photos: ${bodySummary}` : "",
-    measurements.length ? `The customer is ${measurements.join(", ")}.` : "",
-    fit,
-    "Keep the customer's face, hair, skin tone, body shape, limb proportions, pose, hands, background, lighting and camera framing exactly as in image 1. Do not copy anything else from image 2: no other clothes, accessories, pose or background.",
-    "Reproduce the item's colour, print, fabric texture, stitching and details faithfully, sitting naturally on the customer with realistic folds, shadows and contact with the body.",
+    item?.colour ? `COLOURS must match image 2 exactly: ${item.colour}. Do not recolour, tint or swap any part of the print.` : "Colours must match image 2 exactly. Do not recolour any part of the print.",
+    lengthRule,
+    sleeveRule,
+    sized ? sizeText : "",
+    fitRule,
+    measured,
+    bodySummary ? `About the customer's body, from all their photos (do not reshape it): ${bodySummary}` : "",
+    "SKIN: every tattoo, birthmark, scar, piercing and skin detail that is still visible after dressing must stay exactly as in image 1. Newly revealed skin matches their skin tone.",
+    "Keep the face, hair, pose, hands, background, lighting and camera framing exactly as in image 1. Do not copy anything else from image 2: no other clothes, accessories, pose or background.",
+    "Reproduce the item's fabric texture, stitching, straps, slits and details faithfully, with realistic folds, shadows and contact with the body.",
     "Match the sharpness, grain, colour balance and lighting of image 1 exactly, so the result looks like the same unedited photo. No blur, smoothing, text, logos, extra accessories or other people.",
   ]
     .filter(Boolean)
     .join(" ");
 
-  const task = `Put ${itemName} (${CATEGORY_NAME[category ?? "other"]}) from image 2 on the customer in image 1. ${zoneRule(category, zone)}`;
+  const task = [
+    `Put ${itemName} (${CATEGORY_NAME[category ?? "other"]}) from image 2 on the customer in image 1. ${zoneRule(category, zone)}`,
+    item?.colour ? `Colours: ${item.colour}.` : "",
+    length ? `The hem should end ${LENGTHS[length].name}.` : "",
+    sized ? `Fit: ${fitRule}` : "",
+    "Tattoos and skin marks that stay visible must be unchanged.",
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   return { person, garment, mask, maskPath, references, prompt, task, garmentType, costUsd };
+}
+
+const SIZE_STEP: Record<string, number> = { uk_women: 2, waist_in: 2, letter: 1 };
+
+/** How the garment's size compares with the customer's usual size, as a drawing instruction. */
+function describeSize(
+  tryon: Tryon,
+  usual: { size_system: string; size_value: number } | null,
+  labelSize: string | null,
+) {
+  let worn: { system: string; value: number; text: string } | null = null;
+  if (tryon.product_id && tryon.size_system && tryon.size_value != null) {
+    worn = { system: tryon.size_system, value: tryon.size_value, text: tryon.size_label ? `size ${tryon.size_label}` : sizeName(tryon.size_system, tryon.size_value) ?? "" };
+  } else if (labelSize && usual) {
+    const label = labelSize.trim().toUpperCase().replace(/^UK\s*/, "");
+    const letter = LETTERS.indexOf(label === "XXXL" ? "3XL" : label);
+    if (letter > 0 && usual.size_system === "letter") worn = { system: "letter", value: letter, text: `size ${label}` };
+    else if (/^\d{1,2}$/.test(label) && usual.size_system !== "letter") worn = { system: usual.size_system, value: Number(label), text: sizeName(usual.size_system, Number(label)) ?? label };
+  }
+  const usualText = usual ? sizeName(usual.size_system, usual.size_value) : null;
+
+  if (!worn || !usual || worn.system !== usual.size_system) {
+    return usualText
+      ? `SIZE: no garment size given, so fit it onto the customer exactly as it is designed to be worn, in their usual ${usualText}: a mini stays a mini, a bodycon hugs, a wide leg stays wide.`
+      : "SIZE: no garment size given, so fit it onto the customer exactly as it is designed to be worn: a mini stays a mini, a bodycon hugs, a wide leg stays wide.";
+  }
+  const steps = Math.round((worn.value - usual.size_value) / (SIZE_STEP[usual.size_system] ?? 2));
+  if (steps === 0) return `SIZE: the garment is ${worn.text}, the customer's usual size: it fits them as intended, not tight and not loose.`;
+  if (steps < 0) {
+    const n = -steps;
+    return `SIZE: the garment is ${worn.text}, ${n} size${n > 1 ? "s" : ""} smaller than the customer's usual ${usualText}. It must look ${n > 1 ? "very " : ""}tight: fabric strains across the bust, hips and thighs, seams pull, it rides slightly shorter, and it is narrower than their body would like.`;
+  }
+  return `SIZE: the garment is ${worn.text}, ${steps} size${steps > 1 ? "s" : ""} bigger than the customer's usual ${usualText}. It must look ${steps > 1 ? "clearly " : ""}loose: extra width through the body, shoulders sitting slightly wide, and a little extra length.`;
 }
 
 /** The other photos that show most about the body where this item sits. */

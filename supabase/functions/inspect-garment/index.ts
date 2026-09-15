@@ -59,7 +59,8 @@ Deno.serve(async (req) => {
   }
 
   let { data: inspection } = await admin.from("garment_inspections").select("categories, items, is_wearable, source_path").eq(keyColumn, key[keyColumn]).maybeSingle();
-  if (!inspection || inspection.source_path !== path) {
+  const outdated = !!inspection && !(inspection.items ?? []).some((i: object) => "sleeves" in i);
+  if (!inspection || outdated || inspection.source_path !== path) {
     try {
       const fresh = await inspectGarment(await download(admin, bucket, path), hint);
       const row = { ...key, source_path: path, categories: fresh.categories, items: fresh.items, is_wearable: fresh.is_wearable, cost_usd: Number(fresh.costUsd.toFixed(5)) };
@@ -82,6 +83,10 @@ Deno.serve(async (req) => {
     items: inspection.items.map(({ type, category: c, colour, main: m }: { type: string; category: string; colour: string; main: boolean }) => ({ type, category: c, colour, main: m })),
     matches,
     chosen_item: itemFor(inspection, category)?.type ?? null,
+    chosen: (() => {
+      const i = itemFor(inspection, category);
+      return i ? { type: i.type, colour: i.colour, length: i.length ?? null, sleeves: i.sleeves ?? null, silhouette: i.silhouette ?? null } : null;
+    })(),
     suggestion: main ? { category: main.category, type: main.type } : null,
     message: !inspection.is_wearable
       ? "We couldn't find clothes, shoes or accessories in this photo."

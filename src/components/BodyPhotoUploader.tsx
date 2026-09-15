@@ -37,28 +37,12 @@ export function BodyPhotoUploader({ onAdded, onCancel }: { onAdded?: (photoId: s
     try {
       const id = crypto.randomUUID();
       const base = `${user!.id}/masks/${id}`;
-      const paths = {
-        photo: `${user!.id}/${id}.png`,
-        full: `${base}-full.png`,
-        upper: `${base}-upper.png`,
-        lower: `${base}-lower.png`,
-        face: `${base}-face.png`,
-        feet: `${base}-feet.png`,
-        eyes: `${base}-eyes.png`,
-        head: `${base}-head.png`,
-        jewellery: `${base}-jewellery.png`,
-      };
+      const paths = { photo: `${user!.id}/${id}.png`, parts: `${base}-parts.png`, face: `${base}-face.png` };
       const bucket = supabase.storage.from("body-photos");
       const files: [string, Blob][] = [
         [paths.photo, prepared.photo],
-        [paths.full, prepared.masks.full],
-        [paths.upper, prepared.masks.upper],
-        [paths.lower, prepared.masks.lower],
-        [paths.face, prepared.masks.face],
-        [paths.feet, prepared.masks.feet],
-        [paths.eyes, prepared.masks.eyes],
-        [paths.head, prepared.masks.head],
-        [paths.jewellery, prepared.masks.jewellery],
+        [paths.parts, prepared.partsMap],
+        [paths.face, prepared.faceMask],
       ];
       for (const [path, blob] of files) {
         const { error } = await bucket.upload(path, blob, { contentType: "image/png" });
@@ -69,14 +53,8 @@ export function BodyPhotoUploader({ onAdded, onCancel }: { onAdded?: (photoId: s
         user_id: user!.id,
         angle,
         storage_path: paths.photo,
-        edit_mask_path: paths.full,
-        mask_upper_path: paths.upper,
-        mask_lower_path: paths.lower,
+        parts_map_path: paths.parts,
         face_mask_path: paths.face,
-        mask_feet_path: paths.feet,
-        mask_eyes_path: paths.eyes,
-        mask_head_path: paths.head,
-        mask_jewellery_path: paths.jewellery,
         width: 1024,
         height: 1536,
         confirmed_self: true,

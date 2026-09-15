@@ -11,6 +11,7 @@ import { FitPicker } from "@/components/FitPicker";
 import { ShopsForPicker, SizeFields, sizeKey } from "@/components/SizeFields";
 import { Button, ButtonLink, Field, Input, Notice, PageHeader, Select } from "@/components/ui";
 import { BodyPhotoUploader } from "@/components/BodyPhotoUploader";
+import { Measurements } from "@/components/Measurements";
 
 const POLICY_VERSION = "2026-09-v1";
 
@@ -29,6 +30,9 @@ export default function Setup() {
         <Step n={4} title="Your photos" done={setup.steps.photos}>
           {setup.steps.about && setup.steps.privacy ? <PhotosStep /> : <Notice title="Finish steps 1 and 3 first">We need your age and photo consent before you upload body photos.</Notice>}
         </Step>
+        {setup.steps.photos && (
+          <Step n={5} title="Measurements" done={false} id="measurements"><Measurements /></Step>
+        )}
       </div>
     </div>
   );
@@ -93,13 +97,21 @@ function AboutStep() {
         <Field label="Phone (M-Pesa)"><Input type="tel" value={form.phone} onChange={set("phone")} placeholder="07XX XXX XXX" /></Field>
         <Field label="Date of birth" hint="You must be 18 or older"><Input type="date" required value={form.date_of_birth} onChange={set("date_of_birth")} /></Field>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Height (cm)"><Input type="number" min={100} max={250} value={form.height_cm} onChange={set("height_cm")} className="num" /></Field>
+          <Field label="Height (cm)" hint={heightHint(form.height_cm)}><Input type="number" min={100} max={250} value={form.height_cm} onChange={set("height_cm")} className="num" /></Field>
           <Field label="Weight (kg)"><Input type="number" min={25} max={300} value={form.weight_kg} onChange={set("weight_kg")} className="num" /></Field>
         </div>
       </div>
       <Button onClick={save} loading={busy} className="justify-self-start">Save</Button>
     </div>
   );
+}
+
+/** Shows 165 cm as 5 ft 5 in, so a wrong height is easy to spot. */
+function heightHint(cm: string) {
+  const n = Number(cm);
+  if (!n || n < 100 || n > 250) return "Used to place hems and read measurements";
+  const inches = Math.round(n / 2.54);
+  return `That's ${Math.floor(inches / 12)} ft ${inches % 12} in. Check it's right.`;
 }
 
 function SizesStep() {
@@ -197,8 +209,12 @@ function PhotosStep() {
     })();
   }, [photos.data]);
 
-  const remove = async (photo: { id: string; storage_path: string; edit_mask_path: string | null; face_mask_path: string | null; mask_upper_path: string | null; mask_lower_path: string | null }) => {
-    await supabase.storage.from("body-photos").remove([photo.storage_path, photo.edit_mask_path, photo.face_mask_path, photo.mask_upper_path, photo.mask_lower_path].filter(Boolean) as string[]);
+  const remove = async (photo: (typeof photos.data & object)[number]) => {
+    const files = [
+      photo.storage_path, photo.parts_map_path, photo.edit_mask_path, photo.face_mask_path, photo.mask_upper_path, photo.mask_lower_path,
+      photo.mask_feet_path, photo.mask_eyes_path, photo.mask_head_path, photo.mask_jewellery_path,
+    ];
+    await supabase.storage.from("body-photos").remove(files.filter(Boolean) as string[]);
     const { error } = await supabase.from("body_photos").delete().eq("id", photo.id);
     if (error) return toast.error(errorMessage(error));
     queryClient.invalidateQueries({ queryKey: ["body-photos"] });

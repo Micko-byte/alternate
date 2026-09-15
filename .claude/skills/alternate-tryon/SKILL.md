@@ -31,7 +31,16 @@ A shopper's photo + a garment (store product or uploaded inspiration) → a real
    - Stores result, `qa` (all attempts), `identity_score` (best score), `reference_photo_ids`, `edit_mask_path`, `engine`, `cost_usd` (all attempts). Technical errors are saved as `Technical: …` and shown to shoppers as a generic message.
 5. **View** — `src/components/FaceLockImage.tsx` pastes the original photo back wherever the tryon's `edit_mask_path` is opaque ("Keep the rest of me"). "AI version" shows the raw output.
 
-## Zones — what each may change
+## Parts maps, length, size and skin (current engine)
+
+- New body photos upload a **parts map** (`body_photos.parts_map_path`, 256×384 PNG, red = 12 × SegFormer label) plus a face mask. Older photos get one made by `ensurePartsMap` in `startTryon`.
+- `supabase/functions/_shared/body.ts` builds the mask for each try-on from the parts map (`editableGrid` → `maskPng`), saved as `body-photos/{user}/masks/tryon-{id}.png` (`tryons.edit_mask_path`, used for paste-back). Rules: visible arm skin only opens for three-quarter/long sleeves; leg skin only opens down to the new hem; skin that stays visible (tattoos) is locked; wide silhouettes get extra room.
+- **Length** (`LENGTHS`: cropped … floor, as a share of standing height from crown/floor): shopper/store choice (`garment_uploads.length`, `products.length`) > `length_cm` with height (`lengthFromCm`; ignored if >2 steps from the design length, e.g. a mistyped height) > the inspection's design length.
+- **Size**: `describeSize` compares the product variant or the inspiration's `size_label` with the shopper's usual size: smaller = visibly tight and slightly shorter, bigger = loose. No size = fit as designed.
+- **Fit** texts are strong and distinct (fitted = skin-tight bodycon, regular = 2–4 cm ease). Height/weight are never used to describe the body; the body outline comes from the photos. `body_measurements` (bust/waist/hips, photo estimate from `src/lib/measure.ts` or tape) only guide tightness.
+- Inspection items now include `length`, `sleeves`, `silhouette` and exact `colour`; older cached inspections are redone. The quality check also requires `colours_match`, `length_correct`, `fit_correct`, `skin_details_kept`.
+
+## Zones — what each may change (legacy masks for photos without a parts map)
 
 | Zone | Editable (then dilated) | Always kept |
 |---|---|---|

@@ -62,6 +62,42 @@ export type Database = {
         }
         Relationships: []
       }
+      body_measurements: {
+        Row: {
+          accuracy_cm: number | null
+          bust_cm: number | null
+          hips_cm: number | null
+          photo_estimate: Json | null
+          sources: Json
+          tape: Json | null
+          updated_at: string
+          user_id: string
+          waist_cm: number | null
+        }
+        Insert: {
+          accuracy_cm?: number | null
+          bust_cm?: number | null
+          hips_cm?: number | null
+          photo_estimate?: Json | null
+          sources?: Json
+          tape?: Json | null
+          updated_at?: string
+          user_id: string
+          waist_cm?: number | null
+        }
+        Update: {
+          accuracy_cm?: number | null
+          bust_cm?: number | null
+          hips_cm?: number | null
+          photo_estimate?: Json | null
+          sources?: Json
+          tape?: Json | null
+          updated_at?: string
+          user_id?: string
+          waist_cm?: number | null
+        }
+        Relationships: []
+      }
       body_photos: {
         Row: {
           angle: Database["public"]["Enums"]["photo_angle"]
@@ -78,6 +114,7 @@ export type Database = {
           mask_jewellery_path: string | null
           mask_lower_path: string | null
           mask_upper_path: string | null
+          parts_map_path: string | null
           storage_path: string
           user_id: string
           width: number | null
@@ -97,6 +134,7 @@ export type Database = {
           mask_jewellery_path?: string | null
           mask_lower_path?: string | null
           mask_upper_path?: string | null
+          parts_map_path?: string | null
           storage_path: string
           user_id: string
           width?: number | null
@@ -116,6 +154,7 @@ export type Database = {
           mask_jewellery_path?: string | null
           mask_lower_path?: string | null
           mask_upper_path?: string | null
+          parts_map_path?: string | null
           storage_path?: string
           user_id?: string
           width?: number | null
@@ -389,6 +428,9 @@ export type Database = {
           cutout_path: string | null
           garment_type: string | null
           id: string
+          length: string | null
+          length_cm: number | null
+          size_label: string | null
           source_note: string | null
           storage_path: string
           user_id: string
@@ -399,6 +441,9 @@ export type Database = {
           cutout_path?: string | null
           garment_type?: string | null
           id?: string
+          length?: string | null
+          length_cm?: number | null
+          size_label?: string | null
           source_note?: string | null
           storage_path: string
           user_id: string
@@ -409,6 +454,9 @@ export type Database = {
           cutout_path?: string | null
           garment_type?: string | null
           id?: string
+          length?: string | null
+          length_cm?: number | null
+          size_label?: string | null
           source_note?: string | null
           storage_path?: string
           user_id?: string
@@ -701,6 +749,8 @@ export type Database = {
           id: string
           import_source: string | null
           is_one_of_a_kind: boolean
+          length: string | null
+          length_cm: number | null
           name: string
           needs_review: boolean
           price_kes: number
@@ -722,6 +772,8 @@ export type Database = {
           id?: string
           import_source?: string | null
           is_one_of_a_kind?: boolean
+          length?: string | null
+          length_cm?: number | null
           name: string
           needs_review?: boolean
           price_kes: number
@@ -743,6 +795,8 @@ export type Database = {
           id?: string
           import_source?: string | null
           is_one_of_a_kind?: boolean
+          length?: string | null
+          length_cm?: number | null
           name?: string
           needs_review?: boolean
           price_kes?: number

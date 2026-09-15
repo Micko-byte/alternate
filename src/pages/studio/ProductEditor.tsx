@@ -9,7 +9,7 @@ import { DEPARTMENTS, SIZE_SYSTEMS, type Department, type SizeSystem } from "@/l
 import { Button, Field, Input, Notice, PageHeader, Pill, Select, Spinner, Textarea } from "@/components/ui";
 import { VideoFramePicker } from "@/components/VideoFramePicker";
 import { useStore } from "./types";
-import { GARMENT_BY_CATEGORY } from "@/lib/garments";
+import { GARMENT_BY_CATEGORY, LENGTH_OPTIONS } from "@/lib/garments";
 
 type VariantDraft = { id?: string; size_label: string; size_min: string; size_max: string; stock_qty: string };
 
@@ -79,7 +79,7 @@ function EditProduct({ id }: { id: string }) {
     },
   });
 
-  const [form, setForm] = useState({ name: "", category: "dress", garmentType: "", department: "women" as Department, sizeSystem: "uk_women" as SizeSystem, price_kes: "", description: "", status: "draft", is_one_of_a_kind: false });
+  const [form, setForm] = useState({ name: "", category: "dress", garmentType: "", length: "", lengthCm: "", department: "women" as Department, sizeSystem: "uk_women" as SizeSystem, price_kes: "", description: "", status: "draft", is_one_of_a_kind: false });
   const [variants, setVariants] = useState<VariantDraft[]>([]);
   const [removed, setRemoved] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
@@ -92,7 +92,9 @@ function EditProduct({ id }: { id: string }) {
     setForm({
       name: p.name,
       category: p.category,
-      garmentType: (p as { garment_type?: string | null }).garment_type ?? "",
+      garmentType: p.garment_type ?? "",
+      length: p.length ?? "",
+      lengthCm: p.length_cm != null ? String(p.length_cm) : "",
       department: p.department,
       sizeSystem: p.product_variants[0]?.size_system ?? (p.department === "men" ? (p.category === "bottom" ? "waist_in" : "letter") : "uk_women"),
       price_kes: String(p.price_kes),
@@ -207,6 +209,8 @@ function EditProduct({ id }: { id: string }) {
           name: form.name.trim(),
           category: form.category as never,
           garment_type: form.garmentType.trim().slice(0, 40) || null,
+          length: (LENGTH_OPTIONS[form.category] && form.length ? form.length : null) as never,
+          length_cm: Number(form.lengthCm) >= 5 && Number(form.lengthCm) <= 250 ? Number(form.lengthCm) : null,
           department: form.department,
           price_kes: Number(form.price_kes),
           description: form.description || null,
@@ -344,6 +348,19 @@ function EditProduct({ id }: { id: string }) {
               {(GARMENT_BY_CATEGORY[form.category]?.types ?? []).map((t) => <option key={t} value={t} />)}
             </datalist>
           </Field>
+          {LENGTH_OPTIONS[form.category] && (
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="Length" hint="Where it ends when worn. Try-ons draw the hem exactly here.">
+                <Select value={form.length} onChange={(e) => setForm({ ...form, length: e.target.value })}>
+                  <option value="">Read it from the photo</option>
+                  {LENGTH_OPTIONS[form.category].map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </Select>
+              </Field>
+              <Field label="Length in cm (optional)" hint={["bottom", "skirt"].includes(form.category) ? "Waistband to hem, laid flat" : "Top of the shoulder to hem, laid flat"}>
+                <Input type="number" min={5} max={250} value={form.lengthCm} onChange={(e) => setForm({ ...form, lengthCm: e.target.value })} className="num" />
+              </Field>
+            </div>
+          )}
           <Field label="Description"><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} maxLength={2000} placeholder="Fabric, fit, length, care…" /></Field>
           <div className="grid grid-cols-2 gap-4">
             <Field label="Status">

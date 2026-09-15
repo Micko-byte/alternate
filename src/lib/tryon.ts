@@ -19,16 +19,14 @@ export async function startTryon(args: {
   garmentUploadId?: string;
   quality: Quality;
   fit?: Database["public"]["Enums"]["fit_style"];
-  /** What is being tried on; shoes and accessories may need the photo's masks made first. */
+  /** What is being tried on. */
   category?: string | null;
 }) {
-  if (args.category) {
-    const [{ zoneFor }, { ensureAccessoryMasks }] = await Promise.all([import("@/lib/garmentParser"), import("@/lib/bodyPhoto")]);
-    const zone = zoneFor(args.category);
-    if (["feet", "eyes", "head", "jewellery"].includes(zone)) {
-      const { data: photo } = await supabase.from("body_photos").select("*").eq("id", args.bodyPhotoId).single();
-      if (photo) await ensureAccessoryMasks(photo, zone);
-    }
+  // The engine builds each item's mask from the photo's parts map; older photos get one made first
+  const { data: photo } = await supabase.from("body_photos").select("id, user_id, storage_path, parts_map_path").eq("id", args.bodyPhotoId).single();
+  if (photo && !photo.parts_map_path) {
+    const { ensurePartsMap } = await import("@/lib/bodyPhoto");
+    await ensurePartsMap(photo);
   }
   const { data, error } = await supabase.rpc("request_tryon", {
     _body_photo_id: args.bodyPhotoId,

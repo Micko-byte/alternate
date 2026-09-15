@@ -1,22 +1,26 @@
-// Garment-aware lock, part 1 (in the browser when a shopper adds a photo):
+// Body photos, in the browser when a shopper adds one:
 // - normalise the photo to 1024x1536 PNG (the size the try-on engine returns)
-// - parse clothes and body parts
-// - one edit mask per zone: transparent where that garment may change, opaque everywhere else
-//   (face, hair, the other garments, hands, what they hold, shoes, background)
-// The same mask is used to paste the untouched parts back after generation.
-import { L, count, dilate, parseImage, select, subtract, union, type PartMap } from "@/lib/garmentParser";
+// - label every part of it (face, hair, top, trousers, arms, legs, shoes…) with the clothes parser
+// - save that label map as a small "parts map" PNG. The try-on engine builds the exact edit mask for each
+//   item from it, and the measurements are read from it.
+// - save a face mask for the preview (and for try-ons made before parts maps existed)
+import { L, count, dilate, parseImage, select, type PartMap } from "@/lib/garmentParser";
 import { supabase } from "@/integrations/supabase/client";
 import { loadImage } from "@/lib/utils";
 
 export const PHOTO_W = 1024;
 export const PHOTO_H = 1536;
 
-const GRID_W = 256;
-const GRID_H = 384;
+export const GRID_W = 256;
+export const GRID_H = 384;
+
+// Label values are stored ×12 in the red channel so they survive PNG encoding clearly
+const LABEL_SCALE = 12;
 
 export type PreparedPhoto = {
   photo: Blob;
-  masks: { upper: Blob; lower: Blob; full: Blob; face: Blob; feet: Blob; eyes: Blob; head: Blob; jewellery: Blob };
+  partsMap: Blob;
+  faceMask: Blob;
   overlayUrl: string;
   faceFound: boolean;
   bodyFound: boolean;
@@ -37,15 +41,12 @@ export async function prepareBodyPhoto(file: File): Promise<PreparedPhoto> {
   bitmap.close();
 
   const map = await parseImage(canvas, GRID_W, GRID_H);
-  const zones = buildZones(map);
+  const face = dilate(select(map, [L.Face, L.Hair, L.Hat, L.Sunglasses]), GRID_W, GRID_H, 2);
 
-  const photo = await canvasToBlob(canvas, "image/png");
-  const [upper, lower, full, face, accessories] = await Promise.all([
-    maskPng(zones.upper),
-    maskPng(zones.lower),
-    maskPng(zones.full),
-    gridToPng(zones.face, (on) => (on ? [255, 255, 255, 255] : [0, 0, 0, 0])),
-    accessoryMasks(map),
+  const [photo, partsMap, faceMask] = await Promise.all([
+    canvasToBlob(canvas, "image/png"),
+    partsMapPng(map),
+    gridToPng(face, (on) => (on ? [255, 255, 255, 255] : [0, 0, 0, 0])),
   ]);
 
   // Preview: locked face and hair shaded
@@ -58,7 +59,7 @@ export async function prepareBodyPhoto(file: File): Promise<PreparedPhoto> {
   tint.width = PHOTO_W;
   tint.height = PHOTO_H;
   const tctx = tint.getContext("2d")!;
-  tctx.drawImage(await loadImage(URL.createObjectURL(face)), 0, 0, PHOTO_W, PHOTO_H);
+  tctx.drawImage(await loadImage(URL.createObjectURL(faceMask)), 0, 0, PHOTO_W, PHOTO_H);
   tctx.globalCompositeOperation = "source-in";
   tctx.fillStyle = "rgba(34, 42, 65, 0.42)";
   tctx.fillRect(0, 0, PHOTO_W, PHOTO_H);
@@ -66,122 +67,50 @@ export async function prepareBodyPhoto(file: File): Promise<PreparedPhoto> {
 
   return {
     photo,
-    masks: { upper, lower, full, face, ...accessories },
+    partsMap,
+    faceMask,
     overlayUrl: URL.createObjectURL(await canvasToBlob(overlay, "image/jpeg", 0.85)),
     faceFound: count(select(map, [L.Face])) > 40,
     bodyFound: count(select(map, [L["Upper-clothes"], L.Pants, L.Skirt, L.Dress, L["Left-leg"], L["Right-leg"]])) > GRID_W * GRID_H * 0.06,
   };
 }
 
-function buildZones(map: PartMap) {
-  const W = map.width;
-  const H = map.height;
-  const face = dilate(select(map, [L.Face, L.Hair, L.Hat, L.Sunglasses]), W, H, 2);
-  const alwaysKeep = union(face, select(map, [L.Bag]));
-
-  const upperClothes = select(map, [L["Upper-clothes"], L.Scarf, L.Dress]);
-  const arms = select(map, [L["Left-arm"], L["Right-arm"]]);
-  const lowerClothes = select(map, [L.Pants, L.Skirt, L.Belt, L.Dress]);
-  const legs = select(map, [L["Left-leg"], L["Right-leg"]]);
-  const shoes = select(map, [L["Left-shoe"], L["Right-shoe"]]);
-
-  // Tops: the top and sleeves can grow a little; trousers, legs and shoes stay
-  const upper = subtract(subtract(dilate(union(upperClothes, arms), W, H, 6, 5), union(select(map, [L.Pants, L.Skirt]), legs, shoes)), alwaysKeep);
-  // Trousers & skirts: can widen (wide leg, baggy) and lengthen over the ankles; top, arms, hands stay
-  const lower = subtract(subtract(dilate(union(lowerClothes, legs), W, H, 9, 4), union(select(map, [L["Upper-clothes"], L.Scarf]), arms)), alwaysKeep);
-  // Full outfit
-  const full = subtract(dilate(union(upperClothes, lowerClothes, arms, legs), W, H, 9, 5), alwaysKeep);
-  return { upper, lower, full, face };
-}
-
-type Box = { x0: number; y0: number; x1: number; y1: number; w: number; h: number };
-
-function box(mask: Uint8Array, W: number, H: number): Box | null {
-  let x0 = W, y0 = H, x1 = -1, y1 = -1;
-  for (let y = 0; y < H; y++)
-    for (let x = 0; x < W; x++)
-      if (mask[y * W + x]) {
-        if (x < x0) x0 = x;
-        if (x > x1) x1 = x;
-        if (y < y0) y0 = y;
-        if (y > y1) y1 = y;
-      }
-  return x1 < 0 ? null : { x0, y0, x1, y1, w: x1 - x0 + 1, h: y1 - y0 + 1 };
-}
-
-function rect(W: number, H: number, x0: number, y0: number, x1: number, y1: number) {
-  const out = new Uint8Array(W * H);
-  for (let y = Math.max(0, Math.floor(y0)); y <= Math.min(H - 1, Math.ceil(y1)); y++)
-    for (let x = Math.max(0, Math.floor(x0)); x <= Math.min(W - 1, Math.ceil(x1)); x++) out[y * W + x] = 1;
-  return out;
-}
-
-function intersect(a: Uint8Array, b: Uint8Array) {
-  const out = new Uint8Array(a.length);
-  for (let i = 0; i < a.length; i++) out[i] = a[i] & b[i];
-  return out;
-}
-
-/** Shoes, glasses, hats and jewellery: small editable areas, so everything else stays locked. */
-function accessoryZones(map: PartMap) {
-  const W = map.width;
-  const H = map.height;
-  const hair = select(map, [L.Hair, L.Hat]);
-  const face: Box = box(select(map, [L.Face]), W, H) ?? box(hair, W, H) ?? { x0: W * 0.42, y0: H * 0.04, x1: W * 0.58, y1: H * 0.14, w: W * 0.16, h: H * 0.1 };
-
-  // Shoes, plus the ankles just above them so boots and chunky sneakers have room
-  const shoes = select(map, [L["Left-shoe"], L["Right-shoe"]]);
-  const legs = select(map, [L["Left-leg"], L["Right-leg"]]);
-  const shoeBox = box(shoes, W, H);
-  const legBox = box(legs, W, H);
-  const ankleTop = shoeBox ? shoeBox.y0 - H * 0.05 : legBox ? legBox.y1 - legBox.h * 0.15 : H * 0.85;
-  const feet = dilate(
-    union(shoes, intersect(legs, rect(W, H, 0, ankleTop, W - 1, H - 1)), shoeBox ? new Uint8Array(W * H) : rect(W, H, W * 0.3, ankleTop, W * 0.7, H - 1)),
-    W, H, 4, 3,
-  );
-
-  // Glasses: the eye band, out to the ears
-  const eyes = rect(W, H, face.x0 - face.w * 0.18, face.y0 + face.h * 0.22, face.x1 + face.w * 0.18, face.y0 + face.h * 0.58);
-
-  // Hats: hair and the space above it, never the face below the brow
-  const headTop = Math.max(0, (box(hair, W, H)?.y0 ?? face.y0) - face.h * 0.45);
-  const head = subtract(
-    union(dilate(hair, W, H, 3, 3), rect(W, H, face.x0 - face.w * 0.35, headTop, face.x1 + face.w * 0.35, face.y0 + face.h * 0.2)),
-    rect(W, H, 0, face.y0 + face.h * 0.3, W - 1, H - 1),
-  );
-
-  // Jewellery: ears, neck and collarbone, wrists and hands
-  const ears = union(
-    rect(W, H, face.x0 - face.w * 0.22, face.y0 + face.h * 0.35, face.x0 + face.w * 0.08, face.y1 + face.h * 0.1),
-    rect(W, H, face.x1 - face.w * 0.08, face.y0 + face.h * 0.35, face.x1 + face.w * 0.22, face.y1 + face.h * 0.1),
-  );
-  const neck = rect(W, H, face.x0 - face.w * 0.35, face.y1 - face.h * 0.05, face.x1 + face.w * 0.35, face.y1 + face.h * 0.95);
-  let wrists = new Uint8Array(W * H);
-  for (const arm of [L["Left-arm"], L["Right-arm"]]) {
-    const m = select(map, [arm]);
-    const b = box(m, W, H);
-    if (b) wrists = union(wrists, dilate(intersect(m, rect(W, H, 0, b.y1 - b.h * 0.2, W - 1, H - 1)), W, H, 3, 3));
+function partsMapPng(map: PartMap) {
+  const canvas = document.createElement("canvas");
+  canvas.width = GRID_W;
+  canvas.height = GRID_H;
+  const ctx = canvas.getContext("2d")!;
+  const img = ctx.createImageData(GRID_W, GRID_H);
+  for (let i = 0; i < map.labels.length; i++) {
+    img.data[i * 4] = map.labels[i] * LABEL_SCALE;
+    img.data[i * 4 + 3] = 255;
   }
-
-  return { feet, eyes, head, jewellery: union(ears, neck, wrists) };
+  ctx.putImageData(img, 0, 0);
+  return canvasToBlob(canvas, "image/png");
 }
 
-async function accessoryMasks(map: PartMap) {
-  const z = accessoryZones(map);
-  const [feet, eyes, head, jewellery] = await Promise.all([maskPng(z.feet), maskPng(z.eyes), maskPng(z.head), maskPng(z.jewellery)]);
-  return { feet, eyes, head, jewellery };
+/** Reads a stored parts map back into labels. */
+export async function loadPartsMap(url: string): Promise<PartMap> {
+  const img = await loadImage(url);
+  const canvas = document.createElement("canvas");
+  canvas.width = GRID_W;
+  canvas.height = GRID_H;
+  const ctx = canvas.getContext("2d", { willReadFrequently: true })!;
+  ctx.drawImage(img, 0, 0, GRID_W, GRID_H);
+  const data = ctx.getImageData(0, 0, GRID_W, GRID_H).data;
+  const labels = new Uint8Array(GRID_W * GRID_H);
+  for (let i = 0; i < labels.length; i++) labels[i] = Math.min(17, Math.round(data[i * 4] / LABEL_SCALE));
+  return { width: GRID_W, height: GRID_H, labels };
 }
 
-const ACCESSORY_COLUMNS = { feet: "mask_feet_path", eyes: "mask_eyes_path", head: "mask_head_path", jewellery: "mask_jewellery_path" } as const;
-
-type PhotoRow = { id: string; user_id: string; storage_path: string } & Partial<Record<(typeof ACCESSORY_COLUMNS)[keyof typeof ACCESSORY_COLUMNS], string | null>>;
+type PhotoRow = { id: string; user_id: string; storage_path: string; parts_map_path?: string | null };
 
 /**
- * Photos added before shoes and accessories existed have no masks for them.
- * Makes them from the stored photo (in the browser, free) and saves them. Returns true if the photo was updated.
+ * Photos added before parts maps existed get one made from the stored photo (in the browser, free).
+ * Returns the parts map path.
  */
-export async function ensureAccessoryMasks(photo: PhotoRow, zone: string) {
-  if (!(zone in ACCESSORY_COLUMNS) || photo[ACCESSORY_COLUMNS[zone as keyof typeof ACCESSORY_COLUMNS]]) return false;
+export async function ensurePartsMap(photo: PhotoRow) {
+  if (photo.parts_map_path) return photo.parts_map_path;
   const { data } = await supabase.storage.from("body-photos").createSignedUrl(photo.storage_path, 600);
   if (!data) throw new Error("Couldn't open your photo");
   const img = await loadImage(data.signedUrl);
@@ -189,22 +118,13 @@ export async function ensureAccessoryMasks(photo: PhotoRow, zone: string) {
   canvas.width = PHOTO_W;
   canvas.height = PHOTO_H;
   canvas.getContext("2d")!.drawImage(img, 0, 0, PHOTO_W, PHOTO_H);
-  const masks = await accessoryMasks(await parseImage(canvas, GRID_W, GRID_H));
-  const update: Record<string, string> = {};
-  for (const [key, column] of Object.entries(ACCESSORY_COLUMNS)) {
-    const path = `${photo.user_id}/masks/${photo.id}-${key}.png`;
-    const { error } = await supabase.storage.from("body-photos").upload(path, masks[key as keyof typeof masks], { contentType: "image/png", upsert: true });
-    if (error) throw error;
-    update[column] = path;
-  }
-  const { error } = await supabase.from("body_photos").update(update).eq("id", photo.id);
+  const png = await partsMapPng(await parseImage(canvas, GRID_W, GRID_H));
+  const path = `${photo.user_id}/masks/${photo.id}-parts.png`;
+  const { error: uploadError } = await supabase.storage.from("body-photos").upload(path, png, { contentType: "image/png", upsert: true });
+  if (uploadError) throw uploadError;
+  const { error } = await supabase.from("body_photos").update({ parts_map_path: path }).eq("id", photo.id);
   if (error) throw error;
-  return true;
-}
-
-/** Transparent where the garment may change, opaque (kept) everywhere else. */
-function maskPng(editable: Uint8Array) {
-  return gridToPng(editable, (on) => (on ? [0, 0, 0, 0] : [0, 0, 0, 255]));
+  return path;
 }
 
 async function gridToPng(grid: Uint8Array, color: (on: boolean) => number[]) {

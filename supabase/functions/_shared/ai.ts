@@ -79,7 +79,17 @@ async function askJson<T>(opts: { name: string; instructions: string; content: C
 
 // ------------------------------------------------------------------ garment inspection
 
-export type InspectionItem = { type: string; category: Category; colour: string; main: boolean; description: string };
+export type InspectionItem = {
+  type: string;
+  category: Category;
+  colour: string;
+  main: boolean;
+  description: string;
+  /** Where it ends on a standing body when worn as designed (see _shared/body.ts LENGTHS), or "n/a" */
+  length?: string;
+  sleeves?: string;
+  silhouette?: string;
+};
 export type Inspection = { is_wearable: boolean; items: InspectionItem[]; categories: Category[]; costUsd: number };
 
 const INSPECTION_SCHEMA = {
@@ -94,13 +104,20 @@ const INSPECTION_SCHEMA = {
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["type", "category", "colour", "main", "description"],
+        required: ["type", "category", "colour", "main", "description", "length", "sleeves", "silhouette"],
         properties: {
           type: { type: "string", description: "Specific type in 1-3 words, e.g. hoodie, quarter-zip, blazer, trench coat, cargo trousers, midi skirt, sneakers, aviator sunglasses, gold hoop earrings" },
           category: { type: "string", enum: [...CATEGORIES] },
-          colour: { type: "string" },
+          colour: { type: "string", description: "Every colour exactly, part by part, e.g. 'mustard yellow base, white flowers with black centres, green leaves'" },
           main: { type: "boolean", description: "True for the item the photo is mainly showing or selling" },
-          description: { type: "string", description: "For virtual try-on, under 45 words: cut, neckline, sleeves, length, fit, fabric, exact colours, print, hardware" },
+          description: { type: "string", description: "For virtual try-on, under 45 words: cut, neckline, straps, slits, fabric, print scale, hardware" },
+          length: {
+            type: "string",
+            enum: ["cropped", "waist", "high_hip", "hip", "upper_thigh", "mid_thigh", "above_knee", "knee", "below_knee", "mid_calf", "ankle", "floor", "n/a"],
+            description: "Where it ends on an average woman or man wearing it as designed. Judge hanging or flat-lay items from their proportions (strap to hem versus width). Mini = upper_thigh, midi = mid_calf, maxi = ankle. n/a for shoes and accessories.",
+          },
+          sleeves: { type: "string", enum: ["none", "straps", "short", "elbow", "three_quarter", "long", "n/a"] },
+          silhouette: { type: "string", enum: ["bodycon", "fitted", "straight", "a_line", "flared", "relaxed", "oversized", "wide_leg", "n/a"] },
         },
       },
     },
@@ -121,14 +138,15 @@ export async function inspectGarment(image: Blob, hint: string): Promise<Inspect
   const { data, costUsd } = await askJson<{ is_wearable: boolean; items: InspectionItem[] }>({
     name: "garment_inspection",
     instructions: INSPECTION_RULES,
-    maxTokens: 700,
+    maxTokens: 1100,
     schema: INSPECTION_SCHEMA,
     content: [
       { type: "input_text", text: `What wearable items are in this photo? Shopper's note (may be wrong or empty): ${hint.slice(0, 300)}` },
-      { type: "input_image", image_url: await blobToDataUrl(image), detail: "low" },
+      // High detail: exact colours, print and length matter
+      { type: "input_image", image_url: await blobToDataUrl(image), detail: "high" },
     ],
   });
-  const items = (data.items ?? []).slice(0, 6);
+  const items = (data.items ?? []).slice(0, 6).map((i) => ({ ...i, length: i.length === "n/a" ? undefined : i.length }));
   return { is_wearable: data.is_wearable, items, categories: [...new Set(items.map((i) => i.category))], costUsd };
 }
 
@@ -248,6 +266,10 @@ export async function ensureBodyProfile(admin: SupabaseClient, userId: string) {
 
 export type QualityCheck = {
   garment_matches: boolean;
+  colours_match: boolean;
+  length_correct: boolean;
+  fit_correct: boolean;
+  skin_details_kept: boolean;
   identity_same: boolean;
   pose_same: boolean;
   anatomy_ok: boolean;
@@ -260,9 +282,13 @@ export type QualityCheck = {
 const QA_SCHEMA = {
   type: "object",
   additionalProperties: false,
-  required: ["garment_matches", "identity_same", "pose_same", "anatomy_ok", "rest_unchanged", "photo_quality_ok", "score", "problems"],
+  required: ["garment_matches", "colours_match", "length_correct", "fit_correct", "skin_details_kept", "identity_same", "pose_same", "anatomy_ok", "rest_unchanged", "photo_quality_ok", "score", "problems"],
   properties: {
-    garment_matches: { type: "boolean", description: "Image 3 shows the item from image 2: same type, colour, print, neckline, sleeves and length" },
+    garment_matches: { type: "boolean", description: "Image 3 shows the item from image 2: same type, print, neckline, straps, sleeves and details" },
+    colours_match: { type: "boolean", description: "Every colour in the item matches image 2 exactly: nothing recoloured, e.g. white flowers still white" },
+    length_correct: { type: "boolean", description: "The hem ends where the task says on this person, not longer or shorter" },
+    fit_correct: { type: "boolean", description: "How tightly it sits matches the task: fitted is visibly tight and follows the curves; regular has a little room; looser fits are visibly loose" },
+    skin_details_kept: { type: "boolean", description: "Tattoos, birthmarks and marks visible in image 1 that are not covered by the new item are still there, unchanged" },
     identity_same: { type: "boolean", description: "Same person as image 1: face, hair, skin tone" },
     pose_same: { type: "boolean", description: "Same pose, stance, framing and background as image 1" },
     anatomy_ok: { type: "boolean", description: "Natural body: correct number of arms, hands, fingers and legs; limbs the right length and thickness; nothing melted or merged" },
@@ -291,5 +317,5 @@ export async function checkResult(images: { customer: Blob; garment: Blob; resul
 }
 
 export function checkPassed(c: QualityCheck) {
-  return c.garment_matches && c.pose_same && c.anatomy_ok && c.photo_quality_ok && c.score >= 0.72;
+  return c.garment_matches && c.colours_match && c.length_correct && c.fit_correct && c.skin_details_kept && c.pose_same && c.anatomy_ok && c.photo_quality_ok && c.score >= 0.72;
 }
