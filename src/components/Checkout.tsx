@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, CreditCard, Lock, Smartphone, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useProfile } from "@/lib/queries";
+import { endStaleSession } from "@/lib/auth";
 import { cn, kes } from "@/lib/utils";
 import { Button, ButtonLink, Field, Input, Spinner } from "@/components/ui";
 
@@ -21,6 +22,10 @@ const POLL_MS = 3_000;
 async function invoke<T>(name: string, body: Record<string, unknown>): Promise<T> {
   const { data, error } = await supabase.functions.invoke(name, { body });
   if (error) {
+    if ((error as { context?: Response }).context?.status === 401) {
+      await endStaleSession();
+      throw new Error("Please sign in again");
+    }
     let message = error.message;
     try {
       const parsed = await (error as { context?: Response }).context?.json();

@@ -47,5 +47,10 @@ export async function startTryon(args: {
 
 export async function kickTryon(id: string) {
   const { error } = await supabase.functions.invoke("tryon-process", { body: { tryon_id: id } });
-  if (error) console.warn("tryon-process", error);
+  if (!error) return;
+  if ((error as { context?: Response }).context?.status === 401) {
+    const { endStaleSession } = await import("@/lib/auth");
+    return endStaleSession();
+  }
+  console.warn("tryon-process", error);
 }
