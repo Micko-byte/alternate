@@ -4,15 +4,16 @@ import { ImagePlus, Ruler, ScanFace, ShoppingBag, type LucideIcon } from "lucide
 import { buttonClass } from "@/components/ui";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { cn } from "@/lib/utils";
+import { cloudinaryImage } from "@/lib/cloudinary";
 
 /**
  * First screen for people without an account: what ALTERNATE does, then sign up.
- * Images: drop files into public/onboarding/ named 1.jpg, 2.jpg, 3.jpg, 4.jpg.
+ * Images: Cloudinary ALTERNATE/onboarding/1-4. Phones get a phone-sized copy.
  * Until a file exists, that slide shows a designed placeholder.
  */
 const SLIDES: { image: string; kicker: string; title: string; body: string; icon: LucideIcon; tone: string }[] = [
   {
-    image: "/onboarding/1.jpg",
+    image: "onboarding/1",
     kicker: "Virtual fitting room",
     title: "See it on you before you pay.",
     body: "Add your photos, then try on clothes from Nairobi's stores. Drawn on your real body.",
@@ -20,7 +21,7 @@ const SLIDES: { image: string; kicker: string; title: string; body: string; icon
     tone: "bg-sunk text-ink",
   },
   {
-    image: "/onboarding/2.jpg",
+    image: "onboarding/2",
     kicker: "Seen it online?",
     title: "Screenshot it. Try it on.",
     body: "Upload any look from Instagram or TikTok and see yourself wearing it.",
@@ -28,7 +29,7 @@ const SLIDES: { image: string; kicker: string; title: string; body: string; icon
     tone: "bg-accent text-white",
   },
   {
-    image: "/onboarding/3.jpg",
+    image: "onboarding/3",
     kicker: "Made to fit",
     title: "Your size. Your fit.",
     body: "Fitted to baggy, only pieces in stock in your size. Your face never changes.",
@@ -36,7 +37,7 @@ const SLIDES: { image: string; kicker: string; title: string; body: string; icon
     tone: "bg-mustard text-ink",
   },
   {
-    image: "/onboarding/4.jpg",
+    image: "onboarding/4",
     kicker: "Womenswear & menswear",
     title: "Shop the stores you follow.",
     body: "Boutiques, thrift and mitumba sellers in one place. Pay with M-Pesa.",
@@ -97,7 +98,7 @@ export default function Onboarding() {
             <div key={s.image} className="relative h-full w-full shrink-0" aria-hidden={i !== index} role="group" aria-roledescription="slide" aria-label={`${i + 1} of ${SLIDES.length}`}>
               {!missing[i] ? (
                 <img
-                  src={s.image}
+                  {...cloudinaryImage(s.image, "(max-width: 1023px) 100vw, 55vw")}
                   alt=""
                   draggable={false}
                   onError={() => setMissing((m) => ({ ...m, [i]: true }))}

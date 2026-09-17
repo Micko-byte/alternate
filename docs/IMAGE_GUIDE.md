@@ -1,7 +1,8 @@
 # ALTERNATE image guide
 
-Every photo on the public site is a named file. Drop the file in with the exact name, push, and it appears.
-Until a file exists, the page shows a designed placeholder, so nothing breaks while photos are missing.
+Every photo on the public site is served from Cloudinary (cloud `dnrj0hbpy`), folder `ALTERNATE/site/<slot>` for the landing page
+and `ALTERNATE/onboarding/1-4` for the phone welcome slides. Upload a new image with the same public ID (overwrite on) to replace one.
+Cloudinary picks the format and sends phones a smaller copy. If an image is missing, the page shows a designed placeholder.
 
 ## The look (applies to every photo)
 
@@ -17,7 +18,7 @@ Until a file exists, the page shows a designed placeholder, so nothing breaks wh
 **File rules:** JPG, sRGB, quality around 80, longest side 2400 px or less, ideally under 500 KB (most visitors are on mobile data).
 Replacing a photo later? Use a new file name or ask for the cache to be bumped, because installed apps keep images.
 
-## Landing page — `public/site/`
+## Landing page — Cloudinary `ALTERNATE/site/`
 
 | File | Where | Shape, minimum size | What to shoot |
 |---|---|---|---|
@@ -30,7 +31,7 @@ Replacing a photo later? Use a new file name or ask for the cache to be bumped, 
 | `stores.jpg` | Callout "Sell on ALTERNATE" | 4:5 · 1200×1500 | A real store owner (boutique or mitumba seller) at their rail, phone in hand, candid and warm. |
 | `nairobi.jpg` | "Made in Nairobi" | 3:2 · 2000×1333 | Wide editorial shot of Nairobi clothes shopping: market rails, a CBD boutique, a Kilimani street at golden hour. No recognisable faces without consent. |
 
-## Welcome carousel (phones and the installed app) — `public/onboarding/`
+## Welcome carousel (phones and the installed app) — Cloudinary `ALTERNATE/onboarding/`
 
 Tall photos, cropped from both sides on different screens: shoot 2:3 at 1200×1800 or larger and keep the subject in the middle third.
 

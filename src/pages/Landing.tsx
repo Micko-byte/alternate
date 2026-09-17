@@ -10,7 +10,7 @@ import { kes } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 
 /**
- * The public front page. Every photo is a named slot in public/site/ (see docs/IMAGE_GUIDE.md):
+ * The public front page. Every photo is a named slot on Cloudinary, ALTERNATE/site/ (see docs/IMAGE_GUIDE.md):
  *   hero-photo.jpg · hero-item.jpg · hero-result.jpg
  *   women.jpg · men.jpg · screenshot.jpg · stores.jpg
  *   nairobi.jpg
@@ -58,7 +58,7 @@ export default function Landing() {
         <div className="grid animate-rise grid-cols-[0.75fr_1.25fr] items-end gap-3 [animation-delay:120ms]">
           <div className="grid gap-3">
             <figure className="grid gap-2">
-              <SiteImage slot="hero-photo.jpg" alt="A shopper's own full-body photo" className="aspect-[2/3]" fallback={<PersonSketch />} />
+              <SiteImage slot="hero-photo.jpg" alt="A shopper's own full-body photo" className="aspect-[2/3]" sizes="(max-width: 1024px) 38vw, 20vw" fallback={<PersonSketch />} />
               <figcaption className="label text-ink">Your photo</figcaption>
             </figure>
             <span className="grid h-9 w-9 place-items-center justify-self-center border border-ink bg-paper" aria-hidden>
@@ -69,6 +69,7 @@ export default function Landing() {
                 slot="hero-item.jpg"
                 alt="A piece from a Nairobi store"
                 className="aspect-[4/5]"
+                sizes="(max-width: 1024px) 38vw, 20vw"
                 fallback={covers[0] ? <img src={covers[0]} alt="" className="h-full w-full object-cover" /> : <PrintSketch />}
               />
               <figcaption className="label text-ink">The piece</figcaption>
@@ -79,6 +80,7 @@ export default function Landing() {
               slot="hero-result.jpg"
               alt="The same shopper wearing the piece, made by ALTERNATE"
               className="aspect-[2/3]"
+              sizes="(max-width: 1024px) 62vw, 30vw"
               fallback={<div className="grid h-full place-items-center bg-accent p-6 text-center display text-[34px] text-white">On you, in your size</div>}
             />
             <figcaption className="label flex items-center gap-1.5 text-ink"><ShieldCheck className="h-3.5 w-3.5" /> On you · quality checked</figcaption>
@@ -168,7 +170,7 @@ export default function Landing() {
         <div className="page grid gap-10 py-20 md:grid-cols-[1.3fr_1fr] md:py-28">
           <div className="grid content-start gap-8">
             <h2 className="display text-[clamp(56px,9vw,144px)]">Made in Nairobi.</h2>
-            <SiteImage slot="nairobi.jpg" alt="Shopping for clothes in Nairobi" className="aspect-[3/2]" fallback={<div className="h-full bg-sunk" />} />
+            <SiteImage slot="nairobi.jpg" alt="Nairobi at dusk" className="aspect-[3/2]" sizes="(max-width: 768px) 100vw, 55vw" fallback={<div className="h-full bg-sunk" />} />
           </div>
           <div className="grid content-end gap-5 text-[17px] text-muted">
             <p>
@@ -192,6 +194,7 @@ function Callout({ to, slot, alt, fallbackImage, kicker, title, tone }: { to: st
       <SiteImage
         slot={slot}
         alt={alt}
+        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
         className="absolute inset-0"
         imgClassName="transition-transform duration-700 group-hover:scale-[1.03]"
         fallback={fallbackImage ? <img src={fallbackImage} alt="" className="h-full w-full object-cover" /> : <div className={`h-full w-full ${toneClass}`} />}

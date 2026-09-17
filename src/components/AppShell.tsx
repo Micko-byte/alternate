@@ -41,7 +41,7 @@ export function AppShell({ children }: { children?: ReactNode }) {
       </div>
 
       <header className="sticky top-0 z-30 border-b border-rule bg-paper/95 backdrop-blur">
-        <div className="page flex h-[72px] items-center gap-10">
+        <div className="page flex h-[72px] items-center gap-4 sm:gap-10">
           <Wordmark />
           {user && <nav className="hidden items-center gap-7 lg:flex" aria-label="Main">
             {nav.map((l) => {
@@ -82,10 +82,10 @@ export function AppShell({ children }: { children?: ReactNode }) {
               </>
             ) : (
               <>
-                <Link to="/auth" className="font-mono text-[12px] font-semibold uppercase tracking-label text-muted hover:text-ink">
+                <Link to="/auth" className="whitespace-nowrap font-mono text-[12px] font-semibold uppercase tracking-label text-muted hover:text-ink">
                   Log in
                 </Link>
-                <Link to="/auth?mode=signup" className="ml-5 inline-flex h-10 items-center bg-ink px-4 font-mono text-[11px] font-semibold uppercase tracking-label text-paper hover:bg-ink/85">
+                <Link to="/auth?mode=signup" className="ml-3 inline-flex h-10 items-center whitespace-nowrap bg-ink px-3 font-mono sm:ml-5 sm:px-4 text-[11px] font-semibold uppercase tracking-label text-paper hover:bg-ink/85">
                   Get started
                 </Link>
               </>
