@@ -343,7 +343,7 @@ export async function checkResult(images: { customer: Blob; garment: Blob; resul
     name: "tryon_check",
     instructions:
       "You are a strict quality checker for a virtual fitting room. Image 1 is the customer's original photo, image 2 the item, image 3 the try-on result. Judge only image 3 against the task. A shopper must be able to trust it to decide whether to buy.",
-    maxTokens: 400,
+    maxTokens: 1500,
     schema: QA_SCHEMA,
     content: [
       { type: "input_text", text: `Task: ${task}` },

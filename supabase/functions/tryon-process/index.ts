@@ -58,7 +58,7 @@ type Tryon = {
   qa: { attempts?: Attempt[] } | null;
 };
 
-type Attempt = { n: number; path: string; check: QualityCheck | null; passed: boolean };
+type Attempt = { n: number; path: string; check: QualityCheck | null; passed: boolean; check_error?: string };
 
 const TRYON_COLUMNS = "id, user_id, body_photo_id, product_id, garment_upload_id, quality, attempts, fit, size_system, size_value, size_label, garment_type, variant_id, cost_usd, qa";
 
@@ -212,6 +212,7 @@ async function runAttempt(admin: SupabaseClient, tryon: Tryon) {
 
     // Quality check. If the checker itself is down, the result is kept rather than thrown away.
     let check: QualityCheck | null = null;
+    let checkError: string | undefined;
     try {
       const checked = await checkResult(
         { customer: prepared.person, garment: prepared.garment, result: new Blob([generated.png as Uint8Array<ArrayBuffer>], { type: "image/png" }) },
@@ -220,10 +221,11 @@ async function runAttempt(admin: SupabaseClient, tryon: Tryon) {
       check = checked.check;
       costUsd += checked.costUsd;
     } catch (err) {
-      console.error("quality check unavailable", tryon.id, err);
+      checkError = (err instanceof Error ? err.message : String(err)).slice(0, 300);
+      console.error("quality check unavailable", tryon.id, checkError);
     }
     const passed = check ? checkPassed(check) : true;
-    attempts.push({ n, path: workPath, check, passed });
+    attempts.push({ n, path: workPath, check, passed, ...(checkError ? { check_error: checkError } : {}) });
 
     const common = {
       engine: `openai:${IMAGE_MODEL}:${tier.quality}`,

@@ -119,6 +119,14 @@ function dilate(src: Grid, rx: number, ry = rx) {
   return out;
 }
 
+/**
+ * Skin right where a sleeve or hem ends may change (a short sleeve becomes bare skin). Only straight above or
+ * below the edge: arm skin touching the side of the body stays locked, with any tattoo on it.
+ */
+function sleeveEdge(clothes: Grid) {
+  return dilate(clothes, 0, 4);
+}
+
 type Box = { x0: number; y0: number; x1: number; y1: number; w: number; h: number };
 function box(g: Grid): Box | null {
   let x0 = W, y0 = H, x1 = -1, y1 = -1;
@@ -189,7 +197,7 @@ export function editableGrid(map: PartsMap, o: MaskOptions): Grid {
       if (hemRow !== null && hemRow > topEnd) editable = union(editable, dilate(rows(union(lowerClothes, dress), 0, hemRow + margin), spread, 2));
       editable = subtract(editable, union(shoes, rows(legs, (hemRow ?? topEnd) + margin, H)));
       editable = subtract(editable, rows(lowerClothes, Math.max(topEnd, hemRow ?? 0) + margin, H));
-      if (!o.coversArms) editable = subtract(editable, subtract(arms, dilate(upperClothes, 4, 3)));
+      if (!o.coversArms) editable = subtract(editable, subtract(arms, sleeveEdge(upperClothes)));
       break;
     }
     case "lower": {
@@ -198,18 +206,21 @@ export function editableGrid(map: PartsMap, o: MaskOptions): Grid {
       if (hemRow !== null) editable = union(editable, dilate(rows(legs, 0, hemRow + margin), spread, 2));
       editable = subtract(editable, union(upperClothes, arms, shoes));
       if (hemRow !== null) editable = subtract(editable, rows(legs, hemRow + margin * 2, H));
-      else editable = subtract(editable, subtract(legs, dilate(lowerClothes, 4, 3)));
+      else editable = subtract(editable, subtract(legs, sleeveEdge(lowerClothes)));
       break;
     }
     case "full": {
-      editable = dilate(union(upperClothes, lowerClothes, dress), spread, 5);
+      // Flared and wide designs only need extra room below the waist, never over the arms
+      const waistRow = frame ? rowForLength(frame, "waist") : H * 0.45;
+      const clothes = union(upperClothes, lowerClothes, dress);
+      editable = union(dilate(rows(clothes, 0, waistRow), 6, 5), dilate(rows(clothes, waistRow, H), spread, 5));
       if (o.coversArms) editable = union(editable, dilate(arms, 2));
-      else editable = subtract(editable, subtract(arms, dilate(union(upperClothes, dress), 4, 3)));
+      else editable = subtract(editable, subtract(arms, sleeveEdge(union(upperClothes, dress))));
       if (hemRow !== null) {
         editable = union(editable, dilate(rows(legs, 0, hemRow + margin), spread, 2));
         editable = subtract(editable, rows(legs, hemRow + margin * 2, H));
       } else {
-        editable = subtract(editable, subtract(legs, dilate(union(lowerClothes, dress), 4, 3)));
+        editable = subtract(editable, subtract(legs, sleeveEdge(union(lowerClothes, dress))));
       }
       editable = subtract(editable, shoes);
       break;
