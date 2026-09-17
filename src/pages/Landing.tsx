@@ -8,6 +8,10 @@ import { SiteImage } from "@/components/SiteImage";
 import { PRODUCT_SELECT, useCreditPacks, useSizes } from "@/lib/queries";
 import { kes } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
+import { useTheme } from "@/lib/theme";
+import WarpText from "@/components/reactbits/WarpText";
+import ScrollFloat from "@/components/reactbits/ScrollFloat";
+import ScrollReveal from "@/components/reactbits/ScrollReveal";
 
 /**
  * The public front page. Every photo is a named slot on Cloudinary, ALTERNATE/site/ (see docs/IMAGE_GUIDE.md):
@@ -17,6 +21,7 @@ import { useAuth } from "@/lib/auth";
  */
 export default function Landing() {
   const { user } = useAuth();
+  const { resolved: theme } = useTheme();
   const sizes = useSizes();
   const packs = useCreditPacks();
   const single = packs.data?.find((p) => p.is_active && p.credits === 1);
@@ -45,7 +50,22 @@ export default function Landing() {
       <section className="page grid gap-10 pb-16 pt-10 md:pt-16 lg:grid-cols-[1.1fr_1fr] lg:items-end lg:gap-12">
         <div className="grid animate-rise gap-8">
           <span className="label">Virtual fitting room · Nairobi</span>
-          <h1 className="display text-[clamp(60px,9.5vw,152px)]">See it on you before you pay.</h1>
+          <h1 className="sr-only">See it on you before you pay.</h1>
+          <WarpText
+            text={"See it on you\nbefore you pay."}
+            color={theme === "dark" ? "#f3f1ec" : "#191710"}
+            warpStrength={0.08}
+            warpScale={1.7}
+            speed={0.55}
+            pointerInfluence={0.42}
+            pointerStrength={0.38}
+            refraction={0.018}
+            ripple
+            fontFamily='"Nohemi", "Satoshi", system-ui, sans-serif'
+            fontSize="clamp(3rem, 10vw, 9rem)"
+            fontWeight={800}
+            style={{ height: "clamp(180px, 42vw, 320px)" }}
+          />
           <p className="max-w-[48ch] text-[17px] text-muted">
             Add your photos once. Try on pieces from Kenyan Instagram and TikTok stores, or any screenshot you love, drawn to your real size and shape.
           </p>
@@ -113,7 +133,7 @@ export default function Landing() {
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div className="grid gap-4">
               <span className="label">Our top picks this week</span>
-              <h2 className="display text-[clamp(44px,6vw,88px)]">New on the rail</h2>
+              <ScrollFloat containerClassName="pb-[0.12em]" textClassName="display text-[clamp(44px,6vw,88px)]">New on the rail</ScrollFloat>
             </div>
             <Link to="/shop" className="label flex items-center gap-2 text-ink hover:underline">
               Shop all <ArrowRight className="h-3.5 w-3.5" />
@@ -134,7 +154,7 @@ export default function Landing() {
         <div className="page grid gap-12 py-20 md:grid-cols-[1.2fr_1fr] md:py-28">
           <div className="grid content-start gap-6">
             <span className="font-mono text-[11px] font-semibold uppercase tracking-label text-white/60">Seen it on Instagram?</span>
-            <h2 className="display text-[clamp(52px,8vw,128px)]">Screenshot it. Try it on.</h2>
+            <ScrollFloat containerClassName="pb-[0.12em]" textClassName="display text-[clamp(52px,8vw,128px)]">Screenshot it. Try it on.</ScrollFloat>
             <ButtonLink to={start} variant="outline" size="lg" className="justify-self-start border-white text-white hover:bg-white hover:text-accent">
               Try a screenshot
             </ButtonLink>
@@ -148,8 +168,12 @@ export default function Landing() {
               <li key={t} className="grid grid-cols-[48px_1fr] gap-4 border-b border-white/25 py-6">
                 <span className="num text-[13px] text-white/60">0{i + 1}</span>
                 <div className="grid gap-1">
-                  <span className="display text-[30px]">{t}</span>
-                  <span className="text-white/70">{b}</span>
+                  <ScrollReveal baseOpacity={0} enableBlur baseRotation={5} blurStrength={10} wordAnimationEnd="bottom center" textClassName="display text-[30px]">
+                    {t}
+                  </ScrollReveal>
+                  <ScrollReveal baseOpacity={0} enableBlur baseRotation={5} blurStrength={10} wordAnimationEnd="bottom center" textClassName="text-white/70">
+                    {b}
+                  </ScrollReveal>
                 </div>
               </li>
             ))}
@@ -169,7 +193,7 @@ export default function Landing() {
       <section className="border-t border-rule">
         <div className="page grid gap-10 py-20 md:grid-cols-[1.3fr_1fr] md:py-28">
           <div className="grid content-start gap-8">
-            <h2 className="display text-[clamp(56px,9vw,144px)]">Made in Nairobi.</h2>
+            <ScrollFloat containerClassName="pb-[0.12em]" textClassName="display text-[clamp(56px,9vw,144px)]">Made in Nairobi.</ScrollFloat>
             <SiteImage slot="nairobi.jpg" alt="Nairobi skyline with the expressway" className="aspect-[3/2]" sizes="(max-width: 768px) 100vw, 55vw" fallback={<div className="h-full bg-sunk" />} />
           </div>
           <div className="grid content-end gap-5 text-[17px] text-muted">

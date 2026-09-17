@@ -1,0 +1,8 @@
+/* Size and weight come from the page's own text classes (textClassName) */
+.scroll-reveal-text {
+  display: block;
+}
+
+.scroll-reveal .word {
+  display: inline-block;
+}

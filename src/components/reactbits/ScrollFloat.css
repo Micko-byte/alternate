@@ -1,0 +1,17 @@
+/* Size, weight and alignment come from the page's own heading classes (textClassName) */
+.scroll-float {
+  overflow: hidden;
+}
+
+.scroll-float-text {
+  display: inline-block;
+}
+
+.scroll-float .word {
+  display: inline-block;
+  white-space: nowrap;
+}
+
+.scroll-float .char {
+  display: inline-block;
+}
