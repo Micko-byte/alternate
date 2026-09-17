@@ -19,6 +19,7 @@ import type { ParsedInspiration } from "@/lib/garmentCutout";
 import { GARMENTS, GARMENT_BY_CATEGORY, LENGTH_OPTIONS, SIZED_CATEGORIES } from "@/lib/garments";
 import { GarmentDetails, type Seen } from "@/components/GarmentDetails";
 import { SimilarPieces } from "@/components/SimilarPieces";
+import { PrivatePhoto } from "@/components/PrivatePhoto";
 import { DimensionFields, EMPTY_DIMENSIONS, dimensionsRow, hasDimensions, type Dimensions } from "@/components/DimensionFields";
 
 type Quality = "standard" | "hd" | "studio";
@@ -53,6 +54,14 @@ export default function FittingRoom() {
     queryKey: ["photo-urls", photos.data?.map((p) => p.id).join()],
     enabled: !!photos.data?.length,
     queryFn: () => signMany("body-photos", photos.data!.map((p) => [p.id, p.storage_path])),
+    staleTime: 50 * 60_000,
+  });
+
+  // Face masks, so photos show with the face blurred until the shopper chooses to see it
+  const faceMaskUrls = useQuery({
+    queryKey: ["face-mask-urls", photos.data?.map((p) => p.id).join()],
+    enabled: !!photos.data?.length,
+    queryFn: () => signMany("body-photos", photos.data!.filter((p) => p.face_mask_path).map((p) => [p.id, p.face_mask_path!])),
     staleTime: 50 * 60_000,
   });
 
@@ -183,7 +192,7 @@ export default function FittingRoom() {
             <>
               <div className="aspect-[3/4] overflow-hidden bg-sunk">
                 {photoId && photoUrls.data?.[photoId] ? (
-                  <img src={photoUrls.data[photoId]} alt="Your selected photo" className="h-full w-full object-cover" />
+                  <PrivatePhoto key={photoId} photoUrl={photoUrls.data[photoId]} faceMaskUrl={faceMaskUrls.data?.[photoId]} alt="Your selected photo" className="h-full w-full" />
                 ) : (
                   <EmptyPanel
                     title="Add a full-body photo"
@@ -194,7 +203,7 @@ export default function FittingRoom() {
               <div className="flex gap-2 overflow-x-auto pb-1">
                 {photos.data?.map((p) => (
                   <button key={p.id} onClick={() => setPhotoId(p.id)} className={cn("relative h-24 w-[64px] shrink-0 overflow-hidden bg-sunk outline-offset-2", photoId === p.id && "outline outline-2 outline-ink")} aria-label={`Use ${p.angle} photo`} aria-pressed={photoId === p.id}>
-                    {photoUrls.data?.[p.id] && <img src={photoUrls.data[p.id]} alt="" className="h-full w-full object-cover" />}
+                    {photoUrls.data?.[p.id] && <PrivatePhoto photoUrl={photoUrls.data[p.id]} faceMaskUrl={faceMaskUrls.data?.[p.id]} alt="" showToggle={false} className="h-full w-full" />}
                     <span className="absolute inset-x-0 bottom-0 bg-paper/90 py-0.5 text-center font-mono text-[9px] uppercase">{p.angle}</span>
                   </button>
                 ))}

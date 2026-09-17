@@ -35,6 +35,12 @@ verify_jwt = false
 [functions.analyze-body]
 verify_jwt = false
 
+[functions.delete-my-data]
+verify_jwt = false
+
+[functions.payments-status]
+verify_jwt = false
+
 [functions.admin-users]
 verify_jwt = false
 

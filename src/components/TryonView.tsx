@@ -1,24 +1,28 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Download, Flag, ShieldCheck, ThumbsDown, ThumbsUp } from "lucide-react";
+import { Box, Download, Eye, EyeOff, Flag, ShieldCheck, ThumbsDown, ThumbsUp, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { useIsAdmin, useProfile } from "@/lib/queries";
+import { useIsAdmin } from "@/lib/queries";
 import { kickTryon, QUALITY_LABELS } from "@/lib/tryon";
-import { cn, errorMessage, kes, loadImage, signedUrl } from "@/lib/utils";
+import { cn, errorMessage, kes, signedUrl } from "@/lib/utils";
 import { sizeText } from "@/lib/sizes";
 import { Button, ButtonLink, Notice, Pill, Spinner } from "@/components/ui";
 import { FaceLockImage } from "@/components/FaceLockImage";
 import { FeedbackButton } from "@/components/FeedbackButton";
-import { usePrivacySetting } from "@/components/PhotoPrivacy";
+import { DeleteForever } from "@/components/DeleteForever";
+import { ComingSoon3D } from "@/components/ComingSoon3D";
+import { deleteMyData } from "@/lib/deleteData";
+import { useNavigate } from "react-router-dom";
 
 /** A try-on with live status, the face-locked result, rating and buy actions. */
 export function TryonView({ id }: { id: string }) {
   const queryClient = useQueryClient();
   const isAdmin = useIsAdmin();
-  const profile = useProfile();
-  const privacy = usePrivacySetting();
+  const navigate = useNavigate();
   const [locked, setLocked] = useState(true);
+  // Faces are blurred every time a result opens; the shopper chooses to show theirs
+  const [blurFace, setBlurFace] = useState(true);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const onReady = useCallback((c: HTMLCanvasElement) => (canvasRef.current = c), []);
 
@@ -66,7 +70,7 @@ export function TryonView({ id }: { id: string }) {
       // Everything outside the edited garment zone is pasted back (older try-ons: face only)
       mask: await signedUrl("body-photos", tryon.data!.edit_mask_path ?? tryon.data!.body_photos?.face_mask_path),
       garment: tryon.data!.garment_uploads ? await signedUrl("garment-uploads", tryon.data!.garment_uploads.storage_path) : null,
-      faceMask: await signedUrl("body-photos", tryon.data!.body_photos?.face_mask_path),
+      faceMask: await signedUrl("body-photos", (tryon.data as { face_mask_path?: string | null }).face_mask_path ?? tryon.data!.body_photos?.face_mask_path),
     }),
     staleTime: 50 * 60_000,
   });
@@ -93,30 +97,10 @@ export function TryonView({ id }: { id: string }) {
     toast.success("Reported. Our team will review it.");
   };
 
-  const download = async () => {
-    const source = canvasRef.current;
-    if (!source) return;
-    let canvas = source;
-    if (profile.data?.blur_face_on_save) {
-      if (!urls.data?.faceMask) return toast.error("We couldn't find your face to blur. Turn blurring off in your privacy settings to save it.");
-      // Blur only where the face mask is, then lay that over the image
-      const mask = await loadImage(urls.data.faceMask);
-      canvas = document.createElement("canvas");
-      canvas.width = source.width;
-      canvas.height = source.height;
-      const ctx = canvas.getContext("2d")!;
-      ctx.drawImage(source, 0, 0);
-      const blurred = document.createElement("canvas");
-      blurred.width = source.width;
-      blurred.height = source.height;
-      const bctx = blurred.getContext("2d")!;
-      bctx.filter = "blur(10px)";
-      bctx.drawImage(mask, 0, 0, source.width, source.height);
-      bctx.filter = `blur(${Math.round(source.width / 40)}px)`;
-      bctx.globalCompositeOperation = "source-in";
-      bctx.drawImage(source, 0, 0);
-      ctx.drawImage(blurred, 0, 0);
-    }
+  // Saves exactly what is on screen: blurred if the face is blurred
+  const download = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
     canvas.toBlob((blob) => {
       if (!blob) return toast.error("Couldn't save the image");
       const a = document.createElement("a");
@@ -130,7 +114,28 @@ export function TryonView({ id }: { id: string }) {
     <div className="grid gap-8 md:grid-cols-[minmax(0,460px)_1fr] md:gap-14">
       <div>
         {status === "succeeded" && urls.data?.result ? (
-          <FaceLockImage resultUrl={urls.data.result} photoUrl={urls.data.photo} faceMaskUrl={urls.data.mask} locked={locked} onReady={onReady} />
+          <div className="relative">
+            <FaceLockImage
+              resultUrl={urls.data.result}
+              photoUrl={urls.data.photo}
+              faceMaskUrl={urls.data.mask}
+              locked={locked}
+              onReady={onReady}
+              blurMaskUrl={urls.data.faceMask}
+              blurFace={blurFace}
+            />
+            {urls.data.faceMask && (
+              <button
+                type="button"
+                onClick={() => setBlurFace((b) => !b)}
+                aria-pressed={!blurFace}
+                className="absolute left-3 top-3 flex h-10 items-center gap-1.5 bg-paper/90 px-3 font-mono text-[11px] font-semibold uppercase tracking-label text-ink hover:bg-paper"
+              >
+                {blurFace ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                {blurFace ? "Show face" : "Blur face"}
+              </button>
+            )}
+          </div>
         ) : status === "failed" ? (
           <div className="grid aspect-[2/3] place-items-center bg-sunk p-8 text-center display text-[32px] text-muted">That one didn't work</div>
         ) : (
@@ -202,13 +207,41 @@ export function TryonView({ id }: { id: string }) {
             <div className="flex flex-wrap gap-2">
               <Button variant={t.rating === 1 ? "solid" : "outline"} size="sm" onClick={() => rate(1)}><ThumbsUp className="h-4 w-4" /> Looks right</Button>
               <Button variant={t.rating === -1 ? "solid" : "outline"} size="sm" onClick={() => rate(-1)}><ThumbsDown className="h-4 w-4" /> Not right</Button>
-              <Button variant="ghost" size="sm" onClick={download}><Download className="h-4 w-4" /> Save{profile.data?.blur_face_on_save ? " (face blurred)" : ""}</Button>
+              <Button variant="ghost" size="sm" onClick={download}><Download className="h-4 w-4" /> Download{blurFace ? " (face blurred)" : ""}</Button>
               <Button variant="ghost" size="sm" onClick={report}><Flag className="h-4 w-4" /> Not me</Button>
+              <ComingSoon3D trigger={(open) => <Button variant="outline" size="sm" onClick={open}><Box className="h-4 w-4" /> 3D view <span className="ml-1 bg-mustard px-1.5 py-0.5 text-[9.5px] text-ink">Soon</span></Button>} />
             </div>
-            <label className="flex cursor-pointer items-center gap-2 text-[13px] text-muted">
-              <input type="checkbox" className="h-4 w-4 accent-ink" checked={!!profile.data?.blur_face_on_save} onChange={(e) => privacy.set("blur_face_on_save", e.target.checked)} />
-              Blur my face on saved images
-            </label>
+            <div className="grid gap-2 border-t border-rule pt-4">
+              <span className="label">Your data</span>
+              <div className="flex flex-wrap gap-2">
+                <DeleteForever
+                  title="Delete this try-on?"
+                  body="The try-on image is deleted from our servers. Your photos stay unless you delete them too."
+                  onDownload={download}
+                  onDelete={async () => {
+                    await deleteMyData("tryon", t.id);
+                    queryClient.invalidateQueries({ queryKey: ["wardrobe"] });
+                    toast.success("Try-on deleted");
+                    navigate("/wardrobe");
+                  }}
+                  trigger={(open) => <Button variant="danger" size="sm" onClick={open}><Trash2 className="h-4 w-4" /> Delete this try-on</Button>}
+                />
+                {t.body_photo_id && (
+                  <DeleteForever
+                    title="Delete the photo you used?"
+                    body="Your body photo and everything made from it for fitting (outlines and masks) are deleted from our servers. This try-on and your others stay. You'll need to add a photo again for new try-ons."
+                    onDownload={download}
+                    onDelete={async () => {
+                      await deleteMyData("photo", t.body_photo_id!);
+                      queryClient.invalidateQueries({ queryKey: ["body-photos"] });
+                      queryClient.invalidateQueries({ queryKey: ["tryon", id] });
+                      toast.success("Photo deleted");
+                    }}
+                    trigger={(open) => <Button variant="danger" size="sm" onClick={open}><Trash2 className="h-4 w-4" /> Delete my photo</Button>}
+                  />
+                )}
+              </div>
+            </div>
             <FeedbackButton tryonId={t.id} variant="link" label="Tell us how this try-on went" />
             {t.products && (
               <div className="flex flex-wrap gap-2 border-t border-rule pt-5">

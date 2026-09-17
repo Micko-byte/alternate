@@ -272,6 +272,8 @@ async function runAttempt(admin: SupabaseClient, tryon: Tryon) {
         completed_at: new Date().toISOString(),
         error_message: null,
         ...(deletePhotos ? { edit_mask_path: null } : {}),
+        // Kept on the try-on so the face can still be blurred after the photo is deleted
+        face_mask_path: prepared.faceMaskPath,
       })
       .eq("id", tryon.id);
 
@@ -321,7 +323,7 @@ async function prepare(admin: SupabaseClient, tryon: Tryon) {
 
   const { data: photo } = await admin
     .from("body_photos")
-    .select("id, storage_path, parts_map_path, edit_mask_path, mask_upper_path, mask_lower_path, mask_feet_path, mask_eyes_path, mask_head_path, mask_jewellery_path")
+    .select("id, storage_path, face_mask_path, parts_map_path, edit_mask_path, mask_upper_path, mask_lower_path, mask_feet_path, mask_eyes_path, mask_head_path, mask_jewellery_path")
     .eq("id", tryon.body_photo_id)
     .single();
   if (!photo) throw new Error("Body photo row missing");
@@ -555,7 +557,7 @@ async function prepare(admin: SupabaseClient, tryon: Tryon) {
     .filter(Boolean)
     .join(" ");
 
-  return { person, garment, mask, maskPath, references, prompt, task, garmentType, costUsd };
+  return { person, garment, mask, maskPath, references, prompt, task, garmentType, costUsd, faceMaskPath: photo.face_mask_path as string | null };
 }
 
 const SIZE_STEP: Record<string, number> = { uk_women: 2, waist_in: 2, letter: 1 };

@@ -12,6 +12,9 @@ import { ShopsForPicker, SizeFields, sizeKey } from "@/components/SizeFields";
 import { Button, ButtonLink, Field, Input, Notice, PageHeader, Select } from "@/components/ui";
 import { BodyPhotoUploader } from "@/components/BodyPhotoUploader";
 import { Measurements } from "@/components/Measurements";
+import { PrivatePhoto } from "@/components/PrivatePhoto";
+import { DeleteForever } from "@/components/DeleteForever";
+import { deleteMyData } from "@/lib/deleteData";
 import { HeightInput, WeightInput, heightCheck } from "@/components/UnitInputs";
 
 const POLICY_VERSION = "2026-09-v1";
@@ -193,24 +196,30 @@ function PrivacyStep() {
 function PhotosStep() {
   const photos = useBodyPhotos();
   const queryClient = useQueryClient();
-  const [thumbs, setThumbs] = useState<Record<string, string>>({});
+  const [thumbs, setThumbs] = useState<Record<string, { photo: string; face: string | null }>>({});
 
   useEffect(() => {
     (async () => {
-      const entries = await Promise.all((photos.data ?? []).map(async (p) => [p.id, await signedUrl("body-photos", p.storage_path)] as const));
-      setThumbs(Object.fromEntries(entries.filter(([, u]) => u)) as Record<string, string>);
+      const entries = await Promise.all(
+        (photos.data ?? []).map(async (p) => [p.id, { photo: await signedUrl("body-photos", p.storage_path), face: await signedUrl("body-photos", p.face_mask_path) }] as const),
+      );
+      setThumbs(Object.fromEntries(entries.filter(([, u]) => u.photo)) as Record<string, { photo: string; face: string | null }>);
     })();
   }, [photos.data]);
 
+  // Deleting on the server keeps the try-ons made with this photo
   const remove = async (photo: (typeof photos.data & object)[number]) => {
-    const files = [
-      photo.storage_path, photo.parts_map_path, photo.edit_mask_path, photo.face_mask_path, photo.mask_upper_path, photo.mask_lower_path,
-      photo.mask_feet_path, photo.mask_eyes_path, photo.mask_head_path, photo.mask_jewellery_path,
-    ];
-    await supabase.storage.from("body-photos").remove(files.filter(Boolean) as string[]);
-    const { error } = await supabase.from("body_photos").delete().eq("id", photo.id);
-    if (error) return toast.error(errorMessage(error));
+    await deleteMyData("photo", photo.id);
+    toast.success("Photo deleted");
     queryClient.invalidateQueries({ queryKey: ["body-photos"] });
+  };
+
+  const downloadPhoto = async (url: string, angle: string) => {
+    const blob = await (await fetch(url)).blob();
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `alternate-${angle}-photo.png`;
+    a.click();
   };
 
   return (
@@ -219,10 +228,20 @@ function PhotosStep() {
         <div className="flex flex-wrap gap-3">
           {photos.data!.map((p) => (
             <figure key={p.id} className="grid w-28 gap-1">
-              <div className="aspect-[2/3] overflow-hidden bg-sunk">{thumbs[p.id] && <img src={thumbs[p.id]} alt={`${p.angle} photo`} className="h-full w-full object-cover" />}</div>
+              <div className="aspect-[2/3] overflow-hidden bg-sunk">
+                {thumbs[p.id] && <PrivatePhoto photoUrl={thumbs[p.id].photo} faceMaskUrl={thumbs[p.id].face} alt={`${p.angle} photo`} className="h-full w-full" />}
+              </div>
               <figcaption className="flex items-center justify-between">
                 <span className="label">{p.angle}</span>
-                <button onClick={() => remove(p)} aria-label={`Delete ${p.angle} photo`} className="p-1 text-muted hover:text-bad"><Trash2 className="h-4 w-4" /></button>
+                <DeleteForever
+                  title={`Delete your ${p.angle} photo?`}
+                  body="The photo and everything made from it for fitting are deleted from our servers. Try-ons you already made stay."
+                  onDownload={thumbs[p.id] ? () => downloadPhoto(thumbs[p.id].photo, p.angle) : undefined}
+                  onDelete={() => remove(p)}
+                  trigger={(open) => (
+                    <button onClick={open} aria-label={`Delete ${p.angle} photo`} className="p-1 text-muted hover:text-bad"><Trash2 className="h-4 w-4" /></button>
+                  )}
+                />
               </figcaption>
             </figure>
           ))}
