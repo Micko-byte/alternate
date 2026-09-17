@@ -830,8 +830,10 @@ export type Database = {
       }
       profiles: {
         Row: {
+          blur_face_on_save: boolean
           created_at: string
           date_of_birth: string | null
+          delete_photos_after_tryon: boolean
           display_name: string | null
           height_cm: number | null
           id: string
@@ -843,8 +845,10 @@ export type Database = {
           weight_kg: number | null
         }
         Insert: {
+          blur_face_on_save?: boolean
           created_at?: string
           date_of_birth?: string | null
+          delete_photos_after_tryon?: boolean
           display_name?: string | null
           height_cm?: number | null
           id: string
@@ -856,8 +860,10 @@ export type Database = {
           weight_kg?: number | null
         }
         Update: {
+          blur_face_on_save?: boolean
           created_at?: string
           date_of_birth?: string | null
+          delete_photos_after_tryon?: boolean
           display_name?: string | null
           height_cm?: number | null
           id?: string

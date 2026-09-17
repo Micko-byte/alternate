@@ -22,7 +22,7 @@ import {
   type PhotoNote,
   type QualityCheck,
 } from "../_shared/ai.ts";
-import { LENGTHS, editableGrid, lengthFromCm, lengthSteps, maskPng, readPartsMap } from "../_shared/body.ts";
+import { LENGTHS, bakeInPhoto, editableGrid, lengthFromCm, lengthSteps, maskPng, readPartsMap } from "../_shared/body.ts";
 import { bodyForSize, estimateGarment, measurementRule, type Areas } from "../_shared/garmentFit.ts";
 
 const IMAGE_MODEL = Deno.env.get("OPENAI_IMAGE_MODEL") ?? "gpt-image-2.5-sunburst";
@@ -250,7 +250,13 @@ async function runAttempt(admin: SupabaseClient, tryon: Tryon) {
       );
     }
 
-    const bestPng = best.n === n ? generated.png : new Uint8Array(await (await download(admin, "tryon-work", best.path)).arrayBuffer());
+    let bestPng = best.n === n ? generated.png : new Uint8Array(await (await download(admin, "tryon-work", best.path)).arrayBuffer());
+    const { data: privacy } = await admin.from("profiles").select("delete_photos_after_tryon").eq("id", tryon.user_id).maybeSingle();
+    const deletePhotos = !!privacy?.delete_photos_after_tryon;
+    if (deletePhotos) {
+      // The viewer can't paste the original back once it's gone, so bake it into the result now
+      bestPng = bakeInPhoto(bestPng, new Uint8Array(await prepared.person.arrayBuffer()), new Uint8Array(await prepared.mask.arrayBuffer()));
+    }
     const resultPath = `${tryon.user_id}/${tryon.id}.png`;
     const { error: uploadError } = await admin.storage.from("tryon-results").upload(resultPath, bestPng, { contentType: "image/png", upsert: true });
     if (uploadError) throw new Error(`Saving result failed: ${uploadError.message}`);
@@ -265,13 +271,38 @@ async function runAttempt(admin: SupabaseClient, tryon: Tryon) {
         qa: { attempts, chosen: best.n, passed: best.passed },
         completed_at: new Date().toISOString(),
         error_message: null,
+        ...(deletePhotos ? { edit_mask_path: null } : {}),
       })
       .eq("id", tryon.id);
+
+    if (deletePhotos) await deleteUsedPhotos(admin, tryon, [tryon.body_photo_id, ...prepared.references.map((r) => r.id)], attempts);
   } catch (err) {
     const message = err instanceof UserError ? err.message : `Technical: ${err instanceof Error ? err.message : String(err)}`;
     console.error("tryon failed", tryon.id, message);
     await admin.from("tryons").update({ cost_usd: Number(costUsd.toFixed(5)) }).eq("id", tryon.id);
     await admin.rpc("refund_tryon", { _tryon_id: tryon.id, _reason: message.slice(0, 500) });
+  }
+}
+
+/** The shopper chose to have their photos deleted as soon as a try-on is made. */
+async function deleteUsedPhotos(admin: SupabaseClient, tryon: Tryon, photoIds: string[], attempts: Attempt[]) {
+  try {
+    const { data: photos } = await admin
+      .from("body_photos")
+      .select("id, storage_path, parts_map_path, edit_mask_path, mask_upper_path, mask_lower_path, mask_feet_path, mask_eyes_path, mask_head_path, mask_jewellery_path")
+      .in("id", photoIds)
+      .eq("user_id", tryon.user_id);
+    const files = (photos ?? []).flatMap((p) => [
+      p.storage_path, p.parts_map_path, p.edit_mask_path, p.mask_upper_path, p.mask_lower_path, p.mask_feet_path, p.mask_eyes_path, p.mask_head_path, p.mask_jewellery_path,
+    ]).filter((f): f is string => !!f && f.startsWith(`${tryon.user_id}/`));
+    files.push(`${tryon.user_id}/masks/tryon-${tryon.id}.png`);
+    await admin.storage.from("body-photos").remove(files);
+    await admin.storage.from("tryon-work").remove(attempts.map((a) => a.path));
+    // Rows stay (past try-ons point at them) but are no longer usable; the face mask is kept for blurring saved images
+    await admin.from("body_photos").update({ is_active: false }).in("id", (photos ?? []).map((p) => p.id));
+    await admin.from("body_profiles").delete().eq("user_id", tryon.user_id);
+  } catch (err) {
+    console.error("deleting photos after try-on failed", tryon.id, err);
   }
 }
 

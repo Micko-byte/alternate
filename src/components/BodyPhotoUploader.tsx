@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/auth";
 import type { PreparedPhoto } from "@/lib/bodyPhoto";
 import { errorMessage } from "@/lib/utils";
 import { Button, Field, Input, Notice, Select, Spinner } from "@/components/ui";
+import { PhotoPrivacyNote, usePrivacySetting } from "@/components/PhotoPrivacy";
 
 /** Adds a full-body photo: finds face and hair in the browser, uploads photo + face-lock masks. */
 export function BodyPhotoUploader({ onAdded, onCancel }: { onAdded?: (photoId: string) => void; onCancel?: () => void }) {
@@ -16,6 +17,7 @@ export function BodyPhotoUploader({ onAdded, onCancel }: { onAdded?: (photoId: s
   const [processing, setProcessing] = useState(false);
   const [confirmSelf, setConfirmSelf] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const privacy = usePrivacySetting();
 
   const onFile = async (file: File | undefined) => {
     if (!file) return;
@@ -81,6 +83,13 @@ export function BodyPhotoUploader({ onAdded, onCancel }: { onAdded?: (photoId: s
         <li>Good light, plain wall, fitted clothes. Only photos of yourself.</li>
         <li>More photos, more accurate fit: add a side view, one showing your arms, and one in shorts or fitted trousers.</li>
       </ul>
+      <PhotoPrivacyNote />
+      {privacy.profile && (
+        <label className="flex cursor-pointer items-start gap-2 text-[13px] text-muted">
+          <input type="checkbox" className="mt-0.5 h-4 w-4 accent-ink" checked={privacy.profile.delete_photos_after_tryon} onChange={(e) => privacy.set("delete_photos_after_tryon", e.target.checked)} />
+          Delete my photos from your servers after every try-on (you'll add a photo each time)
+        </label>
+      )}
       <div className="grid gap-4 sm:grid-cols-[140px_1fr]">
         <Field label="Angle">
           <Select value={angle} onChange={(e) => setAngle(e.target.value as typeof angle)}>

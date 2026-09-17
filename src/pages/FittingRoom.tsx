@@ -182,7 +182,10 @@ export default function FittingRoom() {
                 {photoId && photoUrls.data?.[photoId] ? (
                   <img src={photoUrls.data[photoId]} alt="Your selected photo" className="h-full w-full object-cover" />
                 ) : (
-                  <EmptyPanel title="Add a full-body photo" body="Front-facing, head to feet. Your face and hair stay locked." />
+                  <EmptyPanel
+                    title="Add a full-body photo"
+                    body={profile.data?.delete_photos_after_tryon ? "You chose to delete your photos after each try-on, so add one for this try-on." : "Front-facing, head to feet. Your face and hair stay locked."}
+                  />
                 )}
               </div>
               <div className="flex gap-2 overflow-x-auto pb-1">

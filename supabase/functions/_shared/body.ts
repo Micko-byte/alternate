@@ -265,6 +265,28 @@ export function editableGrid(map: PartsMap, o: MaskOptions): Grid {
   return subtract(editable, locked);
 }
 
+/**
+ * The result with the untouched parts of the original photo pasted back in (where the mask is opaque),
+ * for shoppers whose photos are deleted straight after a try-on: the result must stand on its own.
+ */
+export function bakeInPhoto(result: Uint8Array, photo: Uint8Array, mask: Uint8Array): Uint8Array {
+  const r = decode(result);
+  const p = decode(photo);
+  const m = decode(mask);
+  if (r.width !== p.width || r.height !== p.height || r.width !== m.width || r.height !== m.height) return result;
+  const out = new Uint8Array(r.width * r.height * 4);
+  for (let i = 0; i < r.width * r.height; i++) {
+    const keep = m.channels === 4 ? Number(m.data[i * 4 + 3]) / 255 : 0;
+    for (let c = 0; c < 3; c++) {
+      const rv = Number(r.data[i * r.channels + c]);
+      const pv = Number(p.data[i * p.channels + c]);
+      out[i * 4 + c] = Math.round(pv * keep + rv * (1 - keep));
+    }
+    out[i * 4 + 3] = 255;
+  }
+  return encode({ width: r.width, height: r.height, data: out, channels: 4, depth: 8 });
+}
+
 /** Full-size mask PNG for OpenAI and for pasting back: transparent where the item may change, opaque elsewhere. */
 export function maskPng(editable: Grid): Uint8Array {
   const out = new Uint8Array(PHOTO_W * PHOTO_H * 4);

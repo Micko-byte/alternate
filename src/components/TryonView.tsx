@@ -3,18 +3,21 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Download, Flag, ShieldCheck, ThumbsDown, ThumbsUp } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { useIsAdmin } from "@/lib/queries";
+import { useIsAdmin, useProfile } from "@/lib/queries";
 import { kickTryon, QUALITY_LABELS } from "@/lib/tryon";
-import { cn, errorMessage, kes, signedUrl } from "@/lib/utils";
+import { cn, errorMessage, kes, loadImage, signedUrl } from "@/lib/utils";
 import { sizeText } from "@/lib/sizes";
 import { Button, ButtonLink, Notice, Pill, Spinner } from "@/components/ui";
 import { FaceLockImage } from "@/components/FaceLockImage";
 import { FeedbackButton } from "@/components/FeedbackButton";
+import { usePrivacySetting } from "@/components/PhotoPrivacy";
 
 /** A try-on with live status, the face-locked result, rating and buy actions. */
 export function TryonView({ id }: { id: string }) {
   const queryClient = useQueryClient();
   const isAdmin = useIsAdmin();
+  const profile = useProfile();
+  const privacy = usePrivacySetting();
   const [locked, setLocked] = useState(true);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const onReady = useCallback((c: HTMLCanvasElement) => (canvasRef.current = c), []);
@@ -63,6 +66,7 @@ export function TryonView({ id }: { id: string }) {
       // Everything outside the edited garment zone is pasted back (older try-ons: face only)
       mask: await signedUrl("body-photos", tryon.data!.edit_mask_path ?? tryon.data!.body_photos?.face_mask_path),
       garment: tryon.data!.garment_uploads ? await signedUrl("garment-uploads", tryon.data!.garment_uploads.storage_path) : null,
+      faceMask: await signedUrl("body-photos", tryon.data!.body_photos?.face_mask_path),
     }),
     staleTime: 50 * 60_000,
   });
@@ -89,8 +93,31 @@ export function TryonView({ id }: { id: string }) {
     toast.success("Reported. Our team will review it.");
   };
 
-  const download = () => {
-    canvasRef.current?.toBlob((blob) => {
+  const download = async () => {
+    const source = canvasRef.current;
+    if (!source) return;
+    let canvas = source;
+    if (profile.data?.blur_face_on_save) {
+      if (!urls.data?.faceMask) return toast.error("We couldn't find your face to blur. Turn blurring off in your privacy settings to save it.");
+      // Blur only where the face mask is, then lay that over the image
+      const mask = await loadImage(urls.data.faceMask);
+      canvas = document.createElement("canvas");
+      canvas.width = source.width;
+      canvas.height = source.height;
+      const ctx = canvas.getContext("2d")!;
+      ctx.drawImage(source, 0, 0);
+      const blurred = document.createElement("canvas");
+      blurred.width = source.width;
+      blurred.height = source.height;
+      const bctx = blurred.getContext("2d")!;
+      bctx.filter = "blur(10px)";
+      bctx.drawImage(mask, 0, 0, source.width, source.height);
+      bctx.filter = `blur(${Math.round(source.width / 40)}px)`;
+      bctx.globalCompositeOperation = "source-in";
+      bctx.drawImage(source, 0, 0);
+      ctx.drawImage(blurred, 0, 0);
+    }
+    canvas.toBlob((blob) => {
       if (!blob) return toast.error("Couldn't save the image");
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
@@ -175,9 +202,13 @@ export function TryonView({ id }: { id: string }) {
             <div className="flex flex-wrap gap-2">
               <Button variant={t.rating === 1 ? "solid" : "outline"} size="sm" onClick={() => rate(1)}><ThumbsUp className="h-4 w-4" /> Looks right</Button>
               <Button variant={t.rating === -1 ? "solid" : "outline"} size="sm" onClick={() => rate(-1)}><ThumbsDown className="h-4 w-4" /> Not right</Button>
-              <Button variant="ghost" size="sm" onClick={download}><Download className="h-4 w-4" /> Save</Button>
+              <Button variant="ghost" size="sm" onClick={download}><Download className="h-4 w-4" /> Save{profile.data?.blur_face_on_save ? " (face blurred)" : ""}</Button>
               <Button variant="ghost" size="sm" onClick={report}><Flag className="h-4 w-4" /> Not me</Button>
             </div>
+            <label className="flex cursor-pointer items-center gap-2 text-[13px] text-muted">
+              <input type="checkbox" className="h-4 w-4 accent-ink" checked={!!profile.data?.blur_face_on_save} onChange={(e) => privacy.set("blur_face_on_save", e.target.checked)} />
+              Blur my face on saved images
+            </label>
             <FeedbackButton tryonId={t.id} variant="link" label="Tell us how this try-on went" />
             {t.products && (
               <div className="flex flex-wrap gap-2 border-t border-rule pt-5">

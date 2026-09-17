@@ -11,6 +11,7 @@ import { ThemePicker } from "@/components/ThemeToggle";
 import { InstallAppSection } from "@/components/InstallApp";
 import { BodyBasics } from "@/components/BodyBasics";
 import { Measurements } from "@/components/Measurements";
+import { PhotoPrivacyNote, PhotoPrivacySettings } from "@/components/PhotoPrivacy";
 
 const CONSENT_LABELS: Record<string, string> = {
   terms: "Terms and privacy policy",
@@ -106,6 +107,8 @@ export default function Account() {
 
         <section className="grid content-start gap-3 bg-surface p-6 md:col-span-2">
           <h2 className="display text-[26px]">Privacy &amp; your data</h2>
+          <PhotoPrivacyNote />
+          <PhotoPrivacySettings />
           <div className="grid gap-2">
             {active.length ? (
               active.map((c) => (
