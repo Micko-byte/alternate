@@ -1,11 +1,10 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { GARMENTS, GARMENT_BY_CATEGORY, LENGTH_OPTIONS, closestLength } from "@/lib/garments";
-import { MEASURES_FOR, MEASURE_LABELS, STRETCH_OPTIONS, convertAround, toMeasurements, type GarmentMeasurements, type MeasureKey, type Stretch } from "@/lib/garmentFit";
+import { GARMENTS, GARMENT_BY_CATEGORY, closestLength } from "@/lib/garments";
 import { cn, errorMessage } from "@/lib/utils";
-import { Button, Field, Input, Notice } from "@/components/ui";
-import { LengthInput, LengthUnitToggle } from "@/components/UnitInputs";
+import { Button, Notice } from "@/components/ui";
+import { DimensionFields, dimensionsFrom, dimensionsRow, type Dimensions } from "@/components/DimensionFields";
 
 export type GarmentRow = {
   id: string;
@@ -34,36 +33,22 @@ export function GarmentDetails({ garment, previewUrl, seen, allowCategory, onDon
 }) {
   const [category, setCategory] = useState(garment.category ?? "top");
   const [garmentType, setGarmentType] = useState(garment.garment_type ?? "");
-  const [length, setLength] = useState<string | null>(garment.length ?? closestLength(garment.category ?? "", seen?.length));
-  const [sizeLabel, setSizeLabel] = useState(garment.size_label ?? "");
-  const saved = (garment.measurements ?? {}) as GarmentMeasurements;
-  const [inputs, setInputs] = useState<Partial<Record<MeasureKey, string>>>(Object.fromEntries(Object.entries(saved).map(([k, v]) => [k, String(v)])));
-  const [measuredFlat, setMeasuredFlat] = useState(false);
   // Typed values win; otherwise start from what the photo check read
-  const [stretch, setStretch] = useState<Stretch | "">((garment.stretch as Stretch) ?? ((seen?.stretch as Stretch) || ""));
+  const [dimensions, setDimensions] = useState<Dimensions>(
+    dimensionsFrom(garment, { length: closestLength(garment.category ?? "", seen?.length), stretch: seen?.stretch }),
+  );
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
 
-  const lengths = LENGTH_OPTIONS[category] ?? [];
-  const measures = MEASURES_FOR[category] ?? [];
   const noun = garmentType.toLowerCase() || GARMENT_BY_CATEGORY[category]?.label.toLowerCase() || "item";
 
   const save = async () => {
     setBusy(true);
     setProblem(null);
     try {
-      const measurements = toMeasurements(Object.fromEntries(Object.entries(inputs).filter(([k]) => measures.includes(k as MeasureKey))), measuredFlat);
       const { error } = await supabase
         .from("garment_uploads")
-        .update({
-          category: category as never,
-          garment_type: garmentType.trim().slice(0, 40) || null,
-          length: (lengths.length && length ? length : null) as never,
-          size_label: sizeLabel.trim().slice(0, 12) || null,
-          measurements: measurements as never,
-          length_cm: null,
-          stretch: (stretch || null) as never,
-        })
+        .update({ category: category as never, garment_type: garmentType.trim().slice(0, 40) || null, ...dimensionsRow(category, dimensions) })
         .eq("id", garment.id);
       if (error) throw error;
       if (allowCategory && category !== garment.category) {
@@ -110,7 +95,7 @@ export function GarmentDetails({ garment, previewUrl, seen, allowCategory, onDon
           <legend className="label mb-2">What is it?</legend>
           <div className="flex flex-wrap gap-1.5">
             {GARMENTS.map((g) => (
-              <button key={g.category} type="button" onClick={() => { setCategory(g.category); setGarmentType(""); setLength(null); }} aria-pressed={category === g.category} className={cn("h-9 border px-3 font-mono text-[11px] font-semibold uppercase tracking-label", category === g.category ? "border-ink bg-ink text-paper" : "border-rule text-muted hover:border-ink hover:text-ink")}>
+              <button key={g.category} type="button" onClick={() => { setCategory(g.category); setGarmentType(""); setDimensions({ ...dimensions, length: null }); }} aria-pressed={category === g.category} className={cn("h-9 border px-3 font-mono text-[11px] font-semibold uppercase tracking-label", category === g.category ? "border-ink bg-ink text-paper" : "border-rule text-muted hover:border-ink hover:text-ink")}>
                 {g.label}
               </button>
             ))}
@@ -125,52 +110,7 @@ export function GarmentDetails({ garment, previewUrl, seen, allowCategory, onDon
         </fieldset>
       )}
 
-      {!!lengths.length && (
-        <fieldset className="grid gap-2">
-          <legend className="label mb-2">How long is it?</legend>
-          <div className="flex flex-wrap gap-1.5">
-            {lengths.map((o) => (
-              <button key={o.value} type="button" onClick={() => setLength(length === o.value ? null : o.value)} aria-pressed={length === o.value} className={cn("h-9 border px-3 text-[13px]", length === o.value ? "border-ink bg-ink text-paper" : "border-rule text-muted hover:border-ink hover:text-ink")}>
-                {o.label}
-              </button>
-            ))}
-          </div>
-          <p className="text-[12.5px] text-muted">{seen?.length && !garment.length ? "We picked this from the photo. Change it if it's wrong." : "Where it ends on you. Leave it empty and we'll go by the photo."}</p>
-        </fieldset>
-      )}
-
-      {!!measures.length && (
-        <>
-          <Field label="Size on the label (optional)" hint="e.g. UK 10, M, 32. Smaller than yours looks tighter.">
-            <Input value={sizeLabel} onChange={(e) => setSizeLabel(e.target.value)} maxLength={12} className="max-w-[200px]" />
-          </Field>
-
-          <fieldset className="grid gap-3 border border-rule p-4">
-            <legend className="label px-1">Garment measurements (optional, most accurate)</legend>
-            <LengthUnitToggle />
-            <p className="text-[12.5px] text-muted">Leave any empty and we'll estimate it from the size and the photo. Anything you type is used exactly.</p>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-              {measures.map((k) => (
-                <Field key={k} label={MEASURE_LABELS[k].label} hint={MEASURE_LABELS[k].around && measuredFlat ? "Laid flat, side to side" : MEASURE_LABELS[k].hint}>
-                  <LengthInput valueCm={inputs[k] ?? ""} onChangeCm={(cm) => setInputs({ ...inputs, [k]: cm })} />
-                </Field>
-              ))}
-            </div>
-            <label className="flex cursor-pointer items-center gap-2 text-[13px] text-muted">
-              <input type="checkbox" checked={measuredFlat} onChange={(e) => { setMeasuredFlat(e.target.checked); setInputs(convertAround(inputs, e.target.checked)); }} className="h-4 w-4 accent-ink" />
-              I measured it laid flat (we double bust, waist, hips and thigh)
-            </label>
-            <div className="flex flex-wrap items-center gap-1.5">
-              <span className="mr-1 text-[13px] text-muted">Fabric:</span>
-              {STRETCH_OPTIONS.map((o) => (
-                <button key={o.value} type="button" onClick={() => setStretch(stretch === o.value ? "" : o.value)} aria-pressed={stretch === o.value} className={cn("h-8 border px-2.5 text-[12.5px]", stretch === o.value ? "border-ink bg-ink text-paper" : "border-rule text-muted hover:border-ink hover:text-ink")}>
-                  {o.label}
-                </button>
-              ))}
-            </div>
-          </fieldset>
-        </>
-      )}
+      <DimensionFields category={category} value={dimensions} onChange={setDimensions} lengthFromPhoto={!!seen?.length && !garment.length} />
 
       <div className="flex gap-2">
         <Button variant="solid" onClick={save} loading={busy}>{allowCategory ? "Save changes" : `Use this ${noun}`}</Button>

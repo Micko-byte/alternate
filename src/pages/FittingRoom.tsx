@@ -18,6 +18,7 @@ import { FeedbackButton } from "@/components/FeedbackButton";
 import type { ParsedInspiration } from "@/lib/garmentCutout";
 import { GARMENTS, GARMENT_BY_CATEGORY, LENGTH_OPTIONS, SIZED_CATEGORIES } from "@/lib/garments";
 import { GarmentDetails, type Seen } from "@/components/GarmentDetails";
+import { DimensionFields, EMPTY_DIMENSIONS, dimensionsRow, hasDimensions, type Dimensions } from "@/components/DimensionFields";
 
 type Quality = "standard" | "hd" | "studio";
 
@@ -434,6 +435,7 @@ function InspirationForm({ file, onFile, onSaved, onCancel }: { file: File; onFi
   const [mismatch, setMismatch] = useState<{ id: string; message: string; suggestion: { category: string; type: string } | null } | null>(null);
   const [details, setDetails] = useState<{ id: string; category: string; type: string | null; seen: Seen } | null>(null);
   const [note, setNote] = useState("");
+  const [dimensions, setDimensions] = useState<Dimensions>(EMPTY_DIMENSIONS);
   const [busy, setBusy] = useState(false);
   const [parsed, setParsed] = useState<ParsedInspiration | null>(null);
   const [parsing, setParsing] = useState(true);
@@ -449,6 +451,7 @@ function InspirationForm({ file, onFile, onSaved, onCancel }: { file: File; onFi
     setTouched(false);
     setMismatch(null);
     setDetails(null);
+    setDimensions(EMPTY_DIMENSIONS);
     let cancelled = false;
     import("@/lib/garmentCutout")
       .then(({ parseInspiration }) => parseInspiration(file))
@@ -500,7 +503,7 @@ function InspirationForm({ file, onFile, onSaved, onCancel }: { file: File; onFi
       }
       const { error } = await supabase
         .from("garment_uploads")
-        .insert({ id, user_id: user!.id, storage_path: path, cutout_path: cutoutPath, category: category as never, garment_type: garmentType, source_note: note || null });
+        .insert({ id, user_id: user!.id, storage_path: path, cutout_path: cutoutPath, category: category as never, garment_type: garmentType, source_note: note || null, ...dimensionsRow(category, dimensions) });
       if (error) throw error;
 
       // The server checks what the photo really shows before anyone pays
@@ -512,8 +515,8 @@ function InspirationForm({ file, onFile, onSaved, onCancel }: { file: File; onFi
       if (check?.checked && !garmentType && check.chosen_item) {
         await supabase.from("garment_uploads").update({ garment_type: String(check.chosen_item).slice(0, 40) }).eq("id", id);
       }
-      if (LENGTH_OPTIONS[category]) {
-        // Confirm length, size and measurements before the first try-on
+      if (LENGTH_OPTIONS[category] && !hasDimensions(dimensions)) {
+        // Nothing described yet: confirm what the photo check read before the first try-on
         setDetails({ id, category, type: garmentType ?? check?.chosen_item ?? null, seen: check?.checked ? check.chosen : null });
         return;
       }
@@ -621,7 +624,7 @@ function InspirationForm({ file, onFile, onSaved, onCancel }: { file: File; onFi
                 <button
                   key={g.category}
                   type="button"
-                  onClick={() => { setCategory(g.category); setGarmentType(null); setTouched(true); }}
+                  onClick={() => { setCategory(g.category); setGarmentType(null); setTouched(true); setDimensions({ ...dimensions, length: null }); }}
                   aria-pressed={category === g.category}
                   className={cn("h-9 border px-3 font-mono text-[11px] font-semibold uppercase tracking-label", category === g.category ? "border-ink bg-ink text-paper" : "border-rule text-muted hover:border-ink hover:text-ink")}
                 >
@@ -657,9 +660,16 @@ function InspirationForm({ file, onFile, onSaved, onCancel }: { file: File; onFi
         </label>
       )}
       <p className="flex items-center gap-1.5 text-[12.5px] text-muted"><ShieldCheck className="h-3.5 w-3.5" /> We check what's in the photo, so you only pay for try-ons that make sense.</p>
-      <Field label="Details (optional)">
-        <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. the beige pleated trousers" maxLength={200} />
-      </Field>
+      <section className="grid gap-4 border border-ink p-4">
+        <div className="grid gap-1">
+          <h3 className="label text-ink">Size &amp; dimensions</h3>
+          <p className="text-[13px] text-muted">Describe it as exactly as you can. Everything is optional: whatever you leave out, we read from the photo.</p>
+        </div>
+        <DimensionFields category={category} value={dimensions} onChange={setDimensions} />
+        <Field label="Describe it" hint="Anything else about the fit, fabric or length">
+          <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. high-waisted, stops just above the ankle, thick ribbed knit" maxLength={200} />
+        </Field>
+      </section>
       <div className="flex gap-2">
         <Button variant="solid" onClick={save} loading={busy} disabled={cutout === undefined}>{busy ? "Checking the photo…" : `Use this ${noun}`}</Button>
         <Button variant="ghost" onClick={onCancel}>Cancel</Button>

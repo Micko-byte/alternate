@@ -23,4 +23,16 @@ function SetupNeeded() {
 
 registerServiceWorker();
 
+window.addEventListener("vite:preloadError", (event) => {
+  const key = "alternate-reloaded-for-update";
+  try {
+    if (sessionStorage.getItem(key)) return;
+    sessionStorage.setItem(key, "1");
+  } catch {
+    return;
+  }
+  event.preventDefault();
+  window.location.reload();
+});
+
 createRoot(document.getElementById("root")!).render(<ThemeProvider>{supabaseConfigured ? <App /> : <SetupNeeded />}</ThemeProvider>);
