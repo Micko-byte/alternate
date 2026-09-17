@@ -170,7 +170,7 @@ export default function Landing() {
         <div className="page grid gap-10 py-20 md:grid-cols-[1.3fr_1fr] md:py-28">
           <div className="grid content-start gap-8">
             <h2 className="display text-[clamp(56px,9vw,144px)]">Made in Nairobi.</h2>
-            <SiteImage slot="nairobi.jpg" alt="Nairobi at dusk" className="aspect-[3/2]" sizes="(max-width: 768px) 100vw, 55vw" fallback={<div className="h-full bg-sunk" />} />
+            <SiteImage slot="nairobi.jpg" alt="Nairobi skyline with the expressway" className="aspect-[3/2]" sizes="(max-width: 768px) 100vw, 55vw" fallback={<div className="h-full bg-sunk" />} />
           </div>
           <div className="grid content-end gap-5 text-[17px] text-muted">
             <p>
