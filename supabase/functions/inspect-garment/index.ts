@@ -36,8 +36,11 @@ Deno.serve(async (req) => {
   } else if (product_id) {
     const { data: product } = await admin.from("products").select("id, store_id, name, category").eq("id", product_id).maybeSingle();
     if (!product) return json({ error: "Piece not found" }, 404);
-    const { data: member } = await admin.from("store_members").select("user_id").eq("store_id", product.store_id).eq("user_id", user.id).maybeSingle();
-    if (!member) return json({ error: "Only this store's team can check its pieces" }, 403);
+    const [{ data: member }, { data: adminRole }] = await Promise.all([
+      admin.from("store_members").select("user_id").eq("store_id", product.store_id).eq("user_id", user.id).maybeSingle(),
+      admin.from("user_roles").select("role").eq("user_id", user.id).eq("role", "admin").maybeSingle(),
+    ]);
+    if (!member && !adminRole) return json({ error: "Only this store's team can check its pieces" }, 403);
     const { data: media } = await admin
       .from("product_media")
       .select("storage_path")

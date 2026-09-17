@@ -1776,6 +1776,19 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      similar_pieces: {
+        Args: { _garment_upload_id: string; _limit?: number }
+        Returns: {
+          image_path: string
+          name: string
+          price_kes: number
+          product_id: string
+          reasons: string[]
+          score: number
+          store_name: string
+          store_slug: string
+        }[]
+      }
       store_size_demand: {
         Args: { _store_id: string }
         Returns: {

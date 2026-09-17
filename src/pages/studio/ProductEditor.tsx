@@ -253,6 +253,7 @@ function EditProduct({ id }: { id: string }) {
         if (vErr) throw vErr;
       }
       toast.success("Saved");
+      if (form.status === "active") void supabase.functions.invoke("inspect-garment", { body: { product_id: id } });
       refresh();
       queryClient.invalidateQueries({ queryKey: ["review-queue"] });
       queryClient.invalidateQueries({ queryKey: ["review-count"] });

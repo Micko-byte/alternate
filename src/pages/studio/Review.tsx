@@ -40,6 +40,8 @@ export default function Review() {
     const { error } = await supabase.from("products").update({ status: "active", needs_review: false }).eq("id", id);
     setBusy(undefined);
     if (error) return toast.error(errorMessage(error));
+    // Photo check, so shoppers' screenshots can be matched to this piece
+    void supabase.functions.invoke("inspect-garment", { body: { product_id: id } });
     refresh();
   };
 
@@ -51,6 +53,7 @@ export default function Review() {
     setBusy(undefined);
     if (error) return toast.error(errorMessage(error));
     toast.success(`${ids.length} pieces listed`);
+    for (const id of ids) void supabase.functions.invoke("inspect-garment", { body: { product_id: id } });
     refresh();
   };
 

@@ -18,6 +18,7 @@ import { FeedbackButton } from "@/components/FeedbackButton";
 import type { ParsedInspiration } from "@/lib/garmentCutout";
 import { GARMENTS, GARMENT_BY_CATEGORY, LENGTH_OPTIONS, SIZED_CATEGORIES } from "@/lib/garments";
 import { GarmentDetails, type Seen } from "@/components/GarmentDetails";
+import { SimilarPieces } from "@/components/SimilarPieces";
 import { DimensionFields, EMPTY_DIMENSIONS, dimensionsRow, hasDimensions, type Dimensions } from "@/components/DimensionFields";
 
 type Quality = "standard" | "hd" | "studio";
@@ -316,6 +317,8 @@ export default function FittingRoom() {
           )}
         </div>
       </section>
+
+      {inspirationId && !pendingInspiration && <SimilarPieces garmentUploadId={inspirationId} />}
 
       {activeTryon && (
         <section ref={resultRef} className="grid scroll-mt-28 gap-6 border-t border-ink pt-8">
