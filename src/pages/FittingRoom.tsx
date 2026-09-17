@@ -5,10 +5,10 @@ import { ArrowLeftRight, Check, ImagePlus, Pencil, Plus, ShieldCheck, Trash2 } f
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
-import { useBodyPhotos, useBodyProfile, useCredits, useProfile, useSetupStatus, useSizes, useTryonPrices, type BodyProfileNotes } from "@/lib/queries";
+import { useBodyPhotos, useBodyProfile, useCreditPacks, useCredits, useProfile, useSetupStatus, useSizes, useTryonPrices, type BodyProfileNotes } from "@/lib/queries";
 import { SIZE_SYSTEMS, defaultSystemFor, sizeText, type FitStyle } from "@/lib/sizes";
 import { QUALITY_LABELS, startTryon } from "@/lib/tryon";
-import { CATEGORY_SINGULAR, cn, errorMessage, extensionOf } from "@/lib/utils";
+import { CATEGORY_SINGULAR, cn, errorMessage, extensionOf, kes } from "@/lib/utils";
 import { Button, ButtonLink, Field, Input, Notice, Select, Spinner } from "@/components/ui";
 import { BodyPhotoUploader } from "@/components/BodyPhotoUploader";
 import { TryonView } from "@/components/TryonView";
@@ -31,6 +31,8 @@ export default function FittingRoom() {
   const sizes = useSizes();
   const prices = useTryonPrices();
   const credits = useCredits();
+  const packs = useCreditPacks();
+  const singlePack = packs.data?.find((p) => p.is_active && p.credits === 1);
   const allowance = useTryonAllowance();
   const usedUp = !!allowance.data && !allowance.data.exempt && allowance.data.remaining === 0;
 
@@ -241,7 +243,11 @@ export default function FittingRoom() {
               <FeedbackButton variant="link" label="Send feedback" />
             </div>
           ) : (credits.data ?? 0) < cost ? (
-            <ButtonLink to="/credits" variant="solid" size="lg">Get credits</ButtonLink>
+            singlePack && cost - (credits.data ?? 0) <= 1 ? (
+              <ButtonLink to={`/checkout/${singlePack.id}`} variant="solid" size="lg">Buy this try-on · {kes(singlePack.price_kes)}</ButtonLink>
+            ) : (
+              <ButtonLink to="/credits" variant="solid" size="lg">Get credits</ButtonLink>
+            )
           ) : (
             <Button variant="solid" size="lg" onClick={swap} loading={busy} disabled={!photoId || !inspirationId || (needsSize && mySize === undefined)}>
               Try it on · {cost} cr

@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ButtonLink } from "@/components/ui";
 import { ProductCard, coverImage, type ProductWithRelations } from "@/components/ProductCard";
 import { SiteImage } from "@/components/SiteImage";
-import { PRODUCT_SELECT, useSizes, useSubscriptionPlans } from "@/lib/queries";
+import { PRODUCT_SELECT, useCreditPacks, useSizes } from "@/lib/queries";
 import { kes } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 
@@ -18,8 +18,8 @@ import { useAuth } from "@/lib/auth";
 export default function Landing() {
   const { user } = useAuth();
   const sizes = useSizes();
-  const plans = useSubscriptionPlans();
-  const cheapest = plans.data?.filter((p) => p.is_active).sort((a, b) => a.price_kes - b.price_kes)[0];
+  const packs = useCreditPacks();
+  const single = packs.data?.find((p) => p.is_active && p.credits === 1);
 
   const products = useQuery({
     queryKey: ["landing-products"],
@@ -94,7 +94,7 @@ export default function Landing() {
           {[
             { icon: ScanFace, title: "Your face stays yours", body: "The AI only changes the clothes. Your face, hair and pose are locked." },
             { icon: Ruler, title: "Your size, your shape", body: "Every photo you add teaches it your build, so clothes hang like they would on you." },
-            { icon: Smartphone, title: "Pay with M-Pesa", body: cheapest ? `Plans from ${kes(cheapest.price_kes)} a month, or ${kes(50)} for a single try-on.` : "Monthly plans or a single try-on." },
+            { icon: Smartphone, title: "Pay with M-Pesa", body: single ? `${kes(single.price_kes)} a try-on. Bundles and plans save more.` : "Pay per try-on with M-Pesa." },
           ].map((b) => (
             <div key={b.title} className="flex items-start gap-4 py-7 md:px-8 md:first:pl-0">
               <b.icon className="mt-0.5 h-6 w-6 shrink-0" strokeWidth={1.4} aria-hidden />

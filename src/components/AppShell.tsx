@@ -17,7 +17,7 @@ const nav = [
   { to: "/wardrobe", label: "Wardrobe" },
 ];
 
-const announcements = ["Plans from KES 499 a month · pay with M-Pesa", "Your face is never changed", "Every try-on is quality checked", "Clothes, shoes, glasses & jewellery", "Made in Nairobi"];
+const announcements = ["Try it on for KES 50 · pay with M-Pesa", "Your face is never changed", "Every try-on is quality checked", "Clothes, shoes, glasses & jewellery", "Made in Nairobi"];
 
 export function AppShell({ children }: { children?: ReactNode }) {
   const { user, signOut } = useAuth();

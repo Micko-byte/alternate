@@ -47,10 +47,15 @@ export default function Credits() {
 
   const activePlans = plans.data?.filter((p) => p.is_active) ?? [];
   const activePacks = packs.data?.filter((p) => p.is_active) ?? [];
+  // One try-on is what most people buy first; everything else is shown as a saving against it
+  const single = activePacks.find((p) => p.credits === 1) ?? null;
+  const bundles = activePacks.filter((p) => p !== single);
+  const savingVsSingle = (price: number, credits: number) =>
+    single ? Math.round((1 - price / credits / single.price_kes) * 100) : 0;
 
   return (
     <div className="grid gap-12">
-      <PageHeader eyebrow="Credits" title="Plans & credits">
+      <PageHeader eyebrow="Credits" title="Try-ons & credits">
         <div className="grid justify-items-end gap-1">
           <span className="num text-[44px] leading-none">{w?.spendable ?? 0}</span>
           <span className="label">credits to spend</span>
@@ -82,53 +87,38 @@ export default function Credits() {
         </section>
       )}
 
-      {!!activePlans.length && (
-        <section className="grid gap-5">
-          <div className="grid gap-2">
-            <h2 className="display text-[clamp(34px,4vw,52px)]">Monthly plans</h2>
-            <p className="max-w-[60ch] text-muted">Pay once for 30 days of try-ons with M-Pesa or card. Nothing renews by itself; pay again when you want another month.</p>
-          </div>
-          <div className="grid gap-3 md:grid-cols-3">
-            {activePlans.map((p, i) => (
-              <article key={p.id} className={cn("grid content-between gap-6 border p-6", i === 1 ? "border-ink bg-ink text-paper" : "border-rule bg-surface")}>
-                <div className="grid gap-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className={cn("label", i === 1 && "text-paper/70")}>{p.name}</span>
-                    {i === 1 && <span className="bg-mustard px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-label text-ink">Most chosen</span>}
-                  </div>
-                  <p className="flex items-baseline gap-1.5">
-                    <span className="display text-[44px]">{kes(p.price_kes)}</span>
-                    <span className={cn("text-[14px]", i === 1 ? "text-paper/70" : "text-muted")}>/ month</span>
-                  </p>
-                  <ul className={cn("grid gap-1.5 text-[14px]", i === 1 ? "text-paper/85" : "text-muted")}>
-                    <li><span className="num">{p.monthly_credits}</span> credits ({p.monthly_credits} Standard try-ons)</li>
-                    {p.daily_limit && <li>Up to <span className="num">{p.daily_limit}</span> try-ons a day</li>}
-                    <li>About <span className="num">{kes(Math.round(p.price_kes / p.monthly_credits))}</span> a try-on</li>
-                    {p.blurb && <li>{p.blurb}</li>}
-                  </ul>
-                </div>
-                <ButtonLink to={`/checkout/plan/${p.id}`} size="lg" variant={i === 1 ? "outline" : "solid"} className={i === 1 ? "border-paper text-paper hover:bg-paper hover:text-ink" : undefined}>
-                  Choose {p.name}
-                </ButtonLink>
-              </article>
-            ))}
-          </div>
-        </section>
-      )}
-
       <div className="grid gap-6 md:grid-cols-[1fr_300px]">
         <section className="grid content-start gap-4">
           <div className="grid gap-2">
             <h2 className="display text-[clamp(30px,3.4vw,44px)]">Pay as you go</h2>
             <p className="text-muted">Credits that never expire. One credit is one Standard try-on.</p>
           </div>
-          {activePacks.map((p) => (
+          {single && (
+            <div className="grid gap-5 border-2 border-ink bg-ink p-6 text-paper md:grid-cols-[1fr_auto] md:items-center">
+              <div className="grid gap-2">
+                <span className="w-fit bg-mustard px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-label text-ink">Start here</span>
+                <span className="display text-[clamp(38px,5vw,56px)]">{kes(single.price_kes)} a try-on</span>
+                <span className="flex items-center gap-1.5 text-[14px] text-paper/75">
+                  <Lock className="h-3.5 w-3.5" /> One Standard try-on · M-Pesa or card · never expires
+                </span>
+              </div>
+              <ButtonLink to={`/checkout/${single.id}`} size="lg" variant="outline" className="border-paper text-paper hover:bg-paper hover:text-ink">
+                Buy one try-on · {kes(single.price_kes)}
+              </ButtonLink>
+            </div>
+          )}
+          {bundles.map((p) => (
             <div key={p.id} className="flex flex-wrap items-center justify-between gap-4 border border-rule bg-surface p-5">
               <div className="grid gap-1">
-                <span className="label">{p.name}</span>
-                <span className="display text-[30px]">{p.credits === 1 ? "One try-on" : `${p.credits} credits`}</span>
+                <span className="flex items-center gap-2">
+                  <span className="label">{p.name}</span>
+                  {savingVsSingle(p.price_kes, p.credits) > 0 && (
+                    <span className="bg-good-soft px-1.5 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-label text-good">Save {savingVsSingle(p.price_kes, p.credits)}%</span>
+                  )}
+                </span>
+                <span className="display text-[30px]">{p.credits} try-ons</span>
                 <span className="flex items-center gap-1.5 text-[13px] text-muted">
-                  <Lock className="h-3.5 w-3.5" /> {p.credits > 1 ? `${kes(Math.round(p.price_kes / p.credits))} each · ` : ""}M-Pesa or card
+                  <Lock className="h-3.5 w-3.5" /> {kes(Math.round(p.price_kes / p.credits))} each{single ? ` instead of ${kes(single.price_kes)}` : ""} · M-Pesa or card
                 </span>
               </div>
               <ButtonLink to={`/checkout/${p.id}`} size="lg">
@@ -153,6 +143,43 @@ export default function Credits() {
           </p>
         </aside>
       </div>
+
+      {!!activePlans.length && (
+        <section className="grid gap-5">
+          <div className="grid gap-2">
+            <h2 className="display text-[clamp(34px,4vw,52px)]">Try on a lot? Save with a plan</h2>
+            <p className="max-w-[60ch] text-muted">Pay once for 30 days of try-ons with M-Pesa or card. Nothing renews by itself; pay again when you want another month.</p>
+          </div>
+          <div className="grid gap-3 md:grid-cols-3">
+            {activePlans.map((p, i) => (
+              <article key={p.id} className={cn("grid content-between gap-6 border p-6", i === 1 ? "border-ink bg-ink text-paper" : "border-rule bg-surface")}>
+                <div className="grid gap-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className={cn("label", i === 1 && "text-paper/70")}>{p.name}</span>
+                    {i === 1 && <span className="bg-mustard px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-label text-ink">Most chosen</span>}
+                  </div>
+                  <p className="flex items-baseline gap-1.5">
+                    <span className="display text-[44px]">{kes(p.price_kes)}</span>
+                    <span className={cn("text-[14px]", i === 1 ? "text-paper/70" : "text-muted")}>/ month</span>
+                  </p>
+                  <ul className={cn("grid gap-1.5 text-[14px]", i === 1 ? "text-paper/85" : "text-muted")}>
+                    <li><span className="num">{p.monthly_credits}</span> credits ({p.monthly_credits} Standard try-ons)</li>
+                    {p.daily_limit && <li>Up to <span className="num">{p.daily_limit}</span> try-ons a day</li>}
+                    <li>
+                      About <span className="num">{kes(Math.round(p.price_kes / p.monthly_credits))}</span> a try-on
+                      {savingVsSingle(p.price_kes, p.monthly_credits) > 0 ? ` · save ${savingVsSingle(p.price_kes, p.monthly_credits)}%` : ""}
+                    </li>
+                    {p.blurb && <li>{p.blurb}</li>}
+                  </ul>
+                </div>
+                <ButtonLink to={`/checkout/plan/${p.id}`} size="lg" variant={i === 1 ? "outline" : "solid"} className={i === 1 ? "border-paper text-paper hover:bg-paper hover:text-ink" : undefined}>
+                  Choose {p.name}
+                </ButtonLink>
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
 
       {!!payments.data?.length && (
         <section className="grid gap-3">
