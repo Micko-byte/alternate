@@ -8,6 +8,7 @@ import { CATEGORY_SINGULAR, cn, errorMessage, extensionOf, publicMediaUrl } from
 import { DEPARTMENTS, SIZE_SYSTEMS, type Department, type SizeSystem } from "@/lib/sizes";
 import { Button, Field, Input, Notice, PageHeader, Pill, Select, Spinner, Textarea } from "@/components/ui";
 import { VideoFramePicker } from "@/components/VideoFramePicker";
+import { LengthInput, LengthUnitToggle } from "@/components/UnitInputs";
 import { useStore } from "./types";
 import { GARMENT_BY_CATEGORY, LENGTH_OPTIONS } from "@/lib/garments";
 import { MEASURES_FOR, MEASURE_LABELS, STRETCH_OPTIONS, convertAround, toMeasurements, type MeasureKey } from "@/lib/garmentFit";
@@ -373,8 +374,8 @@ function EditProduct({ id }: { id: string }) {
                   {LENGTH_OPTIONS[form.category].map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                 </Select>
               </Field>
-              <Field label="Length in cm (optional)" hint={["bottom", "skirt"].includes(form.category) ? "Waistband to hem, laid flat" : "Top of the shoulder to hem, laid flat"}>
-                <Input type="number" min={5} max={250} value={form.lengthCm} onChange={(e) => setForm({ ...form, lengthCm: e.target.value })} className="num" />
+              <Field label="Length (optional)" hint={["bottom", "skirt"].includes(form.category) ? "Waistband to hem, laid flat" : "Top of the shoulder to hem, laid flat"}>
+                <LengthInput valueCm={form.lengthCm} onChangeCm={(cm) => setForm({ ...form, lengthCm: cm })} />
               </Field>
             </div>
           )}
@@ -405,6 +406,7 @@ function EditProduct({ id }: { id: string }) {
                   <span className="font-medium">Measure each size</span> <span className="text-muted">so shoppers see how it fits their body and try-ons draw it the right tightness.</span>
                 </span>
                 <div className="flex flex-wrap items-center gap-4">
+                  <LengthUnitToggle />
                   <label className="flex cursor-pointer items-center gap-2 text-[13px] text-muted">
                     <input
                       type="checkbox"
@@ -460,8 +462,8 @@ function EditProduct({ id }: { id: string }) {
                 <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
                   {measureKeys.map((k) => (
                     <label key={k} className="grid gap-1">
-                      <span className="text-[11.5px] text-muted" title={MEASURE_LABELS[k].hint}>{MEASURE_LABELS[k].label} cm</span>
-                      <Input type="number" inputMode="decimal" min={1} max={300} value={v.m[k] ?? ""} onChange={(e) => setM(i, k, e.target.value)} className="num h-9" />
+                      <span className="text-[11.5px] text-muted" title={MEASURE_LABELS[k].hint}>{MEASURE_LABELS[k].label}</span>
+                      <LengthInput valueCm={v.m[k] ?? ""} onChangeCm={(cm) => setM(i, k, cm)} className="h-9" />
                     </label>
                   ))}
                 </div>

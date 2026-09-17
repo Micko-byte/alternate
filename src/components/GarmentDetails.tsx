@@ -5,6 +5,7 @@ import { GARMENTS, GARMENT_BY_CATEGORY, LENGTH_OPTIONS, closestLength } from "@/
 import { MEASURES_FOR, MEASURE_LABELS, STRETCH_OPTIONS, convertAround, toMeasurements, type GarmentMeasurements, type MeasureKey, type Stretch } from "@/lib/garmentFit";
 import { cn, errorMessage } from "@/lib/utils";
 import { Button, Field, Input, Notice } from "@/components/ui";
+import { LengthInput, LengthUnitToggle } from "@/components/UnitInputs";
 
 export type GarmentRow = {
   id: string;
@@ -145,12 +146,13 @@ export function GarmentDetails({ garment, previewUrl, seen, allowCategory, onDon
           </Field>
 
           <fieldset className="grid gap-3 border border-rule p-4">
-            <legend className="label px-1">Garment measurements in cm (optional, most accurate)</legend>
+            <legend className="label px-1">Garment measurements (optional, most accurate)</legend>
+            <LengthUnitToggle />
             <p className="text-[12.5px] text-muted">Leave any empty and we'll estimate it from the size and the photo. Anything you type is used exactly.</p>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               {measures.map((k) => (
                 <Field key={k} label={MEASURE_LABELS[k].label} hint={MEASURE_LABELS[k].around && measuredFlat ? "Laid flat, side to side" : MEASURE_LABELS[k].hint}>
-                  <Input type="number" inputMode="decimal" min={1} max={300} value={inputs[k] ?? ""} onChange={(e) => setInputs({ ...inputs, [k]: e.target.value })} className="num" />
+                  <LengthInput valueCm={inputs[k] ?? ""} onChangeCm={(cm) => setInputs({ ...inputs, [k]: cm })} />
                 </Field>
               ))}
             </div>

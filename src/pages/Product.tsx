@@ -7,6 +7,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { PRODUCT_SELECT, fitFor, useBodyMeasurements, useBodyPhotos, useBodyProfile, useCredits, useProfile, useSetupStatus, useSizes, useTryonPrices } from "@/lib/queries";
 import { FEEL_LABELS, areaFits, bodyForSize, estimateGarment, recommendSize, type GarmentMeasurements, type Stretch } from "@/lib/garmentFit";
+import { formatLength, fromCm, useUnits } from "@/lib/units";
+import { LengthUnitToggle } from "@/components/UnitInputs";
 import { FITS, SIZE_SYSTEMS, sizeText, type FitStyle } from "@/lib/sizes";
 import { QUALITY_LABELS, startTryon } from "@/lib/tryon";
 import { CATEGORY_SINGULAR, cn, errorMessage, kes, publicMediaUrl, signedUrl } from "@/lib/utils";
@@ -38,6 +40,7 @@ export default function Product() {
   const [fitStyle, setFitStyle] = useState<FitStyle>("regular");
   const [pickedVariant, setPickedVariant] = useState<string | null>(null);
   const body = useBodyMeasurements();
+  const { length: unit } = useUnits();
   const bodyProfile = useBodyProfile();
   // What the photo check read from this piece: stretch and designed room, used when the store typed no measurements
   const pieceCheck = useQuery({
@@ -205,17 +208,20 @@ export default function Product() {
           </div>
           {selected && !!selectedFits.length && (
             <div className="grid gap-2 border border-rule bg-surface p-4">
-              <span className="label text-ink">How size {selected.size_label} fits you</span>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="label text-ink">How size {selected.size_label} fits you</span>
+                <LengthUnitToggle />
+              </div>
               <table className="w-full text-left text-[13.5px]">
                 <thead className="label"><tr><th className="py-1 font-semibold">Area</th><th>Garment</th><th>You</th><th>Feel</th></tr></thead>
                 <tbody>
                   {selectedFits.map((a) => (
                     <tr key={a.area} className="border-t border-rule">
                       <td className="py-1.5 capitalize">{a.area === "bust" ? (profile.data?.shops_for === "men" ? "Chest" : "Bust") : a.area}</td>
-                      <td className="num">{a.garment} cm</td>
-                      <td className="num">{a.body} cm</td>
+                      <td className="num">{formatLength(a.garment, unit)}</td>
+                      <td className="num">{formatLength(a.body, unit)}</td>
                       <td className={cn(a.feel === "too_small" ? "text-bad" : a.feel === "skin_tight" ? "text-warn" : "text-ink")}>
-                        {FEEL_LABELS[a.feel]} <span className="num text-muted">({a.ease > 0 ? "+" : ""}{a.ease})</span>
+                        {FEEL_LABELS[a.feel]} <span className="num text-muted">({a.ease > 0 ? "+" : a.ease < 0 ? "−" : ""}{fromCm(Math.abs(a.ease), unit)})</span>
                       </td>
                     </tr>
                   ))}

@@ -12,7 +12,7 @@ import { ShopsForPicker, SizeFields, sizeKey } from "@/components/SizeFields";
 import { Button, ButtonLink, Field, Input, Notice, PageHeader, Select } from "@/components/ui";
 import { BodyPhotoUploader } from "@/components/BodyPhotoUploader";
 import { Measurements } from "@/components/Measurements";
-import { heightHint } from "@/components/BodyBasics";
+import { HeightInput, WeightInput, heightCheck } from "@/components/UnitInputs";
 
 const POLICY_VERSION = "2026-09-v1";
 
@@ -98,8 +98,8 @@ function AboutStep() {
         <Field label="Phone (M-Pesa)"><Input type="tel" value={form.phone} onChange={set("phone")} placeholder="07XX XXX XXX" /></Field>
         <Field label="Date of birth" hint="You must be 18 or older"><Input type="date" required value={form.date_of_birth} onChange={set("date_of_birth")} /></Field>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Height (cm)" hint={heightHint(form.height_cm)}><Input type="number" min={100} max={250} value={form.height_cm} onChange={set("height_cm")} className="num" /></Field>
-          <Field label="Weight (kg)"><Input type="number" min={25} max={300} value={form.weight_kg} onChange={set("weight_kg")} className="num" /></Field>
+          <Field label="Height" hint={heightCheck(form.height_cm)}><HeightInput valueCm={form.height_cm} onChangeCm={(v) => setForm({ ...form, height_cm: v })} /></Field>
+          <Field label="Weight"><WeightInput valueKg={form.weight_kg} onChangeKg={(v) => setForm({ ...form, weight_kg: v })} /></Field>
         </div>
       </div>
       <Button onClick={save} loading={busy} className="justify-self-start">Save</Button>

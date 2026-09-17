@@ -7,7 +7,9 @@ import { useAuth } from "@/lib/auth";
 import { useBodyMeasurements, useBodyPhotos, useBodyProfile, useProfile } from "@/lib/queries";
 import { SIZE_SYSTEMS, sizeText, type SizeSystem } from "@/lib/sizes";
 import { cn, errorMessage } from "@/lib/utils";
-import { Button, Field, Input, Notice, Pill, Spinner } from "@/components/ui";
+import { Button, Field, Notice, Pill, Spinner } from "@/components/ui";
+import { LengthInput, LengthUnitToggle } from "@/components/UnitInputs";
+import { fromCm, useUnits } from "@/lib/units";
 
 type Fields = { bust: number | null; waist: number | null; hips: number | null };
 const FIELDS = ["bust", "waist", "hips"] as const;
@@ -22,6 +24,8 @@ export function Measurements() {
   const bodyProfile = useBodyProfile();
   const menswear = profile.data?.shops_for === "men";
   const upperName = menswear ? "Chest" : "Bust";
+  const { length: unit } = useUnits();
+  const other = unit === "in" ? "cm" : "in";
 
   const saved = useBodyMeasurements();
 
@@ -102,7 +106,7 @@ export function Measurements() {
     for (const f of FIELDS) {
       const n = Number(tape[f]);
       values[f] = tape[f] === "" ? null : n >= 40 && n <= 220 ? n : NaN;
-      if (Number.isNaN(values[f])) return toast.error(`${f === "bust" ? upperName : f[0].toUpperCase() + f.slice(1)} should be in cm, between 40 and 220.`);
+      if (Number.isNaN(values[f])) return toast.error(`${f === "bust" ? upperName : f[0].toUpperCase() + f.slice(1)} looks wrong: it should be between 40 and 220 cm (16 to 87 in).`);
     }
     setBusy("tape");
     try {
@@ -179,22 +183,24 @@ export function Measurements() {
         </Notice>
       )}
 
+      <div className="flex justify-end"><LengthUnitToggle /></div>
+
       <div className="grid grid-cols-3 gap-2">
         {FIELDS.map((f) => (
           <div key={f} className="grid gap-1 border border-rule bg-paper p-4">
             <span className="label">{f === "bust" ? upperName : f === "waist" ? "Waist" : "Hips"}</span>
             {current[f] ? (
               <>
-                <span className="num text-[28px] leading-none">{current[f]}<span className="ml-1 text-[13px] text-muted">cm</span></span>
-                <span className="num text-[12px] text-muted">{(current[f]! / 2.54).toFixed(1)} in</span>
+                <span className="num text-[28px] leading-none">{fromCm(current[f]!, unit)}<span className="ml-1 text-[13px] text-muted">{unit}</span></span>
+                <span className="num text-[12px] text-muted">{fromCm(current[f]!, other)} {other}</span>
                 <Pill tone={sources[f] === "tape" ? "good" : "neutral"} className="justify-self-start">
                   {sources[f] === "tape" ? "Tape" : `Photo ±${saved.data?.accuracy_cm ?? "?"} cm`}
                 </Pill>
               </>
             ) : aiValue[f] ? (
               <>
-                <span className="num text-[28px] leading-none text-muted">~{aiValue[f]}<span className="ml-1 text-[13px]">cm</span></span>
-                <span className="num text-[12px] text-muted">{(aiValue[f]! / 2.54).toFixed(1)} in</span>
+                <span className="num text-[28px] leading-none text-muted">~{fromCm(aiValue[f]!, unit)}<span className="ml-1 text-[13px]">{unit}</span></span>
+                <span className="num text-[12px] text-muted">{fromCm(aiValue[f]!, other)} {other}</span>
                 <Pill tone="accent" className="justify-self-start">AI estimate</Pill>
               </>
             ) : (
@@ -223,8 +229,8 @@ export function Measurements() {
           </ul>
           <div className="grid grid-cols-3 gap-3">
             {FIELDS.map((f) => (
-              <Field key={f} label={`${f === "bust" ? upperName : f === "waist" ? "Waist" : "Hips"} (cm)`}>
-                <Input type="number" inputMode="decimal" min={40} max={220} value={tape[f]} onChange={(e) => setTape({ ...tape, [f]: e.target.value })} className="num" />
+              <Field key={f} label={f === "bust" ? upperName : f === "waist" ? "Waist" : "Hips"}>
+                <LengthInput valueCm={tape[f]} onChangeCm={(cm) => setTape({ ...tape, [f]: cm })} />
               </Field>
             ))}
           </div>

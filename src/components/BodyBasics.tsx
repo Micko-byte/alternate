@@ -5,15 +5,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { useProfile } from "@/lib/queries";
 import { errorMessage } from "@/lib/utils";
-import { Button, Field, Input } from "@/components/ui";
-
-/** Shows 165 cm as 5 ft 5 in, so a wrong height is easy to spot. */
-export function heightHint(cm: string) {
-  const n = Number(cm);
-  if (!n || n < 100 || n > 250) return "Used to place hems and read measurements";
-  const inches = Math.round(n / 2.54);
-  return `That's ${Math.floor(inches / 12)} ft ${inches % 12} in. Check it's right.`;
-}
+import { Button, Field } from "@/components/ui";
+import { HeightInput, WeightInput, heightCheck } from "@/components/UnitInputs";
 
 /** Height and weight, editable any time. */
 export function BodyBasics() {
@@ -32,8 +25,8 @@ export function BodyBasics() {
   const save = async () => {
     const h = height ? Number(height) : null;
     const w = weight ? Number(weight) : null;
-    if (h !== null && (h < 100 || h > 250)) return toast.error("Height should be in cm, between 100 and 250.");
-    if (w !== null && (w < 25 || w > 300)) return toast.error("Weight should be in kg, between 25 and 300.");
+    if (h !== null && (h < 100 || h > 250)) return toast.error("That height looks wrong. Between 1 m and 2.5 m (3 ft 4 in to 8 ft 2 in).");
+    if (w !== null && (w < 25 || w > 300)) return toast.error("That weight looks wrong. Between 25 and 300 kg (55 to 660 lb).");
     setBusy(true);
     const { error } = await supabase.from("profiles").update({ height_cm: h, weight_kg: w }).eq("id", user!.id);
     setBusy(false);
@@ -45,12 +38,12 @@ export function BodyBasics() {
   const changed = height !== (profile.data?.height_cm?.toString() ?? "") || weight !== (profile.data?.weight_kg?.toString() ?? "");
 
   return (
-    <div className="grid items-end gap-3 sm:grid-cols-[180px_180px_auto]">
-      <Field label="Height (cm)" hint={heightHint(height)}>
-        <Input type="number" min={100} max={250} value={height} onChange={(e) => setHeight(e.target.value)} className="num" />
+    <div className="grid items-end gap-3 sm:grid-cols-[220px_180px_auto]">
+      <Field label="Height" hint={heightCheck(height)}>
+        <HeightInput valueCm={height} onChangeCm={setHeight} />
       </Field>
-      <Field label="Weight (kg)" hint="Private. Never used to change your body in try-ons.">
-        <Input type="number" min={25} max={300} value={weight} onChange={(e) => setWeight(e.target.value)} className="num" />
+      <Field label="Weight" hint="Private. Never used to change your body in try-ons.">
+        <WeightInput valueKg={weight} onChangeKg={setWeight} />
       </Field>
       <Button onClick={save} loading={busy} disabled={!changed} className="mb-6 justify-self-start">Save</Button>
     </div>
