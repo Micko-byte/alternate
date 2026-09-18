@@ -2,11 +2,11 @@ import type { ReactNode } from "react";
 import { NavLink, Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import { LogOut, Shirt, ShoppingBag, Sparkles, User } from "lucide-react";
 import { useAuth } from "@/lib/auth";
-import { useCredits, useIsAdmin, useMyStore } from "@/lib/queries";
+import { useCredits, useIsAdmin, useMyStore, useShopPacks } from "@/lib/queries";
 import { FeedbackButton } from "@/components/FeedbackButton";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { InstallBanner } from "@/components/InstallApp";
-import { cn } from "@/lib/utils";
+import { cn, kes } from "@/lib/utils";
 import { Wordmark } from "@/components/Wordmark";
 
 const nav = [
@@ -17,7 +17,7 @@ const nav = [
   { to: "/wardrobe", label: "Wardrobe" },
 ];
 
-const announcements = ["Try it on for KES 50 · pay with M-Pesa", "Your face is never changed", "Every try-on is quality checked", "Clothes, shoes, glasses & jewellery", "Made in Nairobi"];
+const announcements = (offer: string) => [offer, "Your face is never changed", "Every try-on is quality checked", "Clothes, shoes, glasses & jewellery", "Made in Nairobi"];
 
 export function AppShell({ children }: { children?: ReactNode }) {
   const { user, signOut } = useAuth();
@@ -25,15 +25,17 @@ export function AppShell({ children }: { children?: ReactNode }) {
   const credits = useCredits();
   const store = useMyStore();
   const isAdmin = useIsAdmin();
+  const { starter } = useShopPacks();
   const { pathname, search } = useLocation();
+  const offers = announcements(starter ? `${starter.credits} try-ons for ${kes(starter.price_kes)} · pay with M-Pesa` : "Try-ons from KES 50 · pay with M-Pesa");
   const fullBleed = pathname === "/" || pathname === "/welcome";
 
   return (
     <div className={cn("flex min-h-dvh flex-col md:pb-0", user && "pb-16")}>
       <div className="overflow-hidden bg-accent text-white" aria-label="Announcements">
         <div className="flex w-max animate-marquee gap-12 py-2 motion-reduce:animate-none">
-          {[...announcements, ...announcements].map((a, i) => (
-            <span key={i} className="font-mono text-[11px] font-semibold uppercase tracking-label" aria-hidden={i >= announcements.length}>
+          {[...offers, ...offers].map((a, i) => (
+            <span key={i} className="font-mono text-[11px] font-semibold uppercase tracking-label" aria-hidden={i >= offers.length}>
               {a}
             </span>
           ))}

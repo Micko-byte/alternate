@@ -184,6 +184,31 @@ export function useCreditPacks() {
   });
 }
 
+/**
+ * The packs a shopper should see: the launch offer only on a first purchase, the everyday
+ * starter pack (cheapest way in), and the bundles. `lead` is the one to push.
+ */
+export function useShopPacks() {
+  const { user } = useAuth();
+  const packs = useCreditPacks();
+
+  const firstPurchase = useQuery({
+    queryKey: ["first-purchase", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { count } = await supabase.from("payments").select("id", { count: "exact", head: true }).eq("user_id", user!.id).eq("status", "success");
+      return !count;
+    },
+  });
+
+  const live = (packs.data ?? []).filter((p) => p.is_active && (!p.available_until || new Date(p.available_until) > new Date()));
+  const everyday = live.filter((p) => !p.first_purchase_only);
+  const starter = [...everyday].sort((a, b) => a.price_kes - b.price_kes || b.credits - a.credits)[0] ?? null;
+  const launch = (!user || firstPurchase.data) ? live.find((p) => p.first_purchase_only) ?? null : null;
+  const lead = launch ?? starter;
+  return { lead, starter, others: live.filter((p) => p !== lead).sort((a, b) => a.sort_order - b.sort_order) };
+}
+
 export function useIsAdmin() {
   const { user } = useAuth();
   return useQuery({

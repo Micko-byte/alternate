@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Lock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
-import { useCreditPacks, useSubscriptionPlans, useTryonPrices, useWallet } from "@/lib/queries";
+import { useShopPacks, useSubscriptionPlans, useTryonPrices, useWallet } from "@/lib/queries";
 import { QUALITY_LABELS } from "@/lib/tryon";
 import { cn, kes } from "@/lib/utils";
 import { ButtonLink, PageHeader, Pill } from "@/components/ui";
@@ -19,7 +19,7 @@ const dateText = (iso: string) => new Date(iso).toLocaleDateString("en-KE", { da
 export default function Credits() {
   const { user } = useAuth();
   const wallet = useWallet();
-  const packs = useCreditPacks();
+  const { lead, starter, others } = useShopPacks();
   const plans = useSubscriptionPlans();
   const prices = useTryonPrices();
   const w = wallet.data;
@@ -46,12 +46,10 @@ export default function Credits() {
   });
 
   const activePlans = plans.data?.filter((p) => p.is_active) ?? [];
-  const activePacks = packs.data?.filter((p) => p.is_active) ?? [];
-  // One try-on is what most people buy first; everything else is shown as a saving against it
-  const single = activePacks.find((p) => p.credits === 1) ?? null;
-  const bundles = activePacks.filter((p) => p !== single);
-  const savingVsSingle = (price: number, credits: number) =>
-    single ? Math.round((1 - price / credits / single.price_kes) * 100) : 0;
+  // Everything is shown as a saving against the starter pack, the cheapest everyday way in
+  const starterEach = starter ? starter.price_kes / starter.credits : 0;
+  const savingVsStarter = (price: number, credits: number) =>
+    starterEach ? Math.round((1 - price / credits / starterEach) * 100) : 0;
 
   return (
     <div className="grid gap-12">
@@ -93,32 +91,34 @@ export default function Credits() {
             <h2 className="display text-[clamp(30px,3.4vw,44px)]">Pay as you go</h2>
             <p className="text-muted">Credits that never expire. One credit is one Standard try-on.</p>
           </div>
-          {single && (
+          {lead && (
             <div className="grid gap-5 border-2 border-ink bg-ink p-6 text-paper md:grid-cols-[1fr_auto] md:items-center">
               <div className="grid gap-2">
-                <span className="w-fit bg-mustard px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-label text-ink">Start here</span>
-                <span className="display text-[clamp(38px,5vw,56px)]">{kes(single.price_kes)} a try-on</span>
+                <span className="w-fit bg-mustard px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-label text-ink">
+                  {lead.first_purchase_only ? "Launch offer · first buy only" : "Start here"}
+                </span>
+                <span className="display text-[clamp(38px,5vw,56px)]">{lead.credits} try-ons for {kes(lead.price_kes)}</span>
                 <span className="flex items-center gap-1.5 text-[14px] text-paper/75">
-                  <Lock className="h-3.5 w-3.5" /> One Standard try-on · M-Pesa or card · never expires
+                  <Lock className="h-3.5 w-3.5" /> {kes(Math.round(lead.price_kes / lead.credits))} a try-on · M-Pesa or card · never expires
                 </span>
               </div>
-              <ButtonLink to={`/checkout/${single.id}`} size="lg" variant="outline" className="border-paper text-paper hover:bg-paper hover:text-ink">
-                Buy one try-on · {kes(single.price_kes)}
+              <ButtonLink to={`/checkout/${lead.id}`} size="lg" variant="outline" className="border-paper text-paper hover:bg-paper hover:text-ink">
+                Buy {lead.credits} try-ons · {kes(lead.price_kes)}
               </ButtonLink>
             </div>
           )}
-          {bundles.map((p) => (
+          {others.map((p) => (
             <div key={p.id} className="flex flex-wrap items-center justify-between gap-4 border border-rule bg-surface p-5">
               <div className="grid gap-1">
                 <span className="flex items-center gap-2">
                   <span className="label">{p.name}</span>
-                  {savingVsSingle(p.price_kes, p.credits) > 0 && (
-                    <span className="bg-good-soft px-1.5 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-label text-good">Save {savingVsSingle(p.price_kes, p.credits)}%</span>
+                  {savingVsStarter(p.price_kes, p.credits) > 0 && (
+                    <span className="bg-good-soft px-1.5 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-label text-good">Save {savingVsStarter(p.price_kes, p.credits)}%</span>
                   )}
                 </span>
                 <span className="display text-[30px]">{p.credits} try-ons</span>
                 <span className="flex items-center gap-1.5 text-[13px] text-muted">
-                  <Lock className="h-3.5 w-3.5" /> {kes(Math.round(p.price_kes / p.credits))} each{single ? ` instead of ${kes(single.price_kes)}` : ""} · M-Pesa or card
+                  <Lock className="h-3.5 w-3.5" /> {kes(Math.round(p.price_kes / p.credits))} each{starterEach && p.price_kes / p.credits < starterEach ? ` instead of ${kes(Math.round(starterEach))}` : ""} · M-Pesa or card
                 </span>
               </div>
               <ButtonLink to={`/checkout/${p.id}`} size="lg">
@@ -139,7 +139,7 @@ export default function Credits() {
             </div>
           ))}
           <p className="text-[13px] text-muted">
-            Plan credits are used first. Failed try-ons are refunded automatically. If a store brought you to ALTERNATE, 20% of what you pay goes to that store.
+            Plan credits are used first. Failed try-ons are refunded automatically. If a store brought you to ALTERNATE, part of what you pay goes to that store.
           </p>
         </aside>
       </div>
@@ -167,7 +167,7 @@ export default function Credits() {
                     {p.daily_limit && <li>Up to <span className="num">{p.daily_limit}</span> try-ons a day</li>}
                     <li>
                       About <span className="num">{kes(Math.round(p.price_kes / p.monthly_credits))}</span> a try-on
-                      {savingVsSingle(p.price_kes, p.monthly_credits) > 0 ? ` · save ${savingVsSingle(p.price_kes, p.monthly_credits)}%` : ""}
+                      {savingVsStarter(p.price_kes, p.monthly_credits) > 0 ? ` · save ${savingVsStarter(p.price_kes, p.monthly_credits)}%` : ""}
                     </li>
                     {p.blurb && <li>{p.blurb}</li>}
                   </ul>

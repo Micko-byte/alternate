@@ -12,8 +12,11 @@ import {
   CATEGORY_NAME,
   UserError,
   categoryMatches,
+  aiSetup,
   checkPassed,
   checkResult,
+  worthRedoing,
+  type AiSetup,
   download,
   ensureBodyProfile,
   inspectGarment,
@@ -190,7 +193,8 @@ async function runAttempt(admin: SupabaseClient, tryon: Tryon) {
     if (!apiKey) throw new Error("OPENAI_API_KEY is not set on the server");
     await admin.from("tryons").update({ attempts: n }).eq("id", tryon.id);
 
-    const prepared = await prepare(admin, tryon);
+    const setup = await aiSetup(admin);
+    const prepared = await prepare(admin, tryon, setup);
     costUsd += prepared.costUsd;
 
     const fixes = attempts.map((a) => a.check?.problems).filter(Boolean).at(-1);
@@ -217,6 +221,7 @@ async function runAttempt(admin: SupabaseClient, tryon: Tryon) {
       const checked = await checkResult(
         { customer: prepared.person, garment: prepared.garment, result: new Blob([generated.png as Uint8Array<ArrayBuffer>], { type: "image/png" }) },
         prepared.task,
+        setup.textModel,
       );
       check = checked.check;
       costUsd += checked.costUsd;
@@ -225,6 +230,7 @@ async function runAttempt(admin: SupabaseClient, tryon: Tryon) {
       console.error("quality check unavailable", tryon.id, checkError);
     }
     const passed = check ? checkPassed(check) : true;
+    const redo = check ? worthRedoing(check, setup.mode) : false;
     attempts.push({ n, path: workPath, check, passed, ...(checkError ? { check_error: checkError } : {}) });
 
     const common = {
@@ -236,15 +242,15 @@ async function runAttempt(admin: SupabaseClient, tryon: Tryon) {
       cost_usd: Number(costUsd.toFixed(5)),
     };
 
-    if (!passed && n < tier.attempts) {
-      await admin.from("tryons").update({ ...common, qa: { attempts } }).eq("id", tryon.id);
+    if (redo && n < tier.attempts) {
+      await admin.from("tryons").update({ ...common, qa: { attempts, ai_mode: setup.mode } }).eq("id", tryon.id);
       await continueLater(tryon.id);
       return;
     }
 
     const best = [...attempts].sort((a, b) => Number(b.passed) - Number(a.passed) || (b.check?.score ?? 1) - (a.check?.score ?? 1))[0];
     if (!best.passed && best.check && (!best.check.garment_matches || best.check.score < 0.45)) {
-      await admin.from("tryons").update({ ...common, qa: { attempts } }).eq("id", tryon.id);
+      await admin.from("tryons").update({ ...common, qa: { attempts, ai_mode: setup.mode } }).eq("id", tryon.id);
       throw new UserError(
         `We couldn't make a try-on good enough to show you${best.check.problems ? ` (${best.check.problems.replace(/\.$/, "")})` : ""}. Your credits are back. A clearer photo of the item usually fixes this.`,
       );
@@ -268,7 +274,7 @@ async function runAttempt(admin: SupabaseClient, tryon: Tryon) {
         status: "succeeded",
         result_path: resultPath,
         identity_score: best.check ? Number(best.check.score.toFixed(3)) : null,
-        qa: { attempts, chosen: best.n, passed: best.passed },
+        qa: { attempts, chosen: best.n, passed: best.passed, ai_mode: setup.mode, text_model: setup.textModel },
         completed_at: new Date().toISOString(),
         error_message: null,
         ...(deletePhotos ? { edit_mask_path: null } : {}),
@@ -318,7 +324,7 @@ async function continueLater(tryonId: string) {
 }
 
 /** Everything one attempt needs: images, mask, references and the prompt. */
-async function prepare(admin: SupabaseClient, tryon: Tryon) {
+async function prepare(admin: SupabaseClient, tryon: Tryon, setup: AiSetup) {
   let costUsd = 0;
 
   const { data: photo } = await admin
@@ -404,7 +410,7 @@ async function prepare(admin: SupabaseClient, tryon: Tryon) {
   const outdated = !!inspection && !(inspection.items ?? []).some((i: InspectionItem) => "design_ease" in i);
   if (!inspection || outdated || inspection.source_path !== inspectedPath) {
     const original = tryon.product_id || !isCutout ? garment : await download(admin, "garment-uploads", inspectedPath);
-    const fresh = await inspectGarment(original, hint);
+    const fresh = await inspectGarment(original, hint, setup.textModel);
     costUsd += fresh.costUsd;
     const row = { ...key, source_path: inspectedPath, categories: fresh.categories, items: fresh.items, is_wearable: fresh.is_wearable, cost_usd: Number(fresh.costUsd.toFixed(5)) };
     await admin.from("garment_inspections").upsert(row, { onConflict: keyColumn });
@@ -483,7 +489,7 @@ async function prepare(admin: SupabaseClient, tryon: Tryon) {
   let bodyEstimates: Areas | null = null;
   let references: { id: string; blob: Blob }[] = [];
   try {
-    const body = await ensureBodyProfile(admin, tryon.user_id);
+    const body = await ensureBodyProfile(admin, tryon.user_id, setup.textModel);
     if (body) {
       costUsd += (body as { costUsd?: number }).costUsd ?? 0;
       bodySummary = body.summary ?? "";

@@ -27,9 +27,20 @@ Deno.serve(async (req) => {
     if (plan) item = { id: plan.id, credits: plan.monthly_credits, price_kes: plan.price_kes, kind: "plan" };
     if (!item) return json({ error: "That plan isn't available" }, 404);
   } else {
-    const { data: pack } = await admin.from("credit_packs").select("id, credits, price_kes").eq("id", pack_id).eq("is_active", true).maybeSingle();
-    if (pack) item = { ...pack, kind: "pack" };
-    if (!item) return json({ error: "That credit pack isn't available" }, 404);
+    const { data: pack } = await admin
+      .from("credit_packs")
+      .select("id, credits, price_kes, first_purchase_only, available_until")
+      .eq("id", pack_id)
+      .eq("is_active", true)
+      .maybeSingle();
+    if (!pack || (pack.available_until && new Date(pack.available_until) < new Date())) {
+      return json({ error: "That credit pack isn't available" }, 404);
+    }
+    if (pack.first_purchase_only) {
+      const { count } = await admin.from("payments").select("id", { count: "exact", head: true }).eq("user_id", user.id).eq("status", "success");
+      if (count) return json({ error: "The launch offer is for your first purchase. Pick another pack." }, 409);
+    }
+    item = { id: pack.id, credits: pack.credits, price_kes: pack.price_kes, kind: "pack" };
   }
 
   const reference = `ALT-${crypto.randomUUID()}`;

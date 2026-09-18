@@ -5,7 +5,7 @@ import { Bell, Heart, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
-import { PRODUCT_SELECT, fitFor, useBodyMeasurements, useBodyPhotos, useBodyProfile, useCreditPacks, useCredits, useProfile, useSetupStatus, useSizes, useTryonPrices } from "@/lib/queries";
+import { PRODUCT_SELECT, fitFor, useBodyMeasurements, useBodyPhotos, useBodyProfile, useCredits, useProfile, useSetupStatus, useShopPacks, useSizes, useTryonPrices } from "@/lib/queries";
 import { FEEL_LABELS, areaFits, bodyForSize, estimateGarment, recommendSize, type GarmentMeasurements, type Stretch } from "@/lib/garmentFit";
 import { formatLength, fromCm, useUnits } from "@/lib/units";
 import { LengthUnitToggle } from "@/components/UnitInputs";
@@ -32,8 +32,7 @@ export default function Product() {
   const photos = useBodyPhotos();
   const prices = useTryonPrices();
   const credits = useCredits();
-  const packs = useCreditPacks();
-  const singlePack = packs.data?.find((pk) => pk.is_active && pk.credits === 1);
+  const { lead } = useShopPacks();
   const [active, setActive] = useState(0);
   const [quality, setQuality] = useState<"standard" | "hd" | "studio">("standard");
   const [photoId, setPhotoId] = useState<string>();
@@ -315,8 +314,8 @@ export default function Product() {
           </fieldset>
         )}
         {(credits.data ?? 0) < cost ? (
-          singlePack && cost - (credits.data ?? 0) <= 1 ? (
-            <ButtonLink to={`/checkout/${singlePack.id}`} variant="accent" size="lg">Buy this try-on · {kes(singlePack.price_kes)}</ButtonLink>
+          lead && cost - (credits.data ?? 0) <= lead.credits ? (
+            <ButtonLink to={`/checkout/${lead.id}`} variant="accent" size="lg">Buy {lead.credits} try-ons · {kes(lead.price_kes)}</ButtonLink>
           ) : (
             <ButtonLink to="/credits" variant="accent" size="lg">Get credits to try on</ButtonLink>
           )

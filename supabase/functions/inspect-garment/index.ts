@@ -2,7 +2,7 @@
 // so the fitting room can say "this is a hoodie, not trousers" before anyone pays.
 // The result is saved server-side; request_tryon() refuses a category the photo doesn't contain.
 import { adminClient, callerFrom, corsHeaders, json } from "../_shared/http.ts";
-import { CATEGORY_NAME, categoryMatches, download, inspectGarment, itemFor } from "../_shared/ai.ts";
+import { CATEGORY_NAME, aiSetup, categoryMatches, download, inspectGarment, itemFor } from "../_shared/ai.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -65,7 +65,7 @@ Deno.serve(async (req) => {
   const outdated = !!inspection && !(inspection.items ?? []).some((i: object) => "design_ease" in i);
   if (!inspection || outdated || inspection.source_path !== path) {
     try {
-      const fresh = await inspectGarment(await download(admin, bucket, path), hint);
+      const fresh = await inspectGarment(await download(admin, bucket, path), hint, (await aiSetup(admin)).textModel);
       const row = { ...key, source_path: path, categories: fresh.categories, items: fresh.items, is_wearable: fresh.is_wearable, cost_usd: Number(fresh.costUsd.toFixed(5)) };
       const { error } = await admin.from("garment_inspections").upsert(row, { onConflict: keyColumn });
       if (error) throw new Error(error.message);

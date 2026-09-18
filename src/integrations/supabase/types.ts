@@ -271,31 +271,40 @@ export type Database = {
       }
       credit_packs: {
         Row: {
+          available_until: string | null
           created_at: string
           credits: number
+          first_purchase_only: boolean
           id: string
           is_active: boolean
           name: string
           price_kes: number
           sort_order: number
+          store_share: number | null
         }
         Insert: {
+          available_until?: string | null
           created_at?: string
           credits: number
+          first_purchase_only?: boolean
           id?: string
           is_active?: boolean
           name: string
           price_kes: number
           sort_order?: number
+          store_share?: number | null
         }
         Update: {
+          available_until?: string | null
           created_at?: string
           credits?: number
+          first_purchase_only?: boolean
           id?: string
           is_active?: boolean
           name?: string
           price_kes?: number
           sort_order?: number
+          store_share?: number | null
         }
         Relationships: []
       }
@@ -1351,7 +1360,7 @@ export type Database = {
       tryons: {
         Row: {
           attempts: number
-          body_photo_id: string
+          body_photo_id: string | null
           completed_at: string | null
           cost_usd: number | null
           created_at: string
@@ -1359,6 +1368,7 @@ export type Database = {
           edit_mask_path: string | null
           engine: string | null
           error_message: string | null
+          face_mask_path: string | null
           feedback: string | null
           fit: Database["public"]["Enums"]["fit_style"]
           garment_instruction: string | null
@@ -1384,7 +1394,7 @@ export type Database = {
         }
         Insert: {
           attempts?: number
-          body_photo_id: string
+          body_photo_id?: string | null
           completed_at?: string | null
           cost_usd?: number | null
           created_at?: string
@@ -1392,6 +1402,7 @@ export type Database = {
           edit_mask_path?: string | null
           engine?: string | null
           error_message?: string | null
+          face_mask_path?: string | null
           feedback?: string | null
           fit?: Database["public"]["Enums"]["fit_style"]
           garment_instruction?: string | null
@@ -1417,7 +1428,7 @@ export type Database = {
         }
         Update: {
           attempts?: number
-          body_photo_id?: string
+          body_photo_id?: string | null
           completed_at?: string | null
           cost_usd?: number | null
           created_at?: string
@@ -1425,6 +1436,7 @@ export type Database = {
           edit_mask_path?: string | null
           engine?: string | null
           error_message?: string | null
+          face_mask_path?: string | null
           feedback?: string | null
           fit?: Database["public"]["Enums"]["fit_style"]
           garment_instruction?: string | null
@@ -1587,6 +1599,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_ai_costs: { Args: never; Returns: Json }
       admin_feedback: {
         Args: never
         Returns: {
@@ -1738,7 +1751,7 @@ export type Database = {
         }
         Returns: {
           attempts: number
-          body_photo_id: string
+          body_photo_id: string | null
           completed_at: string | null
           cost_usd: number | null
           created_at: string
@@ -1746,6 +1759,7 @@ export type Database = {
           edit_mask_path: string | null
           engine: string | null
           error_message: string | null
+          face_mask_path: string | null
           feedback: string | null
           fit: Database["public"]["Enums"]["fit_style"]
           garment_instruction: string | null

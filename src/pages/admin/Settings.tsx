@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useIsOwner } from "@/lib/admin";
 import { errorMessage } from "@/lib/utils";
 import { Button, Field, Input, Notice, PageHeader, Pill } from "@/components/ui";
+import { AiMode } from "./AiMode";
 import { PricingEditor } from "./PricingEditor";
 
 export default function AdminSettings() {
@@ -48,6 +49,8 @@ export default function AdminSettings() {
   return (
     <div className="grid max-w-4xl gap-10">
       <PageHeader eyebrow="Admin · settings" title="Controls" />
+
+      <AiMode />
 
       <PricingEditor />
 

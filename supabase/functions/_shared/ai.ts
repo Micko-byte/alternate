@@ -3,8 +3,32 @@
 import { encodeBase64 } from "jsr:@std/encoding@1/base64";
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2.88.0";
 
-export const TEXT_MODEL = Deno.env.get("OPENAI_TEXT_MODEL") ?? "gpt-6-astra";
-const TEXT_PRICE = { input: 10, output: 50 }; // USD per 1M tokens
+// Two setups, switched for the whole system from Admin (app_settings.ai_mode):
+//   premium: GPT-6 Astra reads photos and checks results
+//   saver:   GPT-5.6 Luna does the same reading and checking at about 1/50th of the price
+// Image generation is the same in both.
+export const PREMIUM_TEXT_MODEL = Deno.env.get("OPENAI_TEXT_MODEL") ?? "gpt-6-astra";
+export const SAVER_TEXT_MODEL = Deno.env.get("OPENAI_SAVER_TEXT_MODEL") ?? "gpt-5.6-luna";
+
+// USD per 1M tokens (developers.openai.com/api/docs/pricing, September 2026)
+const TEXT_PRICES: Record<string, { input: number; output: number }> = {
+  "gpt-6-astra": { input: 10, output: 50 },
+  "gpt-5.6-sol": { input: 4, output: 20 },
+  "gpt-5.6-terra": { input: 2, output: 12 },
+  "gpt-5.6-luna": { input: 0.2, output: 1.2 },
+  "gpt-5-mini": { input: 0.25, output: 2 },
+  "gpt-5-nano": { input: 0.05, output: 0.4 },
+};
+
+export type AiMode = "saver" | "premium";
+export type AiSetup = { mode: AiMode; textModel: string };
+
+/** The system-wide AI setup chosen in Admin. Saver unless an admin switched to premium. */
+export async function aiSetup(admin: SupabaseClient): Promise<AiSetup> {
+  const { data } = await admin.from("app_settings").select("value").eq("key", "ai_mode").maybeSingle();
+  const mode: AiMode = data?.value === "premium" ? "premium" : "saver";
+  return { mode, textModel: mode === "premium" ? PREMIUM_TEXT_MODEL : SAVER_TEXT_MODEL };
+}
 
 export const CATEGORIES = ["dress", "top", "bottom", "skirt", "jumpsuit", "outerwear", "set", "shoes", "eyewear", "headwear", "jewellery", "other"] as const;
 export type Category = (typeof CATEGORIES)[number];
@@ -49,14 +73,16 @@ export async function download(admin: SupabaseClient, bucket: string, path: stri
 
 type Content = { type: "input_text"; text: string } | { type: "input_image"; image_url: string; detail?: "low" | "high" | "auto" };
 
-async function askJson<T>(opts: { name: string; instructions: string; content: Content[]; schema: Record<string, unknown>; maxTokens: number }): Promise<{ data: T; costUsd: number }> {
+type Asked<T> = { data: T; costUsd: number; model: string };
+
+async function askJsonWith<T>(model: string, opts: { name: string; instructions: string; content: Content[]; schema: Record<string, unknown>; maxTokens: number }): Promise<Asked<T>> {
   const apiKey = Deno.env.get("OPENAI_API_KEY");
   if (!apiKey) throw new Error("OPENAI_API_KEY is not set on the server");
   const res = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: TEXT_MODEL,
+      model,
       instructions: opts.instructions,
       max_output_tokens: opts.maxTokens,
       input: [{ role: "user", content: opts.content }],
@@ -64,16 +90,33 @@ async function askJson<T>(opts: { name: string; instructions: string; content: C
     }),
   });
   const body = await res.json();
-  if (!res.ok) throw new Error(`${opts.name} failed: ${body?.error?.message ?? res.status}`);
+  const price = TEXT_PRICES[model] ?? TEXT_PRICES["gpt-6-astra"];
+  const usage = body.usage ?? {};
+  const costUsd = ((usage.input_tokens ?? 0) * price.input + (usage.output_tokens ?? 0) * price.output) / 1_000_000;
+  if (!res.ok) throw Object.assign(new Error(`${opts.name} failed on ${model}: ${body?.error?.message ?? res.status}`), { status: res.status, costUsd });
   const text = (body.output ?? [])
     .flatMap((o: { content?: { type: string; text?: string }[] }) => o.content ?? [])
     .find((c: { type: string }) => c.type === "output_text")?.text;
-  const usage = body.usage ?? {};
-  const costUsd = ((usage.input_tokens ?? 0) * TEXT_PRICE.input + (usage.output_tokens ?? 0) * TEXT_PRICE.output) / 1_000_000;
   try {
-    return { data: JSON.parse(text) as T, costUsd };
+    return { data: JSON.parse(text) as T, costUsd, model };
   } catch {
-    throw new Error(`${opts.name} returned unreadable JSON`);
+    throw Object.assign(new Error(`${opts.name} returned unreadable JSON on ${model}`), { costUsd });
+  }
+}
+
+/**
+ * Structured answer from the chosen text model. If the saver model can't do the job (rejects the request or
+ * returns something unreadable), the premium model answers instead, so a try-on never fails because of the switch.
+ */
+async function askJson<T>(model: string, opts: Parameters<typeof askJsonWith>[1]): Promise<Asked<T>> {
+  try {
+    return await askJsonWith<T>(model, opts);
+  } catch (err) {
+    if (model === PREMIUM_TEXT_MODEL) throw err;
+    console.error(`${opts.name}: ${model} failed, using ${PREMIUM_TEXT_MODEL}`, err instanceof Error ? err.message : err);
+    const spent = (err as { costUsd?: number }).costUsd ?? 0;
+    const fallback = await askJsonWith<T>(PREMIUM_TEXT_MODEL, opts);
+    return { ...fallback, costUsd: fallback.costUsd + spent };
   }
 }
 
@@ -93,7 +136,7 @@ export type InspectionItem = {
   /** How much bigger than the body it is designed to be, all the way round (cm); negative = smaller, like bodycon */
   design_ease?: { bust: number | null; waist: number | null; hips: number | null };
 };
-export type Inspection = { is_wearable: boolean; items: InspectionItem[]; categories: Category[]; costUsd: number };
+export type Inspection = { is_wearable: boolean; items: InspectionItem[]; categories: Category[]; costUsd: number; model: string };
 
 const INSPECTION_SCHEMA = {
   type: "object",
@@ -145,8 +188,8 @@ Category rules:
 - jewellery: necklaces, chains, earrings, bracelets, watches, rings. other: bags, belts, scarves and anything else.
 Only list items that are clearly visible and large enough to try on.`;
 
-export async function inspectGarment(image: Blob, hint: string): Promise<Inspection> {
-  const { data, costUsd } = await askJson<{ is_wearable: boolean; items: InspectionItem[] }>({
+export async function inspectGarment(image: Blob, hint: string, model: string): Promise<Inspection> {
+  const { data, costUsd, model: used } = await askJson<{ is_wearable: boolean; items: InspectionItem[] }>(model, {
     name: "garment_inspection",
     instructions: INSPECTION_RULES,
     maxTokens: 1100,
@@ -158,7 +201,7 @@ export async function inspectGarment(image: Blob, hint: string): Promise<Inspect
     ],
   });
   const items = (data.items ?? []).slice(0, 6).map((i) => ({ ...i, length: i.length === "n/a" ? undefined : i.length, stretch: i.stretch === "n/a" ? undefined : i.stretch }));
-  return { is_wearable: data.is_wearable, items, categories: [...new Set(items.map((i) => i.category))], costUsd };
+  return { is_wearable: data.is_wearable, items, categories: [...new Set(items.map((i) => i.category))], costUsd, model: used };
 }
 
 /** The inspected item that matches what the shopper asked for, main item first. */
@@ -235,7 +278,7 @@ Use the stated height and weight to calibrate measurements. Loose clothing hides
 Estimate bust or chest, waist and hips in cm as a tailor would from photos. Separately, judge the person's height from the photos alone, as a range, without using the stated height, so a mistyped height can be caught.
 Be factual and neutral. Never comment on attractiveness, health or ideal weight.`;
 
-export async function analyzeBody(photos: { id: string; blob: Blob }[], facts: string): Promise<BodyProfile> {
+export async function analyzeBody(photos: { id: string; blob: Blob }[], facts: string, model: string): Promise<BodyProfile> {
   const content: Content[] = [{ type: "input_text", text: `${photos.length} photos of the same person, in order. ${facts}` }];
   for (const p of photos) content.push({ type: "input_image", image_url: await blobToDataUrl(p.blob), detail: "high" });
   const { data, costUsd } = await askJson<{
@@ -244,7 +287,7 @@ export async function analyzeBody(photos: { id: string; blob: Blob }[], facts: s
     summary: string;
     tips: string[];
     estimates: BodyEstimates;
-  }>({ name: "body_profile", instructions: BODY_RULES, maxTokens: 1400, schema: BODY_SCHEMA, content });
+  }>(model, { name: "body_profile", instructions: BODY_RULES, maxTokens: 1400, schema: BODY_SCHEMA, content });
   const notes = (data.photos ?? [])
     .filter((n) => n.index >= 1 && n.index <= photos.length)
     .map(({ index, ...n }) => ({ ...n, id: photos[index - 1].id }));
@@ -261,7 +304,7 @@ export async function analyzeBody(photos: { id: string; blob: Blob }[], facts: s
 }
 
 /** Up-to-date body profile for a shopper: re-analysed only when their active photos change. */
-export async function ensureBodyProfile(admin: SupabaseClient, userId: string) {
+export async function ensureBodyProfile(admin: SupabaseClient, userId: string, model: string) {
   const { data: photos } = await admin
     .from("body_photos")
     .select("id, storage_path, angle")
@@ -286,7 +329,7 @@ export async function ensureBodyProfile(admin: SupabaseClient, userId: string) {
     `Photos labelled by the shopper as: ${(photos ?? []).map((p, i) => `${i + 1}=${p.angle}`).join(", ")}.`,
   ].join(" ");
   const blobs = await Promise.all((photos ?? []).map(async (p) => ({ id: p.id, blob: await download(admin, "body-photos", p.storage_path) })));
-  const result = await analyzeBody(blobs, facts);
+  const result = await analyzeBody(blobs, facts, model);
   const row = {
     user_id: userId,
     photo_ids: ids,
@@ -338,8 +381,8 @@ const QA_SCHEMA = {
   },
 };
 
-export async function checkResult(images: { customer: Blob; garment: Blob; result: Blob }, task: string): Promise<{ check: QualityCheck; costUsd: number }> {
-  const { data, costUsd } = await askJson<QualityCheck>({
+export async function checkResult(images: { customer: Blob; garment: Blob; result: Blob }, task: string, model: string): Promise<{ check: QualityCheck; costUsd: number; model: string }> {
+  const { data, costUsd, model: used } = await askJson<QualityCheck>(model, {
     name: "tryon_check",
     instructions:
       "You are a strict quality checker for a virtual fitting room. Image 1 is the customer's original photo, image 2 the item, image 3 the try-on result. Judge only image 3 against the task. A shopper must be able to trust it to decide whether to buy.",
@@ -352,7 +395,16 @@ export async function checkResult(images: { customer: Blob; garment: Blob; resul
       { type: "input_image", image_url: await blobToDataUrl(images.result), detail: "high" },
     ],
   });
-  return { check: { ...data, score: Math.max(0, Math.min(1, Number(data.score) || 0)) }, costUsd };
+  return { check: { ...data, score: Math.max(0, Math.min(1, Number(data.score) || 0)) }, costUsd, model: used };
+}
+
+/**
+ * Saver mode only redoes a try-on when the item itself came out wrong (wrong garment or colours).
+ * Smaller flaws keep the result, so we don't pay for a second image over a minor detail.
+ */
+export function worthRedoing(c: QualityCheck, mode: AiMode) {
+  if (mode === "premium") return !checkPassed(c);
+  return !c.garment_matches || !c.colours_match;
 }
 
 export function checkPassed(c: QualityCheck) {
