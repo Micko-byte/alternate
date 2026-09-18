@@ -16,7 +16,7 @@ import ScrollReveal from "@/components/reactbits/ScrollReveal";
 
 /**
  * The public front page. Every photo is a named slot on Cloudinary, ALTERNATE/site/ (see docs/IMAGE_GUIDE.md):
- *   hero-photo.jpg · hero-item.jpg · hero-result.jpg
+ *   hero-photo-2.jpg · hero-item.jpg · hero-result.jpg
  *   women.jpg · men.jpg · screenshot.jpg · stores.jpg
  *   nairobi.jpg
  */
@@ -80,7 +80,7 @@ export default function Landing() {
         <div className="hidden animate-rise gap-3 [animation-delay:120ms] sm:grid sm:grid-cols-[0.75fr_1.25fr] sm:items-end">
           <div className="flex items-end gap-3 sm:grid sm:gap-3">
             <figure className="grid flex-1 gap-2">
-              <SiteImage slot="hero-photo.jpg" alt="A shopper's own full-body photo" className="aspect-[2/3]" sizes="(max-width: 640px) 44vw, (max-width: 1024px) 38vw, 20vw" fallback={<PersonSketch />} />
+              <SiteImage slot="hero-photo-2.jpg" alt="A shopper's own full-body photo" className="aspect-[2/3]" sizes="(max-width: 640px) 44vw, (max-width: 1024px) 38vw, 20vw" fallback={<PersonSketch />} />
               <figcaption className="label text-ink">Your photo</figcaption>
             </figure>
             <span className="mb-9 grid h-9 w-9 shrink-0 place-items-center border border-ink bg-paper sm:mb-0 sm:justify-self-center" aria-hidden>
@@ -230,7 +230,7 @@ function PhoneHero({ cover }: { cover?: string }) {
         />
         <div className="absolute inset-x-0 bottom-0 grid gap-3 bg-gradient-to-t from-black/85 via-black/55 to-transparent px-4 pb-4 pt-20">
           <div className="flex items-end gap-2">
-            <Snap slot="hero-photo.jpg" label="Your photo" alt="A shopper's own full-body photo" fallback={<PersonSketch />} />
+            <Snap slot="hero-photo-2.jpg" label="Your photo" alt="A shopper's own full-body photo" fallback={<PersonSketch />} />
             <Plus className="mb-7 h-4 w-4 shrink-0 text-white" strokeWidth={2} aria-hidden />
             <Snap slot="hero-item.jpg" label="The piece" alt="A piece from a Nairobi store" fallback={cover ? <img src={cover} alt="" className="h-full w-full object-cover" /> : <PrintSketch />} />
             <span className="mb-7 shrink-0 font-mono text-[15px] font-semibold text-white" aria-hidden>=</span>

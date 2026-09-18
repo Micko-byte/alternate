@@ -22,9 +22,9 @@ Replacing a photo later? Use a new file name or ask for the cache to be bumped, 
 
 | File | Where | Shape, minimum size | What to shoot |
 |---|---|---|---|
-| `hero-photo.jpg` | Hero, "Your photo" | 2:3 · 1200×1800 | One model photographed the way a customer would: phone at chest height, head to feet, plain light wall, fitted plain tee and jeans, standing straight, arms slightly out. |
+|  `hero-photo-2.jpg` | Hero, "Your photo" | 2:3 · 1200×1800 | One model photographed the way a customer would: phone at chest height, head to feet, plain light wall, fitted plain tee and jeans, standing straight, arms slightly out. |
 | `hero-item.jpg` | Hero, "The piece" | 4:5 · 1200×1500 | A bold piece from a partner store (strong colour or print, e.g. a kitenge dress or bright blazer) on a hanger or flat-lay against a plain backdrop. It has to read at thumbnail size. |
-| `hero-result.jpg` | Hero, "On you" (largest) | 2:3 · 1200×1800 | The real ALTERNATE Studio try-on of `hero-photo` wearing `hero-item`. Crop only. |
+| `hero-result.jpg` | Hero, "On you" (largest) | 2:3 · 1200×1800 | The real ALTERNATE Studio try-on of `hero-photo` wearing `hero-photo-2`s model in `hero-item`. Crop only. |
 | `women.jpg` | Callout "Womenswear" | 4:5 · 1200×1500 | Editorial womenswear from a partner store: rooftop, boutique or quiet street, natural light. Keep the bottom third calm; the title sits there. |
 | `men.jpg` | Callout "Menswear" | 4:5 · 1200×1500 | Menswear in the same style: oversized shirt, cargo trousers, sneakers; a Kilimani wall or softly blurred matatu art behind. |
 | `screenshot.jpg` | Callout "Try any screenshot" | 4:5 · 1200×1500 | A hand holding a phone showing a partner store's own Instagram or TikTok outfit post, a rail blurred behind. Only use a post you have permission for. |
