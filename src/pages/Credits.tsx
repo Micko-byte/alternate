@@ -1,5 +1,8 @@
-import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSearchParams } from "react-router-dom";
 import { Lock } from "lucide-react";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { useShopPacks, useSubscriptionPlans, useTryonPrices, useWallet } from "@/lib/queries";
@@ -16,9 +19,42 @@ const ENTRY_LABELS: Record<string, string> = {
 
 const dateText = (iso: string) => new Date(iso).toLocaleDateString("en-KE", { day: "numeric", month: "short" });
 
+/**
+ * Paystack sends shoppers back here with ?reference= after its own checkout page (the card window
+ * inside ALTERNATE never leaves, so this only runs on that fallback). Confirms the payment and
+ * tidies the address bar.
+ */
+function usePaystackReturn() {
+  const [params, setParams] = useSearchParams();
+  const queryClient = useQueryClient();
+  const reference = params.get("reference") || params.get("trxref");
+
+  useEffect(() => {
+    if (!reference) return;
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase.functions.invoke("payments-verify", { body: { reference } });
+      if (cancelled) return;
+      const status = (data as { status?: string; message?: string } | null)?.status;
+      if (error || status === "failed") toast.error((data as { message?: string } | null)?.message || "That payment didn't go through. You haven't been charged.");
+      else if (status === "success") {
+        toast.success("Payment received. Your credits are in.");
+        for (const key of ["credits", "wallet", "ledger", "payments", "tryon-allowance"]) queryClient.invalidateQueries({ queryKey: [key] });
+      } else toast("Still waiting for the payment to confirm. Credits appear here as soon as it does.");
+      const next = new URLSearchParams(params);
+      next.delete("reference");
+      next.delete("trxref");
+      setParams(next, { replace: true });
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reference]);
+}
+
 export default function Credits() {
   const { user } = useAuth();
   const wallet = useWallet();
+  usePaystackReturn();
   const { lead, starter, others } = useShopPacks();
   const plans = useSubscriptionPlans();
   const prices = useTryonPrices();
