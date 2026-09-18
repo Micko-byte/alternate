@@ -69,26 +69,26 @@ export default function Landing() {
             Add your photos once. Try on pieces from Kenyan Instagram and TikTok stores, or any screenshot you love, drawn to your real size and shape.
           </p>
           <div className="flex flex-wrap gap-3">
-            <ButtonLink to={start} variant="solid" size="lg">Open the fitting room</ButtonLink>
+            <ButtonLink to={start} variant="solid" size="lg">{user ? "Open the fitting room" : "Get started"}</ButtonLink>
             <ButtonLink to="/shop" variant="outline" size="lg">Shop new in</ButtonLink>
           </div>
         </div>
 
-        <div className="grid animate-rise grid-cols-[0.75fr_1.25fr] items-end gap-3 [animation-delay:120ms]">
-          <div className="grid gap-3">
-            <figure className="grid gap-2">
-              <SiteImage slot="hero-photo.jpg" alt="A shopper's own full-body photo" className="aspect-[2/3]" sizes="(max-width: 1024px) 38vw, 20vw" fallback={<PersonSketch />} />
+        <div className="grid animate-rise gap-3 [animation-delay:120ms] sm:grid-cols-[0.75fr_1.25fr] sm:items-end">
+          <div className="flex items-end gap-3 sm:grid sm:gap-3">
+            <figure className="grid flex-1 gap-2">
+              <SiteImage slot="hero-photo.jpg" alt="A shopper's own full-body photo" className="aspect-[2/3]" sizes="(max-width: 640px) 44vw, (max-width: 1024px) 38vw, 20vw" fallback={<PersonSketch />} />
               <figcaption className="label text-ink">Your photo</figcaption>
             </figure>
-            <span className="grid h-9 w-9 place-items-center justify-self-center border border-ink bg-paper" aria-hidden>
+            <span className="mb-9 grid h-9 w-9 shrink-0 place-items-center border border-ink bg-paper sm:mb-0 sm:justify-self-center" aria-hidden>
               <Plus className="h-4 w-4" strokeWidth={1.5} />
             </span>
-            <figure className="grid gap-2">
+            <figure className="grid flex-1 gap-2">
               <SiteImage
                 slot="hero-item.jpg"
                 alt="A piece from a Nairobi store"
                 className="aspect-[4/5]"
-                sizes="(max-width: 1024px) 38vw, 20vw"
+                sizes="(max-width: 640px) 44vw, (max-width: 1024px) 38vw, 20vw"
                 fallback={covers[0] ? <img src={covers[0]} alt="" className="h-full w-full object-cover" /> : <PrintSketch />}
               />
               <figcaption className="label text-ink">The piece</figcaption>
@@ -99,7 +99,7 @@ export default function Landing() {
               slot="hero-result.jpg"
               alt="The same shopper wearing the piece, made by ALTERNATE"
               className="aspect-[2/3]"
-              sizes="(max-width: 1024px) 62vw, 30vw"
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 62vw, 30vw"
               fallback={<div className="grid h-full place-items-center bg-accent p-6 text-center display text-[34px] text-white">On you, in your size</div>}
             />
             <figcaption className="label flex items-center gap-1.5 text-ink"><ShieldCheck className="h-3.5 w-3.5" /> On you · quality checked</figcaption>

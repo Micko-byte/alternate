@@ -22,6 +22,7 @@ export default function Auth() {
   const [resetSent, setResetSent] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
   const [name, setName] = useState("");
   const [referral, setReferral] = useState(storedReferral());
   const [shopsFor, setShopsFor] = useState<ShopsFor>("women");
@@ -47,6 +48,7 @@ export default function Auth() {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
       } else {
+        if (password !== confirm) throw new Error("The two passwords don't match. Type the same one twice.");
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
@@ -143,6 +145,18 @@ export default function Auth() {
                   autoComplete={mode === "signin" ? "current-password" : "new-password"}
                 />
               </Field>
+              {mode === "signup" && (
+                <Field label="Confirm password" hint={confirm && password !== confirm ? "The two passwords don't match" : "Type it again"}>
+                  <PasswordInput
+                    required
+                    value={confirm}
+                    onChange={(e) => setConfirm(e.target.value)}
+                    autoComplete="new-password"
+                    aria-invalid={!!confirm && password !== confirm}
+                    className={confirm && password !== confirm ? "border-bad" : undefined}
+                  />
+                </Field>
+              )}
               {mode === "signin" && (
                 <button type="button" onClick={() => setMode("forgot")} className="label justify-self-end text-ink underline underline-offset-4">
                   Forgot password?
@@ -166,7 +180,7 @@ export default function Auth() {
               <Input value={referral} onChange={(e) => setReferral(e.target.value.toUpperCase())} className="num uppercase" />
             </Field>
           )}
-          <Button type="submit" variant="accent" size="lg" loading={busy}>
+          <Button type="submit" variant="accent" size="lg" loading={busy} disabled={mode === "signup" && !!confirm && password !== confirm}>
             {mode === "forgot" ? "Send reset link" : mode === "signin" ? "Sign in" : "Create account"}
           </Button>
           {mode === "forgot" && (

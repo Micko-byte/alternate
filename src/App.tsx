@@ -9,7 +9,6 @@ import { captureReferral } from "@/lib/referral";
 import { AppShell } from "@/components/AppShell";
 import { StudioShell } from "@/components/StudioShell";
 import { RequireAuth } from "@/components/Guards";
-import Onboarding from "@/pages/Onboarding";
 import Landing from "@/pages/Landing";
 import Auth from "@/pages/Auth";
 import Shop from "@/pages/Shop";
@@ -48,12 +47,7 @@ function ReferralCapture() {
   return null;
 }
 
-/** Phones and the installed app get the swipeable welcome; bigger screens get the landing page. */
-function preferOnboarding() {
-  return window.matchMedia("(display-mode: standalone)").matches || window.matchMedia("(max-width: 1023px)").matches;
-}
-
-/** Signed out: landing page or welcome carousel. Signed in: straight into the app. */
+/** Signed out: the landing page, on a phone the same as on a laptop. Signed in: straight into the app. */
 function Home() {
   const { user, loading } = useAuth();
   const setup = useSetupStatus();
@@ -64,7 +58,7 @@ function Home() {
       </div>
     );
   }
-  if (!user) return preferOnboarding() ? <Onboarding /> : <AppShell><Landing /></AppShell>;
+  if (!user) return <AppShell><Landing /></AppShell>;
   return <Navigate to={setup.ready ? "/fitting-room" : "/me/setup"} replace />;
 }
 
