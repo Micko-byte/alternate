@@ -50,9 +50,9 @@ export default function Landing() {
       <section className="page grid gap-10 pb-16 pt-10 md:pt-16 lg:grid-cols-[1.1fr_1fr] lg:items-end lg:gap-12">
         <div className="order-2 grid animate-rise gap-8 sm:order-none">
           <span className="label">Virtual fitting room · Nairobi</span>
-          <h1 className="sr-only">See it on you before you pay.</h1>
+          <h1 className="sr-only">See it on you before you buy it.</h1>
           <WarpText
-            text={"See it on you\nbefore you pay."}
+            text={"See it on you\nbefore you buy it."}
             color={theme === "dark" ? "#f3f1ec" : "#191710"}
             warpStrength={0.08}
             warpScale={1.7}
@@ -68,6 +68,7 @@ export default function Landing() {
           />
           <p className="max-w-[48ch] text-[17px] text-muted">
             Add your photos once. Try on pieces from Kenyan Instagram and TikTok stores, or any screenshot you love, drawn to your real size and shape.
+            {starter ? <> A try-on costs <span className="text-ink">{kes(Math.round(starter.price_kes / starter.credits))}</span>, paid on M-Pesa before it is made.</> : null}
           </p>
           <div className="flex flex-wrap gap-3">
             <ButtonLink to={start} variant="solid" size="lg">{user ? "Open the fitting room" : "Get started"}</ButtonLink>
@@ -165,7 +166,7 @@ export default function Landing() {
             {[
               ["Your photos", "Front, side, arms, legs. The more you add, the truer the fit."],
               ["The piece", "A screenshot, a store photo or a frame from a store video. We check what's really in it."],
-              ["See it on you", "In a minute or two, drawn in your size and checked before you see it."],
+              ["Pay, then see it on you", "A try-on is paid for on M-Pesa first. A minute or two later it is drawn in your size, checked before you see it."],
             ].map(([t, b], i) => (
               <li key={t} className="grid grid-cols-[48px_1fr] gap-4 border-b border-white/25 py-6">
                 <span className="num text-[13px] text-white/60">0{i + 1}</span>

@@ -115,7 +115,7 @@ export function AppShell({ children }: { children?: ReactNode }) {
         {user && <div className="page grid gap-10 py-14 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
           <div className="grid content-start gap-4">
             <Wordmark full className="justify-self-start" />
-            <p className="max-w-[34ch] text-muted">See clothes from Kenyan stores on your own photo, in your size, before you pay.</p>
+            <p className="max-w-[34ch] text-muted">See clothes from Kenyan stores on your own photo, in your size, before you buy them.</p>
           </div>
           {[
             ["Shop", [["New in", "/shop"], ["Women", "/shop?d=women"], ["Men", "/shop?d=men"], ["Fitting room", "/fitting-room"]]],

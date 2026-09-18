@@ -15,7 +15,7 @@ const SLIDES: { image: string; kicker: string; title: string; body: string; icon
   {
     image: "onboarding/1",
     kicker: "Virtual fitting room",
-    title: "See it on you before you pay.",
+    title: "See it on you before you buy it.",
     body: "Add your photos, then try on clothes from Nairobi's stores. Drawn on your real body.",
     icon: ScanFace,
     tone: "bg-sunk text-ink",
