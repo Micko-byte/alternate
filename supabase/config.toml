@@ -46,7 +46,7 @@ verify_jwt = false
 
 # Branded auth emails (letterhead, logo, brand colours)
 [auth.email.template.confirmation]
-subject = "Confirm your email for ALTERNATE"
+subject = "{{ .Token }} is your ALTERNATE code"
 content_path = "./supabase/templates/confirmation.html"
 
 [auth.email.template.recovery]

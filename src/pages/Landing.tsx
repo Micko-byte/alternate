@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { ArrowRight, Plus, Ruler, ScanFace, ShieldCheck, Smartphone } from "lucide-react";
@@ -47,7 +48,7 @@ export default function Landing() {
     <div>
       {/* Hero: your photo + the piece = on you */}
       <section className="page grid gap-10 pb-16 pt-10 md:pt-16 lg:grid-cols-[1.1fr_1fr] lg:items-end lg:gap-12">
-        <div className="grid animate-rise gap-8">
+        <div className="order-2 grid animate-rise gap-8 sm:order-none">
           <span className="label">Virtual fitting room · Nairobi</span>
           <h1 className="sr-only">See it on you before you pay.</h1>
           <WarpText
@@ -74,7 +75,9 @@ export default function Landing() {
           </div>
         </div>
 
-        <div className="grid animate-rise gap-3 [animation-delay:120ms] sm:grid-cols-[0.75fr_1.25fr] sm:items-end">
+        <PhoneHero cover={covers[0]} />
+
+        <div className="hidden animate-rise gap-3 [animation-delay:120ms] sm:grid sm:grid-cols-[0.75fr_1.25fr] sm:items-end">
           <div className="flex items-end gap-3 sm:grid sm:gap-3">
             <figure className="grid flex-1 gap-2">
               <SiteImage slot="hero-photo.jpg" alt="A shopper's own full-body photo" className="aspect-[2/3]" sizes="(max-width: 640px) 44vw, (max-width: 1024px) 38vw, 20vw" fallback={<PersonSketch />} />
@@ -207,6 +210,48 @@ export default function Landing() {
         </div>
       </section>
     </div>
+  );
+}
+
+/**
+ * The hero on a phone: the finished try-on fills the screen, and the two photos it was made from
+ * sit on top of it as one equation — your photo + the piece = on you.
+ */
+function PhoneHero({ cover }: { cover?: string }) {
+  return (
+    <div className="order-1 animate-rise border border-ink sm:hidden [animation-delay:120ms]">
+      <div className="relative">
+        <SiteImage
+          slot="hero-result.jpg"
+          alt="The same shopper wearing the piece, made by ALTERNATE"
+          className="aspect-[3/4]"
+          sizes="100vw"
+          fallback={<div className="grid h-full place-items-center bg-accent p-6 text-center display text-[34px] text-white">On you, in your size</div>}
+        />
+        <div className="absolute inset-x-0 bottom-0 grid gap-3 bg-gradient-to-t from-black/85 via-black/55 to-transparent px-4 pb-4 pt-20">
+          <div className="flex items-end gap-2">
+            <Snap slot="hero-photo.jpg" label="Your photo" alt="A shopper's own full-body photo" fallback={<PersonSketch />} />
+            <Plus className="mb-7 h-4 w-4 shrink-0 text-white" strokeWidth={2} aria-hidden />
+            <Snap slot="hero-item.jpg" label="The piece" alt="A piece from a Nairobi store" fallback={cover ? <img src={cover} alt="" className="h-full w-full object-cover" /> : <PrintSketch />} />
+            <span className="mb-7 shrink-0 font-mono text-[15px] font-semibold text-white" aria-hidden>=</span>
+            <span className="mb-6 font-mono text-[11px] font-semibold uppercase leading-tight tracking-label text-white">On<br />you</span>
+          </div>
+          <span className="flex items-center gap-1.5 font-mono text-[10px] font-semibold uppercase tracking-label text-white/85">
+            <ShieldCheck className="h-3.5 w-3.5" aria-hidden /> Quality checked · your face never changes
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** One of the two small source photos stacked on the phone hero. */
+function Snap({ slot, label, alt, fallback }: { slot: string; label: string; alt: string; fallback: ReactNode }) {
+  return (
+    <figure className="w-[27%] shrink-0 border border-white/80">
+      <SiteImage slot={slot} alt={alt} className="aspect-[3/4]" sizes="30vw" fallback={fallback} />
+      <figcaption className="bg-paper py-1 text-center font-mono text-[8.5px] font-semibold uppercase tracking-label text-ink">{label}</figcaption>
+    </figure>
   );
 }
 

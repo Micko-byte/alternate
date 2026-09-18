@@ -17,7 +17,13 @@ const nav = [
   { to: "/wardrobe", label: "Wardrobe" },
 ];
 
-const announcements = (offer: string) => [offer, "Your face is never changed", "Every try-on is quality checked", "Clothes, shoes, glasses & jewellery", "Made in Nairobi"];
+const announcements = (offers: string[]) => [
+  ...offers,
+  "Your face is never changed",
+  "Every try-on is quality checked",
+  "Clothes, shoes, glasses & jewellery",
+  "Made in Nairobi",
+];
 
 export function AppShell({ children }: { children?: ReactNode }) {
   const { user, signOut } = useAuth();
@@ -25,9 +31,14 @@ export function AppShell({ children }: { children?: ReactNode }) {
   const credits = useCredits();
   const store = useMyStore();
   const isAdmin = useIsAdmin();
-  const { starter } = useShopPacks();
+  const { starter, lead, others } = useShopPacks();
   const { pathname, search } = useLocation();
-  const offers = announcements(starter ? `${starter.credits} try-ons for ${kes(starter.price_kes)} · pay with M-Pesa` : "Try-ons from KES 50 · pay with M-Pesa");
+  const best = [starter, ...others].filter(Boolean).sort((a, b) => a!.price_kes / a!.credits - b!.price_kes / b!.credits)[0];
+  const offers = announcements([
+    starter ? `${starter.credits} try-ons for ${kes(starter.price_kes)} · pay with M-Pesa` : "Try-ons from KES 50 · pay with M-Pesa",
+    ...(lead?.first_purchase_only ? [`First buy: ${lead.credits} try-ons for ${kes(lead.price_kes)}`] : []),
+    ...(best && starter && best !== starter ? [`${best.credits} try-ons for ${kes(best.price_kes)} · ${kes(Math.round(best.price_kes / best.credits))} each`] : []),
+  ]);
   const fullBleed = pathname === "/" || pathname === "/welcome";
 
   return (
