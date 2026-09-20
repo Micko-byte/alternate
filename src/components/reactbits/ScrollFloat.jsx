@@ -1,4 +1,4 @@
-// ScrollFloat from React Bits (JS + CSS variant), with three changes for ALTERNATE:
+// ScrollFloat from React Bits (JS + CSS variant), with three changes for VAA ALTERNATE:
 // - characters are grouped per word, so long headings still wrap on phones
 // - the animation is removed when the heading unmounts (the original left its ScrollTrigger behind)
 // - nothing moves for people who ask for reduced motion

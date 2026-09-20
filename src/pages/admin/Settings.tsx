@@ -103,7 +103,7 @@ export default function AdminSettings() {
         </ul>
         {isOwner.data ? (
           <div className="flex flex-wrap items-end gap-3">
-            <Field label="Add an admin by email" hint="They need an ALTERNATE account first."><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-72" /></Field>
+            <Field label="Add an admin by email" hint="They need an VAA ALTERNATE account first."><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-72" /></Field>
             <Button disabled={!email} loading={busy === "add"} onClick={() => run("add", () => supabase.rpc("owner_set_admin", { _email: email, _grant: true }), `${email} is now an admin`, () => { setEmail(""); admins.refetch(); })}>Add admin</Button>
           </div>
         ) : (

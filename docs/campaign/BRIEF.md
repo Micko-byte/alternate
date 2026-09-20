@@ -1,20 +1,20 @@
-# ALTERNATE — the try-on comparison ad
+# VAA ALTERNATE — the try-on comparison ad
 
 Everything a design session needs is in this folder. Point the session at this repo and tell it to read
 this file; the pictures sit in `docs/campaign/assets/`.
 
 ---
 
-## What ALTERNATE is
+## What VAA ALTERNATE is
 
 A virtual fitting room built in Nairobi. A shopper adds one photo of themselves, screenshots any piece
 from Instagram, TikTok or Pinterest, pays **KES 25 on M-Pesa**, and about a minute later sees that piece
 drawn on their own body at its real size. Two try-ons for KES 50. Payment comes first; nothing is free.
-Live at alternate-two.vercel.app.
+Live at vaaalternate.lol.
 
 ## The one claim, and the proof for it
 
-**A free AI does poor work. A paid AI does beautiful work and still changes the person. ALTERNATE changes
+**A free AI does poor work. A paid AI does beautiful work and still changes the person. VAA ALTERNATE changes
 the clothes and nothing else.**
 
 Same woman, same dress, three machines. Every asset below is real, none of it is a mockup, and every
@@ -26,7 +26,7 @@ difference named here is visible when you open the files side by side.
 | `02-the-dress.jpg` | The real piece, laid flat | Mustard-and-white ditsy floral, thin ruffled straps, side slit. Flat on the floor it looks long — **it is a mini dress**. The shop listing says mini. |
 | `03-free-ai-gemini.jpg` | A **free** AI's attempt | Kept her sneakers, but drew the dress as a **midi** — past the knee, nothing like the mini it was given. Her body is narrowed and her face is softened. |
 | `04-paid-chatgpt.jpg` | **Paid ChatGPT's** attempt | Genuinely good-looking, and still wrong: it put her in **strappy white heels she does not own**, changed how she is standing, and reshaped her bust and waist. |
-| `05-alternate.jpg` | **ALTERNATE's** result | The mini, at the right length, on her own body. Her sneakers, her stance, her face, her hair, her proportions — untouched. |
+| `05-alternate.jpg` | **VAA ALTERNATE's** result | The mini, at the right length, on her own body. Her sneakers, her stance, her face, her hair, her proportions — untouched. |
 | `06-feet-her.jpg`, `07-feet-paid-chatgpt.jpg`, `08-feet-alternate.jpg` | The same crop of the feet in all three | Sneakers → invented heels → the same sneakers. The clearest single proof in the whole set. |
 | `09-free-ai-prompt-screenshot.jpg` | The free tool being asked | The prompt reads "help me try on this mini dress", with both pictures attached. It was told *mini* and still got it wrong. |
 
@@ -50,7 +50,7 @@ still understand what is being sold. Not a carousel where the meaning arrives at
    length. "It was told mini. It made a midi." — `03-free-ai-gemini.jpg`
 3. **Paid ChatGPT.** "Then we paid for the good one." → "Beautiful picture. Look at the feet: those heels
    are not hers." — `04-paid-chatgpt.jpg`, and the feet crop `07`
-4. **ALTERNATE.** "We only change the clothes." → "Her shoes. Her stand. Her body. Her face." —
+4. **VAA ALTERNATE.** "We only change the clothes." → "Her shoes. Her stand. Her body. Her face." —
    `05-alternate.jpg`
 5. **How to use it.** One photo → screenshot any dress → pay KES 25 on M-Pesa → see it in a minute.
 
@@ -62,7 +62,7 @@ The strongest version is first person, the way someone actually talks about shop
 > I wanted to know how it would look on me before I send anyone money.
 > I tried a free AI — it gave me the wrong dress, past my knee.
 > I tried the paid one — beautiful picture, but it put me in heels I do not own and changed how I stand.
-> Then I tried ALTERNATE. Same me. Same shoes. Just the dress.
+> Then I tried VAA ALTERNATE. Same me. Same shoes. Just the dress.
 > KES 25 on M-Pesa. Two for KES 50.
 
 Use that as the caption, and pull one line from it onto each slide.

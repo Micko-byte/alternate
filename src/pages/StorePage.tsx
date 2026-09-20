@@ -55,7 +55,7 @@ export default function StorePage() {
           </div>
         </div>
       </header>
-      {s.status !== "active" && <Notice tone="warn" title="This store isn't open to shoppers yet">Only the store team can see this page until ALTERNATE approves it.</Notice>}
+      {s.status !== "active" && <Notice tone="warn" title="This store isn't open to shoppers yet">Only the store team can see this page until VAA ALTERNATE approves it.</Notice>}
       {products.data?.length ? (
         <div className="grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-3 lg:grid-cols-4">
           {products.data.map((p) => <ProductCard key={p.id} product={p} sizes={sizes.data} signedIn={!!user} />)}

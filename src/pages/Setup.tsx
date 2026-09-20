@@ -74,7 +74,7 @@ function AboutStep() {
   }, [profile.data]);
 
   const save = async () => {
-    if (form.date_of_birth && !isAdult(form.date_of_birth)) return toast.error("ALTERNATE try-on is for people aged 18 and over.");
+    if (form.date_of_birth && !isAdult(form.date_of_birth)) return toast.error("VAA ALTERNATE try-on is for people aged 18 and over.");
     setBusy(true);
     const { error } = await supabase
       .from("profiles")
@@ -154,8 +154,8 @@ function PrivacyStep() {
   const [busy, setBusy] = useState(false);
 
   const items = [
-    { type: "terms", text: "I accept the ALTERNATE terms and privacy policy." },
-    { type: "body_photo_processing", text: "I agree ALTERNATE may process my body photos, height and weight to create try-ons. They are private to me and I can delete them at any time." },
+    { type: "terms", text: "I accept the VAA ALTERNATE terms and privacy policy." },
+    { type: "body_photo_processing", text: "I agree VAA ALTERNATE may process my body photos, height and weight to create try-ons. They are private to me and I can delete them at any time." },
     { type: "cross_border_transfer", text: "I agree my photos may be sent to OpenAI in the United States to generate try-ons, and are not used to train their models." },
   ] as const;
 

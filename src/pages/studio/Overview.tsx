@@ -45,8 +45,8 @@ export default function Overview() {
         <ButtonLink to="/studio/products/new" variant="accent">Add a piece</ButtonLink>
       </PageHeader>
 
-      {store.status === "pending" && <Notice tone="warn" title="Your store is waiting for approval">You can add products now. Shoppers will see them once ALTERNATE approves your store.</Notice>}
-      {store.status === "suspended" && <Notice tone="bad" title="Your store is suspended">Contact ALTERNATE support to reopen it.</Notice>}
+      {store.status === "pending" && <Notice tone="warn" title="Your store is waiting for approval">You can add products now. Shoppers will see them once VAA ALTERNATE approves your store.</Notice>}
+      {store.status === "suspended" && <Notice tone="bad" title="Your store is suspended">Contact VAA ALTERNATE support to reopen it.</Notice>}
 
       <dl className="grid grid-cols-2 gap-px border border-rule bg-rule md:grid-cols-4">
         {[

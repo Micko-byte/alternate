@@ -28,7 +28,7 @@ export function registerServiceWorker() {
 const isStandalone = () =>
   window.matchMedia("(display-mode: standalone)").matches || (navigator as Navigator & { standalone?: boolean }).standalone === true;
 
-/** Whether ALTERNATE can be added to the home screen, and how. iPhones have no install button, so they get instructions. */
+/** Whether VAA ALTERNATE can be added to the home screen, and how. iPhones have no install button, so they get instructions. */
 export function useInstallApp() {
   const [, rerender] = useState(0);
   useEffect(() => {

@@ -14,14 +14,14 @@ const ENTRY_LABELS: Record<string, string> = {
   purchase: "Bought credits",
   tryon_charge: "Try-on",
   tryon_refund: "Refund, try-on failed",
-  adjustment: "Added by ALTERNATE",
+  adjustment: "Added by VAA ALTERNATE",
 };
 
 const dateText = (iso: string) => new Date(iso).toLocaleDateString("en-KE", { day: "numeric", month: "short" });
 
 /**
  * Paystack sends shoppers back here with ?reference= after its own checkout page (the card window
- * inside ALTERNATE never leaves, so this only runs on that fallback). Confirms the payment and
+ * inside VAA ALTERNATE never leaves, so this only runs on that fallback). Confirms the payment and
  * tidies the address bar.
  */
 function usePaystackReturn() {
@@ -175,7 +175,7 @@ export default function Credits() {
             </div>
           ))}
           <p className="text-[13px] text-muted">
-            Plan credits are used first. Failed try-ons are refunded automatically. If a store brought you to ALTERNATE, part of what you pay goes to that store.
+            Plan credits are used first. Failed try-ons are refunded automatically. If a store brought you to VAA ALTERNATE, part of what you pay goes to that store.
           </p>
         </aside>
       </div>

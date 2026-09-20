@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { cloudinaryImage } from "@/lib/cloudinary";
 
 /**
- * First screen for people without an account: what ALTERNATE does, then sign up.
+ * First screen for people without an account: what VAA ALTERNATE does, then sign up.
  * Images: Cloudinary ALTERNATE/onboarding/1-4. Phones get a phone-sized copy.
  * Until a file exists, that slide shows a designed placeholder.
  */
@@ -75,7 +75,7 @@ export default function Onboarding() {
       <section
         className="relative h-[58dvh] min-h-[340px] overflow-hidden bg-sunk lg:order-1 lg:h-auto lg:min-h-dvh"
         aria-roledescription="carousel"
-        aria-label="What ALTERNATE does"
+        aria-label="What VAA ALTERNATE does"
         onPointerDown={(e) => {
           startX.current = e.clientX;
           setPaused(true);
@@ -113,8 +113,8 @@ export default function Onboarding() {
 
         <div className="absolute inset-x-5 top-5 flex items-start justify-between lg:inset-x-8 lg:top-8">
           <div className="bg-paper/90 px-3 py-2">
-            <img src="/brand/alternate-mark.png" alt="ALTERNATE" className="h-9 w-auto dark:hidden" />
-            <img src="/brand/alternate-mark-white.png" alt="" aria-hidden className="hidden h-9 w-auto dark:block" />
+            <img src="/brand/vaa-mark.png" alt="VAA ALTERNATE" className="h-9 w-auto dark:hidden" />
+            <img src="/brand/vaa-mark-white.png" alt="" aria-hidden className="hidden h-9 w-auto dark:block" />
           </div>
           <ThemeToggle className="bg-paper/90" />
         </div>

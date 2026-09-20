@@ -1,4 +1,4 @@
-"""ALTERNATE — one vertical ad, cut on a beat.
+"""VAA ALTERNATE — one vertical ad, cut on a beat.
 
 Renders 1080x1920 frames with Pillow, synthesises a 128 BPM bed with numpy, muxes with ffmpeg.
 Every picture is real: her photo, the piece, a free AI's try, a paid AI's try, and ours.
@@ -161,7 +161,7 @@ def label(frame, xy, s, col=MUSTARD, fg=INK, size=34, pad=(18, 12)):
 def chrome(frame, t, total):
     """Brand line and a thin progress rule — the bits that make it read as an ad, not a clip."""
     d = ImageDraw.Draw(frame)
-    d.text((60, 74), "ALTERNATE", font=font(F_MONO, 32), fill=PAPER)
+    d.text((60, 74), "VAA ALTERNATE", font=font(F_MONO, 32), fill=PAPER)
     d.text((W - 60, 74), "NAIROBI", font=font(F_MONO, 32), fill=GREY, anchor="ra")
     d.rectangle((0, 0, int(W * clamp(t / total)), 7), fill=MUSTARD)
     return frame
@@ -277,7 +277,7 @@ def build_frame(t, A):
         f.paste(A["ours"].crop((0, H - cut, W, H)), (0, H - cut))
         f = drift(f, t - t0, 3.75, 0.05)
         f = scrim(f)
-        f = label(f, (60, 940), "ALTERNATE", col=MUSTARD, fg=INK)
+        f = label(f, (60, 940), "VAA ALTERNATE", col=MUSTARD, fg=INK)
         f = kinetic(f, 60, 1060, "Same me.\n Same shoes.\n Just the DRESS.".split(" "), font(F_BLACK, 88), t - t0, 0.5, 0.075, hi="DRESS.")
         if t - t0 > 2.2:
             f = kinetic(f, 60, 1560, "Your face. Your body. Your shoes.".split(), font(F_BOLD, 48), t - t0, 2.2, 0.05, fill=GREY)
@@ -286,7 +286,7 @@ def build_frame(t, A):
     elif t < 3 * beat * 3 + 12 * beat + 6 * beat + 14 * beat:  # 16.41 - 19.22
         t0 = 3 * beat * 3 + 12 * beat + 6 * beat + 8 * beat
         p = out_cubic((t - t0) / 1.1) * 0.5
-        f = split(A["paid"], A["ours"], p, "PAID AI", "ALTERNATE")
+        f = split(A["paid"], A["ours"], p, "PAID AI", "VAA ALTERNATE")
         f = scrim(f, top=0.24, bottom=0.42)
         f = kinetic(f, 60, 1380, "One of these is still HER.".split(), font(F_BLACK, 76), t - t0, 0.6, 0.07, hi="HER.")
     # ---- 8. end card
@@ -308,7 +308,7 @@ def build_frame(t, A):
         if ti > 1.8:
             f = kinetic(f, 60, 1560, "Pay with M-Pesa. Ready in a minute.".split(), font(F_BOLD, 44), ti, 1.8, 0.04, fill=GREY)
         if ti > 2.4:
-            f = label(f, (60, 1700), "alternate-two.vercel.app", col=PAPER, fg=INK, size=40)
+            f = label(f, (60, 1700), "vaaalternate.lol", col=PAPER, fg=INK, size=40)
         f = flash(f, ti, 0.14)
     return f
 
@@ -385,7 +385,7 @@ def main():
         f.save(os.path.join(folder, "f%04d.jpg" % i), "JPEG", quality=93)
     wav = os.path.join(OUT, "bed.wav")
     audio(wav, total)
-    mp4 = os.path.join(OUT, "ALTERNATE-ad-vertical.mp4")
+    mp4 = os.path.join(OUT, "VAA ALTERNATE-ad-vertical.mp4")
     subprocess.run(["ffmpeg", "-v", "error", "-y", "-framerate", str(FPS), "-i", os.path.join(folder, "f%04d.jpg"),
                     "-i", wav, "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "slow", "-crf", "19",
                     "-c:a", "aac", "-b:a", "160k", "-shortest", "-movflags", "+faststart", mp4], check=True)

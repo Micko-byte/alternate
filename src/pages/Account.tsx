@@ -76,7 +76,7 @@ export default function Account() {
             </>
           ) : (
             <>
-              <p className="text-muted">Sell on ALTERNATE and earn from the followers you bring.</p>
+              <p className="text-muted">Sell on VAA ALTERNATE and earn from the followers you bring.</p>
               <ButtonLink to="/studio" variant="outline" className="justify-self-start">Open a store</ButtonLink>
             </>
           )}
@@ -101,7 +101,7 @@ export default function Account() {
         </section>
 
         <section className="grid content-start gap-3 bg-surface p-6 md:col-span-2">
-          <h2 className="display text-[26px]">ALTERNATE on your phone</h2>
+          <h2 className="display text-[26px]">VAA ALTERNATE on your phone</h2>
           <InstallAppSection />
         </section>
 

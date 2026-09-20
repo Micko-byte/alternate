@@ -1,4 +1,4 @@
-"""Render the ALTERNATE motion ads as real 1080x1920 MP4s.
+"""Render the VAA ALTERNATE motion ads as real 1080x1920 MP4s.
 
 Each ad is a list of beats; a beat draws one frame at time t. Frames go through ffmpeg.
 Assets come from the repo folder docs/campaign/assets.
@@ -79,7 +79,7 @@ def rise(draw, x, y, s, f, fill, t, start, dur=0.55, spacing=12):
 def brandbar(frame, right="KES 25 · M-PESA"):
     d = ImageDraw.Draw(frame)
     f = font(F_MONO, 30)
-    d.text((64, 78), "ALTERNATE", font=f, fill=MUSTARD)
+    d.text((64, 78), "VAA ALTERNATE", font=f, fill=MUSTARD)
     d.text((W - 64, 78), right, font=f, fill=(200, 196, 186), anchor="ra")
     return frame
 
@@ -154,7 +154,7 @@ def ad_ours(t):
         rise(d, 64, 1400, "Her shoes. Her stand.", font(F_BOLD, 52), (226, 222, 212), t, 1.0)
     else:
         rise(d, 64, 1120, "Same me.\nSame shoes.\nJust the dress.", font(F_BLACK, 92), PAPER, t, 3.4, spacing=6)
-        rise(d, 64, 1500, "ALTERNATE changes the clothes\nand nothing else.", font(F_BOLD, 48), (226, 222, 212), t, 5.0)
+        rise(d, 64, 1500, "VAA ALTERNATE changes the clothes\nand nothing else.", font(F_BOLD, 48), (226, 222, 212), t, 5.0)
         if t > 7.0:
             rise(d, 64, 1700, "KES 25 on M-Pesa. 2 for KES 50.", font(F_MONO, 40), MUSTARD, t, 7.0)
     return frame

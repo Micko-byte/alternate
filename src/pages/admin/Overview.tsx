@@ -43,7 +43,7 @@ export default function AdminOverview() {
 
   return (
     <div className="grid gap-10">
-      <PageHeader eyebrow="Admin · overview" title="How ALTERNATE is doing">
+      <PageHeader eyebrow="Admin · overview" title="How VAA ALTERNATE is doing">
         <div className="flex border border-rule" role="tablist" aria-label="Period">
           {PERIODS.map((p) => (
             <button key={p} role="tab" aria-selected={days === p} onClick={() => setDays(p)} className={cn("h-10 px-4 font-mono text-[11px] font-semibold uppercase tracking-label", days === p ? "bg-ink text-paper" : "text-muted hover:text-ink")}>

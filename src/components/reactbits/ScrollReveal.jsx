@@ -1,4 +1,4 @@
-// ScrollReveal from React Bits (JS + CSS variant), with three changes for ALTERNATE:
+// ScrollReveal from React Bits (JS + CSS variant), with three changes for VAA ALTERNATE:
 // - it only removes its own scroll animations when it unmounts (the original killed every ScrollTrigger
 //   on the page, which would stop the ScrollFloat headings)
 // - the wrapper is a <div> by default (set `as="h2"` for a heading), so body text isn't marked up as a heading

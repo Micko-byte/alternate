@@ -1,4 +1,4 @@
-"""ALTERNATE money model -> a PDF the founders can read.
+"""VAA ALTERNATE money model -> a PDF the founders can read.
 
 Every figure is either MEASURED (from the try-ons already run) or an ASSUMPTION, and each
 table says which. Costs in USD are converted at KES 129.4 to the dollar.
@@ -10,7 +10,7 @@ from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import mm
 from reportlab.platypus import BaseDocTemplate, Frame, PageTemplate, Paragraph, Spacer, Table, TableStyle, KeepTogether
 
-OUT = r"C:\Users\User\neggarman\alternate-style-hub\docs\ALTERNATE-money-model.pdf"
+OUT = r"C:\Users\User\neggarman\alternate-style-hub\docs\VAA ALTERNATE-money-model.pdf"
 
 INK = colors.HexColor("#191710")
 PAPER = colors.HexColor("#FFFFFF")
@@ -98,7 +98,7 @@ def header_footer(canvas, doc):
     canvas.rect(0, A4[1] - 12 * mm, A4[0], 12 * mm, stroke=0, fill=1)
     canvas.setFillColor(PAPER)
     canvas.setFont("Helvetica-Bold", 8)
-    canvas.drawString(18 * mm, A4[1] - 8 * mm, "ALTERNATE")
+    canvas.drawString(18 * mm, A4[1] - 8 * mm, "VAA ALTERNATE")
     canvas.setFont("Helvetica", 8)
     canvas.drawRightString(A4[0] - 18 * mm, A4[1] - 8 * mm, "What we make on every try-on  ·  18 September 2026")
     canvas.setFillColor(MUTED)
@@ -254,7 +254,7 @@ for head, text in [
     S(Paragraph(f"<b>{head}.</b> {text}", styles["body"]))
 
 doc = BaseDocTemplate(OUT, pagesize=A4, leftMargin=18 * mm, rightMargin=18 * mm, topMargin=20 * mm, bottomMargin=16 * mm,
-                      title="ALTERNATE — what we make on every try-on", author="ALTERNATE")
+                      title="VAA ALTERNATE — what we make on every try-on", author="VAA ALTERNATE")
 doc.addPageTemplates([PageTemplate(id="main", frames=[Frame(doc.leftMargin, doc.bottomMargin, doc.width, doc.height)],
                                    onPage=header_footer)])
 doc.build(story)

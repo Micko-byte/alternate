@@ -38,7 +38,7 @@ async function invoke<T>(name: string, body: Record<string, unknown>): Promise<T
   return data as T;
 }
 
-/** Buy a credit pack or a month of a plan without leaving ALTERNATE. M-Pesa runs in our UI; cards use Paystack's secure window.
+/** Buy a credit pack or a month of a plan without leaving VAA ALTERNATE. M-Pesa runs in our UI; cards use Paystack's secure window.
  *  `inline` renders it inside a page; otherwise it is an overlay with a close button. */
 export function Checkout({ item: pack, onClose, inline }: { item: CheckoutItem; onClose?: () => void; inline?: boolean }) {
   const target = pack.kind === "plan" ? { plan_id: pack.id } : { pack_id: pack.id };
@@ -157,7 +157,7 @@ export function Checkout({ item: pack, onClose, inline }: { item: CheckoutItem; 
               </form>
             ) : (
               <div className="grid gap-4">
-                <p className="text-[14px] text-muted">Your card details go straight to Paystack's secure payment window. ALTERNATE never sees your card number.</p>
+                <p className="text-[14px] text-muted">Your card details go straight to Paystack's secure payment window. VAA ALTERNATE never sees your card number.</p>
                 <Button size="lg" onClick={payCard}>Pay {kes(pack.price_kes)} by card</Button>
               </div>
             )}
@@ -180,7 +180,7 @@ export function Checkout({ item: pack, onClose, inline }: { item: CheckoutItem; 
               </span>
               <p className="display text-[26px]">Check your phone</p>
               <p className="max-w-[32ch] text-[14px] text-muted">
-                Enter your M-Pesa PIN to pay <span className="num text-ink">{kes(pack.price_kes)}</span> to ALTERNATE. This page updates by itself.
+                Enter your M-Pesa PIN to pay <span className="num text-ink">{kes(pack.price_kes)}</span> to VAA ALTERNATE. This page updates by itself.
               </p>
             </div>
             <div className="h-1 bg-sunk" aria-hidden>

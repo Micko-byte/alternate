@@ -244,7 +244,7 @@ export default function Product() {
 
         <div className="flex flex-wrap gap-2 border-t border-rule pt-5">
           {p.stores.whatsapp_phone && (
-            <a href={`https://wa.me/${p.stores.whatsapp_phone.replace(/\D/g, "")}?text=${encodeURIComponent(`Hi ${p.stores.name}, I'd like to buy "${p.name}" (${kes(p.price_kes)}) — found on ALTERNATE.`)}`} target="_blank" rel="noreferrer" className="inline-flex h-11 items-center gap-2 border border-rule bg-surface px-4 text-[14px] font-semibold hover:border-ink">
+            <a href={`https://wa.me/${p.stores.whatsapp_phone.replace(/\D/g, "")}?text=${encodeURIComponent(`Hi ${p.stores.name}, I'd like to buy "${p.name}" (${kes(p.price_kes)}) — found on VAA ALTERNATE.`)}`} target="_blank" rel="noreferrer" className="inline-flex h-11 items-center gap-2 border border-rule bg-surface px-4 text-[14px] font-semibold hover:border-ink">
               <MessageCircle className="h-4 w-4" /> Buy on WhatsApp
             </a>
           )}

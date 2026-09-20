@@ -1,9 +1,9 @@
 ---
 name: alternate-tryon
-description: How ALTERNATE's AI virtual try-on works end to end — garment zones and masks (clothes, shoes, glasses, hats, jewellery), the clothes parser, cut-outs, garment inspections, body profiles from all photos, the quality check and redo loop, size and fit rules, the GPT Image prompt, credits and plans, and how to test changes. Use whenever changing try-on quality, masks, prompts, sizes/fits, the fitting room, product sizing, or the tryon-process edge function.
+description: How VAA ALTERNATE's AI virtual try-on works end to end — garment zones and masks (clothes, shoes, glasses, hats, jewellery), the clothes parser, cut-outs, garment inspections, body profiles from all photos, the quality check and redo loop, size and fit rules, the GPT Image prompt, credits and plans, and how to test changes. Use whenever changing try-on quality, masks, prompts, sizes/fits, the fitting room, product sizing, or the tryon-process edge function.
 ---
 
-# ALTERNATE try-on
+# VAA ALTERNATE try-on
 
 A shopper's photo + a garment (store product or uploaded inspiration) → a realistic photo of *them* wearing it, in their real size and chosen fit, with everything else about them unchanged.
 

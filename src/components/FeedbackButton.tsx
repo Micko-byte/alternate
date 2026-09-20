@@ -41,7 +41,7 @@ export function FeedbackButton({ tryonId, variant = "icon", label = "Feedback" }
     });
     setBusy(false);
     if (error) return toast.error(errorMessage(error));
-    toast.success("Thank you. The ALTERNATE team reads every message.");
+    toast.success("Thank you. The VAA ALTERNATE team reads every message.");
     setMessage("");
     setRating(0);
     setOpen(false);
@@ -81,7 +81,7 @@ export function FeedbackButton({ tryonId, variant = "icon", label = "Feedback" }
           </fieldset>
 
           <fieldset className="grid gap-2">
-            <legend className="label mb-2">How would you rate ALTERNATE so far?</legend>
+            <legend className="label mb-2">How would you rate VAA ALTERNATE so far?</legend>
             <div className="flex gap-1">
               {[1, 2, 3, 4, 5].map((n) => (
                 <button type="button" key={n} onClick={() => setRating(n === rating ? 0 : n)} aria-label={`${n} of 5`} aria-pressed={rating >= n} className="p-1">

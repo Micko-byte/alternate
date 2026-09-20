@@ -19,12 +19,12 @@ export function InstallAppSection() {
   return (
     <div className="grid gap-3">
       {app.installed ? (
-        <p className="text-muted">You're using the ALTERNATE app. Open it any time from your home screen.</p>
+        <p className="text-muted">You're using the VAA ALTERNATE app. Open it any time from your home screen.</p>
       ) : (
         <>
-          <p className="text-muted">Add ALTERNATE to your home screen. It opens full screen like an app, with no app store and almost no storage.</p>
+          <p className="text-muted">Add VAA ALTERNATE to your home screen. It opens full screen like an app, with no app store and almost no storage.</p>
           {app.canPrompt ? (
-            <Button className="justify-self-start" onClick={app.install}><Download className="h-4 w-4" /> Install ALTERNATE</Button>
+            <Button className="justify-self-start" onClick={app.install}><Download className="h-4 w-4" /> Install VAA ALTERNATE</Button>
           ) : app.ios ? (
             <IosSteps />
           ) : (
@@ -62,7 +62,7 @@ export function InstallBanner() {
       <div className="flex items-center gap-3">
         <img src="/brand/icon-192.png" alt="" className="h-10 w-10 border border-rule" />
         <div className="min-w-0 flex-1">
-          <p className="text-[14px] font-medium">Get the ALTERNATE app</p>
+          <p className="text-[14px] font-medium">Get the VAA ALTERNATE app</p>
           {app.ios ? <IosSteps /> : <p className="text-[13px] text-muted">Opens full screen from your home screen.</p>}
         </div>
         {app.canPrompt && <Button size="sm" onClick={() => app.install().then((ok) => ok && dismiss())}>Install</Button>}

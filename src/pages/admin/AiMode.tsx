@@ -29,7 +29,7 @@ const MODES = [
   },
 ] as const;
 
-/** One switch for the whole system: how much ALTERNATE spends on reading photos and checking results. */
+/** One switch for the whole system: how much VAA ALTERNATE spends on reading photos and checking results. */
 export function AiMode() {
   const queryClient = useQueryClient();
 

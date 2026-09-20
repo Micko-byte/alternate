@@ -1,7 +1,7 @@
 {
   "id": "/",
-  "name": "ALTERNATE",
-  "short_name": "ALTERNATE",
+  "name": "VAA ALTERNATE",
+  "short_name": "VAA",
   "description": "Try on clothes from Kenyan stores on your own photo, in your size, before you buy.",
   "start_url": "/?source=app",
   "scope": "/",

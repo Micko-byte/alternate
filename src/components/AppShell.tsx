@@ -120,7 +120,7 @@ export function AppShell({ children }: { children?: ReactNode }) {
           {[
             ["Shop", [["New in", "/shop"], ["Women", "/shop?d=women"], ["Men", "/shop?d=men"], ["Fitting room", "/fitting-room"]]],
             ["Your account", [["Wardrobe", "/wardrobe"], ["Credits", "/credits"], ["Privacy & data", "/account"]]],
-            ["Stores", [["Sell on ALTERNATE", "/studio"], ["Store Studio", "/studio"]]],
+            ["Stores", [["Sell on VAA ALTERNATE", "/studio"], ["Store Studio", "/studio"]]],
           ].map(([head, links]) => (
             <div key={head as string} className="grid content-start gap-3">
               <h2 className="label text-ink">{head as string}</h2>
@@ -133,7 +133,7 @@ export function AppShell({ children }: { children?: ReactNode }) {
           ))}
         </div>}
         <div className="page flex flex-wrap items-center justify-between gap-3 border-t border-rule py-5">
-          <span className="label">© 2026 ALTERNATE. All rights reserved.</span>
+          <span className="label">© 2026 VAA ALTERNATE. All rights reserved.</span>
           <span className="label">Nairobi, Kenya · KES</span>
         </div>
       </footer>

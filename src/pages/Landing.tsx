@@ -101,7 +101,7 @@ export default function Landing() {
           <figure className="grid gap-2">
             <SiteImage
               slot="hero-result.jpg"
-              alt="The same shopper wearing the piece, made by ALTERNATE"
+              alt="The same shopper wearing the piece, made by VAA ALTERNATE"
               className="aspect-[2/3]"
               sizes="(max-width: 640px) 100vw, (max-width: 1024px) 62vw, 30vw"
               fallback={<div className="grid h-full place-items-center bg-accent p-6 text-center display text-[34px] text-white">On you, in your size</div>}
@@ -189,7 +189,7 @@ export default function Landing() {
         <Callout to="/shop?d=women" slot="women.jpg" alt="Womenswear from Nairobi stores" fallbackImage={covers[1]} kicker="Shop" title="Womenswear" />
         <Callout to="/shop?d=men" slot="men.jpg" alt="Menswear from Nairobi stores" fallbackImage={covers[4]} kicker="Shop" title="Menswear" tone="navy" />
         <Callout to={start} slot="screenshot.jpg" alt="Trying on a look from a screenshot" fallbackImage={covers[2]} kicker="Fitting room" title="Try any screenshot" />
-        <Callout to="/studio" slot="stores.jpg" alt="A Nairobi store owner with her rail" fallbackImage={covers[3]} kicker="For stores" title="Sell on ALTERNATE" tone="mustard" />
+        <Callout to="/studio" slot="stores.jpg" alt="A Nairobi store owner with her rail" fallbackImage={covers[3]} kicker="For stores" title="Sell on VAA ALTERNATE" tone="mustard" />
       </section>
 
       {/* Statement */}
@@ -201,9 +201,9 @@ export default function Landing() {
           </div>
           <div className="grid content-end gap-5 text-[17px] text-muted">
             <p>
-              Kenya shops on Instagram, TikTok and at the stall. ALTERNATE lets you see a piece on your own body before you send the M-Pesa, and lets boutiques and mitumba sellers show every follower how it fits.
+              Kenya shops on Instagram, TikTok and at the stall. VAA ALTERNATE lets you see a piece on your own body before you send the M-Pesa, and lets boutiques and mitumba sellers show every follower how it fits.
             </p>
-            <p className="text-ink">Stores list for free and earn 20% of what their followers spend on ALTERNATE.</p>
+            <p className="text-ink">Stores list for free and earn 20% of what their followers spend on VAA ALTERNATE.</p>
             <Link to="/studio" className="label flex items-center gap-2 text-ink hover:underline">
               Open your store <ArrowRight className="h-3.5 w-3.5" />
             </Link>
@@ -224,7 +224,7 @@ function PhoneHero({ cover }: { cover?: string }) {
       <div className="relative">
         <SiteImage
           slot="hero-result.jpg"
-          alt="The same shopper wearing the piece, made by ALTERNATE"
+          alt="The same shopper wearing the piece, made by VAA ALTERNATE"
           className="aspect-[3/4]"
           sizes="100vw"
           fallback={<div className="grid h-full place-items-center bg-accent p-6 text-center display text-[34px] text-white">On you, in your size</div>}

@@ -249,7 +249,7 @@ export function TryonView({ id }: { id: string }) {
                 {t.products.stores?.whatsapp_phone && (
                   <a
                     className="inline-flex h-12 items-center border border-ink px-6 font-mono text-[12px] font-semibold uppercase tracking-label hover:bg-ink hover:text-paper"
-                    href={`https://wa.me/${t.products.stores.whatsapp_phone.replace(/\D/g, "")}?text=${encodeURIComponent(`Hi, I tried on "${t.products.name}" on ALTERNATE and I'd like to buy it.`)}`}
+                    href={`https://wa.me/${t.products.stores.whatsapp_phone.replace(/\D/g, "")}?text=${encodeURIComponent(`Hi, I tried on "${t.products.name}" on VAA ALTERNATE and I'd like to buy it.`)}`}
                     target="_blank"
                     rel="noreferrer"
                   >

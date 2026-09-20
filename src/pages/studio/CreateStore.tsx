@@ -38,7 +38,7 @@ export default function CreateStore() {
     <div className="grid gap-10 md:grid-cols-[1fr_1.2fr]">
       <div className="grid content-start gap-5">
         <span className="label text-accent">For stores</span>
-        <h1 className="display text-[clamp(38px,6vw,64px)]">Open your store on ALTERNATE</h1>
+        <h1 className="display text-[clamp(38px,6vw,64px)]">Open your store on VAA ALTERNATE</h1>
         <ul className="grid gap-3 text-muted">
           <li><strong className="text-ink">Free to list.</strong> Photos or videos, sizes and stock, for women or men.</li>
           <li><strong className="text-ink">Earn 20%</strong> of credits bought by shoppers who join through your link.</li>

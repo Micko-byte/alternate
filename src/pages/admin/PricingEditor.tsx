@@ -12,7 +12,7 @@ const PAYSTACK = 0.015;
 const STORE_SHARE = 0.2;
 const AI_COST_PER_CREDIT_KES = 11; // a checked Standard try-on in Saver, including redos; Premium is about KES 17
 
-/** What ALTERNATE keeps from one credit sold at this price, after VAT, Paystack, the store's share and AI cost. */
+/** What VAA ALTERNATE keeps from one credit sold at this price, after VAT, Paystack, the store's share and AI cost. */
 function keepPerCredit(pricePerCredit: number, storeShare: number) {
   return pricePerCredit / (1 + VAT) - pricePerCredit * (PAYSTACK + storeShare) - AI_COST_PER_CREDIT_KES;
 }
@@ -66,7 +66,7 @@ export function PricingEditor() {
       <div className="grid gap-1">
         <h2 className="display text-[28px]">Prices</h2>
         <p className="text-muted">
-          "Keep / credit" estimates what ALTERNATE keeps from each credit if the buyer came through a store: after 16% VAT, 1.5% Paystack, that pack's store share and about {kes(AI_COST_PER_CREDIT_KES)} of AI per Standard try-on in Saver. Red means too thin.
+          "Keep / credit" estimates what VAA ALTERNATE keeps from each credit if the buyer came through a store: after 16% VAT, 1.5% Paystack, that pack's store share and about {kes(AI_COST_PER_CREDIT_KES)} of AI per Standard try-on in Saver. Red means too thin.
         </p>
       </div>
 

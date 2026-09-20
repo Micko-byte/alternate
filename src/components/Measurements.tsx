@@ -174,7 +174,7 @@ export function Measurements() {
   return (
     <div className="grid gap-6">
       <p className="text-muted">
-        Try-ons use these to draw how tightly clothes sit on you. Anything you type in is used as it is; anything missing is estimated from your photos. Only you can see them; ALTERNATE staff can't.
+        Try-ons use these to draw how tightly clothes sit on you. Anything you type in is used as it is; anything missing is estimated from your photos. Only you can see them; VAA ALTERNATE staff can't.
       </p>
 
       {heightOff && (

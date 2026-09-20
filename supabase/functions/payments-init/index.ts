@@ -1,4 +1,4 @@
-// Starts a payment for a credit pack or a monthly plan without leaving ALTERNATE:
+// Starts a payment for a credit pack or a monthly plan without leaving VAA ALTERNATE:
 //  - method "mpesa": Paystack Charge API sends an M-Pesa STK prompt to the shopper's phone
 //  - method "card":  returns an access code for Paystack's secure card window (InlineJS) over our page
 import { adminClient, callerFrom, corsHeaders, json } from "../_shared/http.ts";

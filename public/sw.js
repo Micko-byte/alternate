@@ -1,4 +1,4 @@
-// ALTERNATE service worker: makes the app installable and quick to open on slow connections.
+// VAA ALTERNATE service worker: makes the app installable and quick to open on slow connections.
 // Only our own static files are cached. Supabase, Paystack and OpenAI requests are never touched.
 const CACHE = "alternate-v2";
 const SHELL = ["/", "/manifest.webmanifest", "/brand/icon-192.png", "/brand/alternate-mark.png", "/brand/alternate-mark-white.png"];
