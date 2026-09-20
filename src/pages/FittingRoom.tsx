@@ -12,6 +12,7 @@ import { warmGarmentParser } from "@/lib/garmentParser";
 import { fileKey, forgetJob, forgetJobs, useJob, useKept } from "@/lib/work";
 import { CATEGORY_SINGULAR, cn, errorMessage, extensionOf, kes } from "@/lib/utils";
 import { Button, ButtonLink, Field, Input, Notice, Select, Spinner } from "@/components/ui";
+import { Crawl, Pondering, ScanFrame } from "@/components/Loading";
 import { BodyPhotoUploader } from "@/components/BodyPhotoUploader";
 import { TryonView } from "@/components/TryonView";
 import { FitPicker } from "@/components/FitPicker";
@@ -683,7 +684,7 @@ function InspirationForm({ file, onFile, onSaved, onCancel }: { file: File; onFi
       <div className="grid grid-cols-2 gap-2">
         <figure className="grid gap-1.5">
           <div className="relative aspect-[3/4] overflow-hidden bg-sunk">
-            {preview && <img src={preview} alt="Your inspiration photo" className="h-full w-full object-contain" />}
+            {preview && (parsing ? <ScanFrame src={preview} alt="Your inspiration photo, being read" className="h-full w-full border-0" /> : <img src={preview} alt="Your inspiration photo" className="h-full w-full object-contain" />)}
             <label className="absolute right-1.5 top-1.5 cursor-pointer bg-paper/95 px-2 py-1.5 font-mono text-[9.5px] font-semibold uppercase tracking-label hover:bg-paper">
               <input type="file" accept="image/*" className="sr-only" onClick={warmGarmentParser} onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); e.target.value = ""; }} />
               Change
@@ -694,9 +695,9 @@ function InspirationForm({ file, onFile, onSaved, onCancel }: { file: File; onFi
         <figure className="grid gap-1.5">
           <div className="grid aspect-[3/4] place-items-center overflow-hidden border border-ink bg-white">
             {cutout === undefined ? (
-              <span className="grid justify-items-center gap-2 p-3 text-center text-[12.5px] text-muted">
-                <Spinner className="h-5 w-5" />
-                Finding the {noun}…
+              <span className="grid w-full justify-items-center gap-3 p-4 text-center">
+                <Pondering stages={[`Finding the ${noun}`, "Cutting it out", "Tidying the edges"]} className="text-center" />
+                <Crawl className="max-w-[120px]" />
               </span>
             ) : cutout && !useWhole ? (
               <img src={cutout.url} alt={`Just the ${noun}`} className="h-full w-full object-contain" />

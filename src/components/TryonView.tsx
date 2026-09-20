@@ -8,12 +8,20 @@ import { kickTryon, QUALITY_LABELS } from "@/lib/tryon";
 import { cn, errorMessage, kes, signedUrl } from "@/lib/utils";
 import { sizeText } from "@/lib/sizes";
 import { Button, ButtonLink, Notice, Pill, Spinner } from "@/components/ui";
+import { AlternatingMark, Crawl, Pondering, TRYON_STAGES } from "@/components/Loading";
 import { FaceLockImage } from "@/components/FaceLockImage";
 import { FeedbackButton } from "@/components/FeedbackButton";
 import { DeleteForever } from "@/components/DeleteForever";
 import { ComingSoon3D } from "@/components/ComingSoon3D";
 import { deleteMyData } from "@/lib/deleteData";
 import { useNavigate } from "react-router-dom";
+
+/** What the engine is doing on a second run, after the quality check sent the first one back. */
+const REDO_STAGES = [
+  "Reading what the check flagged",
+  "Drawing it again",
+  "Checking the new result",
+];
 
 /** A try-on with live status, the face-locked result, rating and buy actions. */
 export function TryonView({ id }: { id: string }) {
@@ -139,11 +147,15 @@ export function TryonView({ id }: { id: string }) {
         ) : status === "failed" ? (
           <div className="grid aspect-[2/3] place-items-center bg-sunk p-8 text-center display text-[32px] text-muted">That one didn't work</div>
         ) : (
-          <div className="grid aspect-[2/3] place-items-center bg-sunk">
-            <div className="grid gap-3 text-center">
-              <Spinner className="mx-auto h-6 w-6" />
-              <span className="display text-[40px]">{attemptsSoFar ? "Improving…" : "Fitting…"}</span>
-              <span className="max-w-[30ch] text-[14px] text-muted">
+          <div className="grid aspect-[2/3] place-items-center border border-rule bg-sunk p-6">
+            <div className="grid justify-items-center gap-5 text-center">
+              <AlternatingMark className="w-[76px]" />
+              <div className="grid gap-2">
+                <span className="display text-[clamp(34px,6vw,44px)]">{attemptsSoFar ? "Improving" : "Fitting"}</span>
+                <Pondering stages={attemptsSoFar ? REDO_STAGES : TRYON_STAGES} className="text-center" />
+              </div>
+              <Crawl className="max-w-[200px]" />
+              <span className="max-w-[30ch] text-[13.5px] text-muted">
                 {attemptsSoFar
                   ? "Our quality check wasn't happy with the first result, so we're redoing it."
                   : "Usually 1–2 minutes. Every result is checked before you see it. You can leave this page."}
