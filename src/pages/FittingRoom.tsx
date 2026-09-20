@@ -8,6 +8,8 @@ import { useAuth } from "@/lib/auth";
 import { useBodyPhotos, useBodyProfile, useCredits, useProfile, useSetupStatus, useShopPacks, useSizes, useTryonPrices, type BodyProfileNotes } from "@/lib/queries";
 import { SIZE_SYSTEMS, defaultSystemFor, sizeText, type FitStyle } from "@/lib/sizes";
 import { QUALITY_LABELS, startTryon } from "@/lib/tryon";
+import { warmGarmentParser } from "@/lib/garmentParser";
+import { fileKey, forgetJob, forgetJobs, useJob, useKept } from "@/lib/work";
 import { CATEGORY_SINGULAR, cn, errorMessage, extensionOf, kes } from "@/lib/utils";
 import { Button, ButtonLink, Field, Input, Notice, Select, Spinner } from "@/components/ui";
 import { BodyPhotoUploader } from "@/components/BodyPhotoUploader";
@@ -37,16 +39,18 @@ export default function FittingRoom() {
   const allowance = useTryonAllowance();
   const usedUp = !!allowance.data && !allowance.data.exempt && allowance.data.remaining === 0;
 
-  const [photoId, setPhotoId] = useState<string>();
-  const [inspirationId, setInspirationId] = useState<string>();
-  const [addingPhoto, setAddingPhoto] = useState(false);
-  const [pendingInspiration, setPendingInspiration] = useState<File | null>(null);
+  // Kept outside this screen. A tap on Wardrobe used to throw away the photo someone had just
+  // picked, the garment being read, and the try-on they had already paid for.
+  const [photoId, setPhotoId] = useKept<string | undefined>("fitting-photo", undefined);
+  const [inspirationId, setInspirationId] = useKept<string | undefined>("fitting-inspiration", undefined);
+  const [addingPhoto, setAddingPhoto] = useKept("fitting-adding-photo", false);
+  const [pendingInspiration, setPendingInspiration] = useKept<File | null>("fitting-pending-inspiration", null);
   const [editingInspiration, setEditingInspiration] = useState(false);
   const profile = useProfile();
-  const [fit, setFit] = useState<FitStyle>("regular");
-  const [quality, setQuality] = useState<Quality>("standard");
-  const [busy, setBusy] = useState(false);
-  const [activeTryon, setActiveTryon] = useState<string>();
+  const [fit, setFit] = useKept<FitStyle>("fitting-fit", "regular");
+  const [quality, setQuality] = useKept<Quality>("fitting-quality", "standard");
+  const [starting, setStarting] = useKept<string | null>("fitting-starting", null);
+  const [activeTryon, setActiveTryon] = useKept<string | undefined>("fitting-active-tryon", undefined);
   const resultRef = useRef<HTMLDivElement>(null);
 
   const photoUrls = useQuery({
@@ -88,9 +92,13 @@ export default function FittingRoom() {
     },
   });
 
+  // Everyone here is about to try something on, so the 29 MB clothes parser starts downloading
+  // with the page instead of when a photo is picked (skipped on a save-data connection).
+  useEffect(warmGarmentParser, []);
+
   useEffect(() => {
     if (profile.data?.preferred_fit) setFit(profile.data.preferred_fit);
-  }, [profile.data?.preferred_fit]);
+  }, [profile.data?.preferred_fit, setFit]);
 
   const profileStale = !!photos.data?.length && bodyProfile.isSuccess && (bodyProfile.data?.photo_ids?.length ?? 0) !== photos.data.length;
   useEffect(() => {
@@ -109,15 +117,19 @@ export default function FittingRoom() {
     };
     window.addEventListener("paste", onPaste);
     return () => window.removeEventListener("paste", onPaste);
-  }, []);
+  }, [setPendingInspiration]);
+
+  // A choice made last time is kept, so let go of it if that photo or garment is gone now
+  useEffect(() => {
+    if (!photos.data?.length) return;
+    const chosen = photoId && photos.data.some((p) => p.id === photoId);
+    if (!chosen) setPhotoId(photos.data.find((p) => p.angle === "front")?.id ?? photos.data[0].id);
+  }, [photos.data, photoId, setPhotoId]);
 
   useEffect(() => {
-    if (!photoId && photos.data?.length) setPhotoId(photos.data.find((p) => p.angle === "front")?.id ?? photos.data[0].id);
-  }, [photos.data, photoId]);
-
-  useEffect(() => {
-    if (!inspirationId && inspirations.data?.length) setInspirationId(inspirations.data[0].id);
-  }, [inspirations.data, inspirationId]);
+    if (!inspirations.data?.length) return;
+    if (!inspirationId || !inspirations.data.some((g) => g.id === inspirationId)) setInspirationId(inspirations.data[0].id);
+  }, [inspirations.data, inspirationId, setInspirationId]);
 
   const inspiration = inspirations.data?.find((g) => g.id === inspirationId);
   const category = inspiration?.category ?? null;
@@ -142,21 +154,36 @@ export default function FittingRoom() {
     inspirations.refetch();
   };
 
-  const swap = async () => {
-    if (!photoId || !inspirationId) return;
-    setBusy(true);
-    try {
-      const id = await startTryon({ bodyPhotoId: photoId, garmentUploadId: inspirationId, quality, fit, category });
-      queryClient.invalidateQueries({ queryKey: ["credits"] });
-      queryClient.invalidateQueries({ queryKey: ["tryon-allowance"] });
-      recent.refetch();
-      setActiveTryon(id);
-      setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
-    } catch (err) {
-      toast.error(errorMessage(err));
-    } finally {
-      setBusy(false);
-    }
+  // A try-on costs credits the moment it starts, so it is run as a job: walking off to the wardrobe
+  // and back brings you to the result instead of losing it.
+  const swapping = useJob(starting ? `tryon-start:${starting}` : null, () =>
+    startTryon({ bodyPhotoId: photoId!, garmentUploadId: inspirationId!, quality, fit, category }),
+  );
+  const startedTryon = swapping.status === "done" ? (swapping.value as string) : null;
+
+  useEffect(() => {
+    if (!startedTryon || !starting) return;
+    forgetJob(`tryon-start:${starting}`);
+    setStarting(null);
+    setActiveTryon(startedTryon);
+    queryClient.invalidateQueries({ queryKey: ["credits"] });
+    queryClient.invalidateQueries({ queryKey: ["tryon-allowance"] });
+    recent.refetch();
+    setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+    // The try-on's id is what decides this runs, once
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [startedTryon]);
+
+  useEffect(() => {
+    if (swapping.status !== "failed" || !starting) return;
+    toast.error(errorMessage(swapping.error));
+    forgetJob(`tryon-start:${starting}`);
+    setStarting(null);
+  }, [swapping.status, swapping.error, starting, setStarting]);
+
+  const swap = () => {
+    if (!photoId || !inspirationId || starting) return;
+    setStarting(crypto.randomUUID());
   };
 
   if (setup.loading) return <div className="grid place-items-center py-24"><Spinner /></div>;
@@ -206,7 +233,7 @@ export default function FittingRoom() {
                     <span className="absolute inset-x-0 bottom-0 bg-paper/90 py-0.5 text-center font-mono text-[9px] uppercase">{p.angle}</span>
                   </button>
                 ))}
-                <AddTile label="Photo" disabled={!canUpload} onClick={() => setAddingPhoto(true)} />
+                <AddTile label="Photo" disabled={!canUpload} onClick={() => { warmGarmentParser(); setAddingPhoto(true); }} />
               </div>
               {!!photos.data?.length && <PhotoChecklist notes={bodyProfile.data?.photos} tips={bodyProfile.data?.tips} checking={profileStale} />}
             </>
@@ -258,7 +285,7 @@ export default function FittingRoom() {
               <ButtonLink to="/credits" variant="solid" size="lg">Get credits</ButtonLink>
             )
           ) : (
-            <Button variant="solid" size="lg" onClick={swap} loading={busy} disabled={!photoId || !inspirationId || (needsSize && mySize === undefined)}>
+            <Button variant="solid" size="lg" onClick={swap} loading={!!starting} disabled={!photoId || !inspirationId || (needsSize && mySize === undefined)}>
               Try it on · {cost} cr
             </Button>
           )}
@@ -407,7 +434,8 @@ function UploadZone({ onFile, compact }: { onFile: (file: File) => void; compact
   const [over, setOver] = useState(false);
   return (
     <label
-      onDragOver={(e) => { e.preventDefault(); setOver(true); }}
+      onPointerEnter={warmGarmentParser}
+      onDragOver={(e) => { e.preventDefault(); setOver(true); warmGarmentParser(); }}
       onDragLeave={() => setOver(false)}
       onDrop={(e) => {
         e.preventDefault();
@@ -421,7 +449,7 @@ function UploadZone({ onFile, compact }: { onFile: (file: File) => void; compact
         over ? "border-ink bg-sunk" : "border-ink/35 hover:border-ink",
       )}
     >
-      <input type="file" accept="image/*" className="sr-only" onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); e.target.value = ""; }} />
+      <input type="file" accept="image/*" className="sr-only" onClick={warmGarmentParser} onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); e.target.value = ""; }} />
       <ImagePlus className={compact ? "h-4 w-4" : "h-8 w-8"} strokeWidth={1.4} aria-hidden />
       {compact ? (
         <span className="font-mono text-[11px] font-semibold uppercase tracking-label">Upload new clothes</span>
@@ -438,159 +466,205 @@ function UploadZone({ onFile, compact }: { onFile: (file: File) => void; compact
 
 function AddFileTile({ label, onFile }: { label: string; onFile: (file: File) => void }) {
   return (
-    <label className="grid h-24 w-[64px] shrink-0 cursor-pointer place-items-center content-center gap-1 border border-dashed border-ink/40 text-muted hover:border-ink hover:text-ink">
-      <input type="file" accept="image/*" className="sr-only" onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); e.target.value = ""; }} />
+    <label onPointerEnter={warmGarmentParser} className="grid h-24 w-[64px] shrink-0 cursor-pointer place-items-center content-center gap-1 border border-dashed border-ink/40 text-muted hover:border-ink hover:text-ink">
+      <input type="file" accept="image/*" className="sr-only" onClick={warmGarmentParser} onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); e.target.value = ""; }} />
       <Plus className="h-4 w-4" />
       <span className="font-mono text-[9px] font-semibold uppercase tracking-label">{label}</span>
     </label>
   );
 }
 
+type Draft = {
+  /** Which picked photo all of this belongs to. Everything resets when that changes. */
+  file: string;
+  category: string;
+  garmentType: string | null;
+  touched: boolean;
+  note: string;
+  dimensions: Dimensions;
+  useWhole: boolean;
+  /** Set while this photo is being saved and checked. */
+  saveToken: string | null;
+  /** What the photo check asked us to put to the shopper. */
+  asked: Saved | null;
+};
+
+const NEW_DRAFT: Draft = { file: "", category: "top", garmentType: null, touched: false, note: "", dimensions: EMPTY_DIMENSIONS, useWhole: false, saveToken: null, asked: null };
+
+/** What came back from saving: it's on the shelf, or the photo check has something to say first. */
+type Saved =
+  | { kind: "saved"; id: string }
+  | { kind: "mismatch"; id: string; message: string; suggestion: { category: string; type: string } | null }
+  | { kind: "details"; id: string; category: string; type: string | null; seen: Seen };
+
 function InspirationForm({ file, onFile, onSaved, onCancel }: { file: File; onFile: (file: File) => void; onSaved: (id: string) => void; onCancel: () => void }) {
   const { user } = useAuth();
+  // Reading the photo, cutting the garment out of it and the photo check are all slow, and all of
+  // them used to be abandoned the moment this screen went away. They live outside it now, under
+  // this photo's name, so leaving and coming back finds the same work where it was left.
+  const mine = `inspiration:${fileKey(file)}:`;
   const [preview, setPreview] = useState<string>();
-  const [category, setCategory] = useState("top");
-  const [garmentType, setGarmentType] = useState<string | null>(null);
-  const [touched, setTouched] = useState(false);
-  const [mismatch, setMismatch] = useState<{ id: string; message: string; suggestion: { category: string; type: string } | null } | null>(null);
-  const [details, setDetails] = useState<{ id: string; category: string; type: string | null; seen: Seen } | null>(null);
-  const [note, setNote] = useState("");
-  const [dimensions, setDimensions] = useState<Dimensions>(EMPTY_DIMENSIONS);
-  const [busy, setBusy] = useState(false);
-  const [parsed, setParsed] = useState<ParsedInspiration | null>(null);
-  const [parsing, setParsing] = useState(true);
-  const [cutout, setCutout] = useState<{ blob: Blob; url: string } | null | undefined>(undefined);
-  const [useWhole, setUseWhole] = useState(false);
+  const [stored, setDraft] = useKept<Draft>("inspiration-draft", NEW_DRAFT);
+  const draft = stored.file === mine ? stored : { ...NEW_DRAFT, file: mine };
+  const { category, garmentType, note, dimensions, useWhole, saveToken, asked } = draft;
+  const latest = useRef(draft);
+  latest.current = draft;
+  // Writes through the ref as well, so two changes in one go don't undo each other
+  const patch = (fields: Partial<Draft>) => {
+    latest.current = { ...latest.current, ...fields };
+    setDraft(latest.current);
+  };
 
   useEffect(() => {
     const url = URL.createObjectURL(file);
     setPreview(url);
-    setParsed(null);
-    setParsing(true);
-    setUseWhole(false);
-    setTouched(false);
-    setMismatch(null);
-    setDetails(null);
-    setDimensions(EMPTY_DIMENSIONS);
-    let cancelled = false;
-    import("@/lib/garmentCutout")
-      .then(({ parseInspiration }) => parseInspiration(file))
-      .then(async (p) => {
-        if (cancelled) return;
-        setParsed(p);
-        const { guessCategory } = await import("@/lib/garmentCutout");
-        const guess = guessCategory(p);
-        if (guess) setCategory((c) => (touchedRef.current ? c : guess));
-      })
-      .catch(() => !cancelled && setParsed(null))
-      .finally(() => !cancelled && setParsing(false));
-    return () => {
-      cancelled = true;
-      URL.revokeObjectURL(url);
-    };
+    return () => URL.revokeObjectURL(url);
   }, [file]);
 
-  const touchedRef = useRef(false);
-  touchedRef.current = touched;
+  const read = useJob(`${mine}parse`, async () => {
+    const { parseInspiration } = await import("@/lib/garmentCutout");
+    return parseInspiration(file);
+  });
+  const parsed = read.status === "done" ? (read.value as ParsedInspiration) : null;
+  const parsing = read.status === "idle" || read.status === "running";
+
+  // The parser's own guess at what the photo shows, unless the shopper has already said
+  const guessedFor = useRef<string>();
+  useEffect(() => {
+    if (!parsed || latest.current.touched || guessedFor.current === mine) return;
+    guessedFor.current = mine;
+    void import("@/lib/garmentCutout").then(({ guessCategory }) => {
+      const guess = guessCategory(parsed);
+      if (guess && !latest.current.touched) patch({ category: guess });
+    });
+    // patch always writes the newest draft, so it doesn't belong in here
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [parsed, mine]);
+
+  const cutoutKey = parsed && category !== "jewellery" ? `${mine}cutout:${category}` : null;
+  const cut = useJob(
+    cutoutKey,
+    async () => {
+      const { cutoutGarment } = await import("@/lib/garmentCutout");
+      return cutoutGarment(parsed!, category);
+    },
+    (made) => made && URL.revokeObjectURL(made.url),
+  );
+  // undefined while we're still looking, null when there's nothing to cut out
+  const cutout: { blob: Blob; url: string } | null | undefined = !cutoutKey
+    ? parsing
+      ? undefined
+      : null
+    : cut.status === "done"
+      ? ((cut.value as { blob: Blob; url: string } | null) ?? null)
+      : cut.status === "failed"
+        ? null
+        : undefined;
+
+  const saving = useJob(saveToken ? `inspiration-save:${saveToken}` : null, async (): Promise<Saved> => {
+    const id = crypto.randomUUID();
+    const path = `${user!.id}/${id}.${extensionOf(file)}`;
+    const keeping = cutout && !latest.current.useWhole ? cutout : null;
+    const cutoutPath = keeping ? `${user!.id}/${id}-cutout.png` : null;
+    const bucket = supabase.storage.from("garment-uploads");
+    // Photo and cut-out go up together: on a phone the second round trip is most of the wait
+    const [photo, cutUp] = await Promise.all([
+      bucket.upload(path, file, { contentType: file.type || "image/png" }),
+      keeping && cutoutPath ? bucket.upload(cutoutPath, keeping.blob, { contentType: "image/png" }) : Promise.resolve(null),
+    ]);
+    if (photo.error) throw photo.error;
+    if (cutUp?.error) throw cutUp.error;
+
+    const now = latest.current;
+    const { error } = await supabase
+      .from("garment_uploads")
+      .insert({ id, user_id: user!.id, storage_path: path, cutout_path: cutoutPath, category: now.category as never, garment_type: now.garmentType, source_note: now.note || null, ...dimensionsRow(now.category, now.dimensions) });
+    if (error) throw error;
+
+    // The server checks what the photo really shows before anyone pays
+    const { data: check } = await supabase.functions.invoke("inspect-garment", { body: { garment_upload_id: id } });
+    if (check?.checked && (!check.matches || !check.is_wearable)) {
+      return { kind: "mismatch", id, message: check.message, suggestion: check.is_wearable ? check.suggestion : null };
+    }
+    if (check?.checked && !now.garmentType && check.chosen_item) {
+      await supabase.from("garment_uploads").update({ garment_type: String(check.chosen_item).slice(0, 40) }).eq("id", id);
+    }
+    if (LENGTH_OPTIONS[now.category] && !hasDimensions(now.dimensions)) {
+      // Nothing described yet: confirm what the photo check read before the first try-on
+      return { kind: "details", id, category: now.category, type: now.garmentType ?? check?.chosen_item ?? null, seen: check?.checked ? check.chosen : null };
+    }
+    return { kind: "saved", id };
+  });
+
+  const clearSave = () => {
+    if (saveToken) forgetJob(`inspiration-save:${saveToken}`);
+    patch({ saveToken: null, asked: null });
+  };
+
+  const finish = (id: string) => {
+    if (saveToken) forgetJob(`inspiration-save:${saveToken}`);
+    forgetJobs(mine);
+    setDraft(NEW_DRAFT);
+    onSaved(id);
+  };
+
+  const outcome = asked ?? (saving.status === "done" ? (saving.value as Saved) : null);
+  const settled = outcome?.kind === "saved" ? outcome.id : null;
+  useEffect(() => {
+    if (settled) finish(settled);
+    // The garment's id is what decides this runs, once
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settled]);
 
   useEffect(() => {
-    if (!parsed || category === "jewellery") {
-      setCutout(parsing ? undefined : null);
-      return;
-    }
-    let cancelled = false;
-    import("@/lib/garmentCutout")
-      .then(({ cutoutGarment }) => cutoutGarment(parsed, category))
-      .then((c) => !cancelled && setCutout(c))
-      .catch(() => !cancelled && setCutout(null));
-    return () => {
-      cancelled = true;
-    };
-  }, [parsed, parsing, category]);
-
-  const save = async () => {
-    setBusy(true);
-    try {
-      const id = crypto.randomUUID();
-      const path = `${user!.id}/${id}.${extensionOf(file)}`;
-      const { error: upErr } = await supabase.storage.from("garment-uploads").upload(path, file, { contentType: file.type || "image/png" });
-      if (upErr) throw upErr;
-      let cutoutPath: string | null = null;
-      if (cutout && !useWhole) {
-        cutoutPath = `${user!.id}/${id}-cutout.png`;
-        const { error: cutErr } = await supabase.storage.from("garment-uploads").upload(cutoutPath, cutout.blob, { contentType: "image/png" });
-        if (cutErr) throw cutErr;
-      }
-      const { error } = await supabase
-        .from("garment_uploads")
-        .insert({ id, user_id: user!.id, storage_path: path, cutout_path: cutoutPath, category: category as never, garment_type: garmentType, source_note: note || null, ...dimensionsRow(category, dimensions) });
-      if (error) throw error;
-
-      // The server checks what the photo really shows before anyone pays
-      const { data: check } = await supabase.functions.invoke("inspect-garment", { body: { garment_upload_id: id } });
-      if (check?.checked && (!check.matches || !check.is_wearable)) {
-        setMismatch({ id, message: check.message, suggestion: check.is_wearable ? check.suggestion : null });
-        return;
-      }
-      if (check?.checked && !garmentType && check.chosen_item) {
-        await supabase.from("garment_uploads").update({ garment_type: String(check.chosen_item).slice(0, 40) }).eq("id", id);
-      }
-      if (LENGTH_OPTIONS[category] && !hasDimensions(dimensions)) {
-        // Nothing described yet: confirm what the photo check read before the first try-on
-        setDetails({ id, category, type: garmentType ?? check?.chosen_item ?? null, seen: check?.checked ? check.chosen : null });
-        return;
-      }
-      onSaved(id);
-    } catch (err) {
-      toast.error(errorMessage(err));
-    } finally {
-      setBusy(false);
-    }
-  };
+    if (saving.status !== "failed") return;
+    toast.error(errorMessage(saving.error));
+    clearSave();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [saving.status, saving.error]);
 
   const noun = garmentType?.toLowerCase() ?? CATEGORY_SINGULAR[category];
 
   const useSuggestion = async () => {
-    if (!mismatch?.suggestion) return;
+    if (outcome?.kind !== "mismatch" || !outcome.suggestion) return;
+    const { category: suggested, type } = outcome.suggestion;
     const { error } = await supabase
       .from("garment_uploads")
-      .update({ category: mismatch.suggestion.category as never, garment_type: mismatch.suggestion.type.slice(0, 40) })
-      .eq("id", mismatch.id);
+      .update({ category: suggested as never, garment_type: type.slice(0, 40) })
+      .eq("id", outcome.id);
     if (error) return toast.error(errorMessage(error));
-    if (LENGTH_OPTIONS[mismatch.suggestion.category]) {
-      setCategory(mismatch.suggestion.category);
-      setDetails({ id: mismatch.id, category: mismatch.suggestion.category, type: mismatch.suggestion.type, seen: null });
-      setMismatch(null);
+    if (LENGTH_OPTIONS[suggested]) {
+      patch({ category: suggested, saveToken: null, asked: { kind: "details", id: outcome.id, category: suggested, type, seen: null } });
       return;
     }
-    onSaved(mismatch.id);
+    finish(outcome.id);
   };
 
   const discardMismatch = async () => {
-    if (!mismatch) return;
-    await supabase.from("garment_uploads").delete().eq("id", mismatch.id);
-    setMismatch(null);
+    if (outcome?.kind !== "mismatch") return;
+    await supabase.from("garment_uploads").delete().eq("id", outcome.id);
+    clearSave();
   };
 
-  if (details) {
+  if (outcome?.kind === "details") {
     return (
       <GarmentDetails
-        garment={{ id: details.id, category: details.category, garment_type: details.type, length: null, size_label: null, measurements: null, stretch: null }}
+        garment={{ id: outcome.id, category: outcome.category, garment_type: outcome.type, length: null, size_label: null, measurements: null, stretch: null }}
         previewUrl={preview}
-        seen={details.seen}
-        onDone={() => onSaved(details.id)}
-        onCancel={() => onSaved(details.id)}
+        seen={outcome.seen}
+        onDone={() => finish(outcome.id)}
+        onCancel={() => finish(outcome.id)}
       />
     );
   }
 
-  if (mismatch) {
-    const label = mismatch.suggestion ? mismatch.suggestion.type : null;
+  if (outcome?.kind === "mismatch") {
+    const label = outcome.suggestion ? outcome.suggestion.type : null;
     return (
       <div className="grid gap-4">
         {preview && <img src={preview} alt="Your inspiration photo" className="aspect-[3/4] w-full bg-sunk object-contain" />}
         <Notice tone="warn" title="That doesn't match">
-          {mismatch.message} Try-ons only draw what's really in the photo.
+          {outcome.message} Try-ons only draw what's really in the photo.
         </Notice>
         <div className="flex flex-wrap gap-2">
           {label && <Button variant="solid" onClick={useSuggestion}>Try on the {label.toLowerCase()}</Button>}
@@ -602,6 +676,7 @@ function InspirationForm({ file, onFile, onSaved, onCancel }: { file: File; onFi
   }
 
   const groupOf = GARMENT_BY_CATEGORY[category];
+  const busy = !!saveToken;
 
   return (
     <div className="grid gap-4">
@@ -610,7 +685,7 @@ function InspirationForm({ file, onFile, onSaved, onCancel }: { file: File; onFi
           <div className="relative aspect-[3/4] overflow-hidden bg-sunk">
             {preview && <img src={preview} alt="Your inspiration photo" className="h-full w-full object-contain" />}
             <label className="absolute right-1.5 top-1.5 cursor-pointer bg-paper/95 px-2 py-1.5 font-mono text-[9.5px] font-semibold uppercase tracking-label hover:bg-paper">
-              <input type="file" accept="image/*" className="sr-only" onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); e.target.value = ""; }} />
+              <input type="file" accept="image/*" className="sr-only" onClick={warmGarmentParser} onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); e.target.value = ""; }} />
               Change
             </label>
           </div>
@@ -644,7 +719,7 @@ function InspirationForm({ file, onFile, onSaved, onCancel }: { file: File; onFi
                 <button
                   key={g.category}
                   type="button"
-                  onClick={() => { setCategory(g.category); setGarmentType(null); setTouched(true); setDimensions({ ...dimensions, length: null }); }}
+                  onClick={() => patch({ category: g.category, garmentType: null, touched: true, dimensions: { ...dimensions, length: null } })}
                   aria-pressed={category === g.category}
                   className={cn("h-9 border px-3 font-mono text-[11px] font-semibold uppercase tracking-label", category === g.category ? "border-ink bg-ink text-paper" : "border-rule text-muted hover:border-ink hover:text-ink")}
                 >
@@ -662,7 +737,7 @@ function InspirationForm({ file, onFile, onSaved, onCancel }: { file: File; onFi
                 <button
                   key={t}
                   type="button"
-                  onClick={() => setGarmentType(garmentType === t ? null : t)}
+                  onClick={() => patch({ garmentType: garmentType === t ? null : t })}
                   aria-pressed={garmentType === t}
                   className={cn("h-8 border px-2.5 text-[12.5px]", garmentType === t ? "border-ink bg-ink text-paper" : "border-rule text-muted hover:border-ink hover:text-ink")}
                 >
@@ -675,7 +750,7 @@ function InspirationForm({ file, onFile, onSaved, onCancel }: { file: File; onFi
       </fieldset>
       {cutout && (
         <label className="flex cursor-pointer items-center gap-2 text-[13px] text-muted">
-          <input type="checkbox" checked={useWhole} onChange={(e) => setUseWhole(e.target.checked)} className="h-4 w-4 accent-ink" />
+          <input type="checkbox" checked={useWhole} onChange={(e) => patch({ useWhole: e.target.checked })} className="h-4 w-4 accent-ink" />
           The cut-out missed part of it. Use the whole photo instead.
         </label>
       )}
@@ -685,13 +760,13 @@ function InspirationForm({ file, onFile, onSaved, onCancel }: { file: File; onFi
           <h3 className="label text-ink">Size &amp; dimensions</h3>
           <p className="text-[13px] text-muted">Describe it as exactly as you can. Everything is optional: whatever you leave out, we read from the photo.</p>
         </div>
-        <DimensionFields category={category} value={dimensions} onChange={setDimensions} />
+        <DimensionFields category={category} value={dimensions} onChange={(next) => patch({ dimensions: next })} />
         <Field label="Describe it" hint="Anything else about the fit, fabric or length">
-          <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. high-waisted, stops just above the ankle, thick ribbed knit" maxLength={200} />
+          <Input value={note} onChange={(e) => patch({ note: e.target.value })} placeholder="e.g. high-waisted, stops just above the ankle, thick ribbed knit" maxLength={200} />
         </Field>
       </section>
       <div className="flex gap-2">
-        <Button variant="solid" onClick={save} loading={busy} disabled={cutout === undefined}>{busy ? "Checking the photo…" : `Use this ${noun}`}</Button>
+        <Button variant="solid" onClick={() => !saveToken && patch({ saveToken: crypto.randomUUID() })} loading={busy} disabled={cutout === undefined}>{busy ? "Checking the photo…" : `Use this ${noun}`}</Button>
         <Button variant="ghost" onClick={onCancel}>Cancel</Button>
       </div>
     </div>
