@@ -49,17 +49,15 @@ export async function prepareBodyPhoto(file: File): Promise<PreparedPhoto> {
     gridToPng(face, (on) => (on ? [255, 255, 255, 255] : [0, 0, 0, 0])),
   ]);
 
-  // Preview: locked face and hair shaded
+  // Preview: locked face and hair shaded. Drawn from the grid, not from the mask PNG we just made:
+  // encoding and decoding a full-size PNG again costs a phone a second for a picture nobody keeps.
   const overlay = document.createElement("canvas");
   overlay.width = PHOTO_W;
   overlay.height = PHOTO_H;
   const octx = overlay.getContext("2d")!;
   octx.drawImage(canvas, 0, 0);
-  const tint = document.createElement("canvas");
-  tint.width = PHOTO_W;
-  tint.height = PHOTO_H;
+  const tint = grown(gridCanvas(face, (on) => (on ? [255, 255, 255, 255] : [0, 0, 0, 0])));
   const tctx = tint.getContext("2d")!;
-  tctx.drawImage(await loadImage(URL.createObjectURL(faceMask)), 0, 0, PHOTO_W, PHOTO_H);
   tctx.globalCompositeOperation = "source-in";
   tctx.fillStyle = "rgba(34, 42, 65, 0.42)";
   tctx.fillRect(0, 0, PHOTO_W, PHOTO_H);
@@ -127,7 +125,7 @@ export async function ensurePartsMap(photo: PhotoRow) {
   return path;
 }
 
-async function gridToPng(grid: Uint8Array, color: (on: boolean) => number[]) {
+function gridCanvas(grid: Uint8Array, color: (on: boolean) => number[]) {
   const small = document.createElement("canvas");
   small.width = GRID_W;
   small.height = GRID_H;
@@ -141,6 +139,11 @@ async function gridToPng(grid: Uint8Array, color: (on: boolean) => number[]) {
     img.data[i * 4 + 3] = a;
   }
   sctx.putImageData(img, 0, 0);
+  return small;
+}
+
+/** The grid drawn at photo size, softened, the way the engine and the paste-back want it. */
+function grown(small: HTMLCanvasElement) {
   const big = document.createElement("canvas");
   big.width = PHOTO_W;
   big.height = PHOTO_H;
@@ -148,11 +151,53 @@ async function gridToPng(grid: Uint8Array, color: (on: boolean) => number[]) {
   bctx.imageSmoothingEnabled = true;
   bctx.imageSmoothingQuality = "high";
   bctx.drawImage(small, 0, 0, PHOTO_W, PHOTO_H);
-  return canvasToBlob(big, "image/png");
+  return big;
+}
+
+function gridToPng(grid: Uint8Array, color: (on: boolean) => number[]) {
+  return canvasToBlob(grown(gridCanvas(grid, color)), "image/png");
 }
 
 export function canvasToBlob(canvas: HTMLCanvasElement, type: string, quality?: number) {
   return new Promise<Blob>((resolve, reject) =>
     canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("Could not encode image"))), type, quality),
   );
+}
+
+/**
+ * Saves a prepared photo: the photo itself, its parts map and its face mask go up together rather
+ * than one after the other (three round trips on a phone is most of the wait), then the row.
+ * Returns the new photo's id.
+ */
+export async function saveBodyPhoto(userId: string, angle: "front" | "back" | "side", prepared: PreparedPhoto) {
+  const id = crypto.randomUUID();
+  const paths = {
+    photo: `${userId}/${id}.png`,
+    parts: `${userId}/masks/${id}-parts.png`,
+    face: `${userId}/masks/${id}-face.png`,
+  };
+  const bucket = supabase.storage.from("body-photos");
+  const uploads = await Promise.all(
+    ([
+      [paths.photo, prepared.photo],
+      [paths.parts, prepared.partsMap],
+      [paths.face, prepared.faceMask],
+    ] as [string, Blob][]).map(([path, blob]) => bucket.upload(path, blob, { contentType: "image/png" })),
+  );
+  const failed = uploads.find((u) => u.error);
+  if (failed?.error) throw failed.error;
+
+  const { error } = await supabase.from("body_photos").insert({
+    id,
+    user_id: userId,
+    angle,
+    storage_path: paths.photo,
+    parts_map_path: paths.parts,
+    face_mask_path: paths.face,
+    width: PHOTO_W,
+    height: PHOTO_H,
+    confirmed_self: true,
+  });
+  if (error) throw error;
+  return id;
 }

@@ -1,79 +1,88 @@
-import { useState } from "react";
+import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import type { PreparedPhoto } from "@/lib/bodyPhoto";
+import { warmGarmentParser } from "@/lib/garmentParser";
+import { fileKey, forgetJob, useJob, useKept } from "@/lib/work";
 import { errorMessage } from "@/lib/utils";
 import { Button, Field, Input, Notice, Select, Spinner } from "@/components/ui";
 import { PhotoPrivacyNote, usePrivacySetting } from "@/components/PhotoPrivacy";
+
+type Angle = "front" | "back" | "side";
+
+const readKey = (file: File) => `body-photo:${fileKey(file)}`;
+const saveKey = (file: File) => `body-photo-save:${fileKey(file)}`;
 
 /** Adds a full-body photo: finds face and hair in the browser, uploads photo + face-lock masks. */
 export function BodyPhotoUploader({ onAdded, onCancel }: { onAdded?: (photoId: string) => void; onCancel?: () => void }) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [angle, setAngle] = useState<"front" | "back" | "side">("front");
-  const [prepared, setPrepared] = useState<PreparedPhoto | null>(null);
-  const [processing, setProcessing] = useState(false);
-  const [confirmSelf, setConfirmSelf] = useState(false);
-  const [uploading, setUploading] = useState(false);
+  // Kept outside this screen: reading a photo takes seconds, and a tap on Wardrobe used to throw it away
+  const [file, setFile] = useKept<File | null>("body-photo-file", null);
+  const [angle, setAngle] = useKept<Angle>("body-photo-angle", "front");
+  const [confirmSelf, setConfirmSelf] = useKept("body-photo-confirmed", false);
+  const [saving, setSaving] = useKept("body-photo-saving", false);
   const privacy = usePrivacySetting();
 
-  const onFile = async (file: File | undefined) => {
-    if (!file) return;
-    setProcessing(true);
-    setPrepared(null);
-    try {
+  const read = useJob(
+    file ? readKey(file) : null,
+    async () => {
       const { prepareBodyPhoto } = await import("@/lib/bodyPhoto");
-      setPrepared(await prepareBodyPhoto(file));
-    } catch (err) {
-      toast.error(`We couldn't read that photo: ${errorMessage(err)}`);
-    } finally {
-      setProcessing(false);
-    }
-  };
+      return prepareBodyPhoto(file!);
+    },
+    (photo) => URL.revokeObjectURL(photo.overlayUrl),
+  );
+  const prepared = read.status === "done" ? (read.value as PreparedPhoto) : null;
 
-  const upload = async () => {
-    if (!prepared) return;
-    setUploading(true);
-    try {
-      const id = crypto.randomUUID();
-      const base = `${user!.id}/masks/${id}`;
-      const paths = { photo: `${user!.id}/${id}.png`, parts: `${base}-parts.png`, face: `${base}-face.png` };
-      const bucket = supabase.storage.from("body-photos");
-      const files: [string, Blob][] = [
-        [paths.photo, prepared.photo],
-        [paths.parts, prepared.partsMap],
-        [paths.face, prepared.faceMask],
-      ];
-      for (const [path, blob] of files) {
-        const { error } = await bucket.upload(path, blob, { contentType: "image/png" });
-        if (error) throw error;
-      }
-      const { error } = await supabase.from("body_photos").insert({
-        id,
-        user_id: user!.id,
-        angle,
-        storage_path: paths.photo,
-        parts_map_path: paths.parts,
-        face_mask_path: paths.face,
-        width: 1024,
-        height: 1536,
-        confirmed_self: true,
-      });
-      if (error) throw error;
-      toast.success("Photo added");
-      setPrepared(null);
-      setConfirmSelf(false);
-      await queryClient.invalidateQueries({ queryKey: ["body-photos"] });
-      // Read all photos together in the background: body shape, limbs, and what to add next
-      void supabase.functions.invoke("analyze-body").then(() => queryClient.invalidateQueries({ queryKey: ["body-profile"] }));
-      onAdded?.(id);
-    } catch (err) {
-      toast.error(errorMessage(err));
-    } finally {
-      setUploading(false);
+  const save = useJob(file && saving ? saveKey(file) : null, async () => {
+    const { saveBodyPhoto } = await import("@/lib/bodyPhoto");
+    return saveBodyPhoto(user!.id, angle, prepared!);
+  });
+
+  useEffect(() => {
+    if (read.status === "failed") {
+      toast.error(`We couldn't read that photo: ${errorMessage(read.error)}`);
+      if (file) forgetJob(readKey(file));
+      setFile(null);
     }
+  }, [read.status, read.error, file, setFile]);
+
+  const done = save.status === "done" ? (save.value as string) : null;
+  useEffect(() => {
+    if (!done || !file) return;
+    toast.success("Photo added");
+    const [reading, writing] = [readKey(file), saveKey(file)];
+    setFile(null);
+    setConfirmSelf(false);
+    setSaving(false);
+    forgetJob(reading);
+    forgetJob(writing);
+    void queryClient.invalidateQueries({ queryKey: ["body-photos"] });
+    // Read all photos together in the background: body shape, limbs, and what to add next
+    void supabase.functions.invoke("analyze-body").then(() => queryClient.invalidateQueries({ queryKey: ["body-profile"] }));
+    onAdded?.(done);
+    // onAdded is a fresh function every render; the photo id is what decides this runs
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [done]);
+
+  useEffect(() => {
+    if (save.status !== "failed" || !file) return;
+    toast.error(errorMessage(save.error));
+    setSaving(false);
+    forgetJob(saveKey(file));
+  }, [save.status, save.error, file, setSaving]);
+
+  const cancel = () => {
+    if (file) {
+      forgetJob(readKey(file));
+      forgetJob(saveKey(file));
+    }
+    setFile(null);
+    setConfirmSelf(false);
+    setSaving(false);
+    onCancel?.();
   };
 
   return (
@@ -92,19 +101,22 @@ export function BodyPhotoUploader({ onAdded, onCancel }: { onAdded?: (photoId: s
       )}
       <div className="grid gap-4 sm:grid-cols-[140px_1fr]">
         <Field label="Angle">
-          <Select value={angle} onChange={(e) => setAngle(e.target.value as typeof angle)}>
+          <Select value={angle} onChange={(e) => setAngle(e.target.value as Angle)}>
             <option value="front">Front</option>
             <option value="side">Side</option>
             <option value="back">Back</option>
           </Select>
         </Field>
+        {/* The model is 29 MB, so it starts downloading when someone reaches for the picker
+            rather than when they open this page — and not at all on a save-data connection. */}
         <Field label="Photo">
-          <Input type="file" accept="image/*" onChange={(e) => onFile(e.target.files?.[0])} className="h-auto py-2 file:mr-3 file:border-0 file:bg-ink file:px-3 file:py-1.5 file:font-mono file:text-[11px] file:uppercase file:text-paper" />
+          <Input type="file" accept="image/*" onPointerEnter={warmGarmentParser} onFocus={warmGarmentParser} onClick={warmGarmentParser} onChange={(e) => { const picked = e.target.files?.[0]; if (picked) setFile(picked); e.target.value = ""; }} className="h-auto py-2 file:mr-3 file:border-0 file:bg-ink file:px-3 file:py-1.5 file:font-mono file:text-[11px] file:uppercase file:text-paper" />
         </Field>
       </div>
-      {processing && (
+      {read.status === "running" && (
         <p className="flex items-center gap-2 text-muted">
           <Spinner className="h-4 w-4" /> Finding your face, top, trousers and shoes… (the first time downloads a 29 MB model)
+          <span className="sr-only">You can keep using the app; this carries on if you leave this page.</span>
         </p>
       )}
       {prepared && (
@@ -121,11 +133,11 @@ export function BodyPhotoUploader({ onAdded, onCancel }: { onAdded?: (photoId: s
               <span>This is a photo of me, and I'm 18 or older.</span>
             </label>
             <div className="flex flex-wrap gap-2">
-              <Button variant="solid" onClick={upload} loading={uploading} disabled={!confirmSelf}>
+              <Button variant="solid" onClick={() => setSaving(true)} loading={save.status === "running"} disabled={!confirmSelf}>
                 Add this photo
               </Button>
               {onCancel && (
-                <Button variant="ghost" onClick={onCancel}>
+                <Button variant="ghost" onClick={cancel}>
                   Cancel
                 </Button>
               )}
@@ -133,8 +145,8 @@ export function BodyPhotoUploader({ onAdded, onCancel }: { onAdded?: (photoId: s
           </div>
         </div>
       )}
-      {!prepared && !processing && onCancel && (
-        <Button variant="ghost" onClick={onCancel} className="justify-self-start">
+      {!prepared && read.status !== "running" && onCancel && (
+        <Button variant="ghost" onClick={cancel} className="justify-self-start">
           Cancel
         </Button>
       )}

@@ -3,6 +3,7 @@ import type { Session, User } from "@supabase/supabase-js";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { clearKeptWork } from "@/lib/work";
 
 /**
  * The browser can still hold a sign-in that the server has already ended (for example after logging out
@@ -11,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
  */
 export async function endStaleSession() {
   await supabase.auth.signOut({ scope: "local" });
+  clearKeptWork();
   toast.error("Your sign-in has ended. Please sign in again.");
   const next = window.location.pathname + window.location.search;
   window.location.assign(`/auth?next=${encodeURIComponent(next)}`);
@@ -60,6 +62,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = async () => {
     // This device only: logging out on your phone shouldn't end your sign-in on your laptop
     await supabase.auth.signOut({ scope: "local" });
+    // Half-finished uploads belong to whoever was signed in: none of it may outlast them
+    clearKeptWork();
     queryClient.clear();
   };
 
