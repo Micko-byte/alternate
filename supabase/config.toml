@@ -2,7 +2,7 @@ project_id = "alternate"
 
 # Hosted auth: where sign-up / sign-in emails and redirects may send people
 [auth]
-site_url = "https://vaaalternate.lol"
+site_url = "https://www.vaaalternate.lol"
 additional_redirect_urls = [
   "https://vaaalternate.lol/**",
   "https://www.vaaalternate.lol",
