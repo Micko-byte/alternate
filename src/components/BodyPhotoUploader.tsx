@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,7 +7,8 @@ import type { PreparedPhoto } from "@/lib/bodyPhoto";
 import { warmGarmentParser } from "@/lib/garmentParser";
 import { fileKey, forgetJob, useJob, useKept } from "@/lib/work";
 import { errorMessage } from "@/lib/utils";
-import { Button, Field, Input, Notice, Select, Spinner } from "@/components/ui";
+import { Button, Field, Input, Notice, Select } from "@/components/ui";
+import { BODY_PHOTO_STAGES, LoadingPanel } from "@/components/Loading";
 import { PhotoPrivacyNote, usePrivacySetting } from "@/components/PhotoPrivacy";
 
 type Angle = "front" | "back" | "side";
@@ -25,6 +26,14 @@ export function BodyPhotoUploader({ onAdded, onCancel }: { onAdded?: (photoId: s
   const [confirmSelf, setConfirmSelf] = useKept("body-photo-confirmed", false);
   const [saving, setSaving] = useKept("body-photo-saving", false);
   const privacy = usePrivacySetting();
+
+  const [picked, setPicked] = useState<string>();
+  useEffect(() => {
+    if (!file) return setPicked(undefined);
+    const url = URL.createObjectURL(file);
+    setPicked(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
 
   const read = useJob(
     file ? readKey(file) : null,
@@ -114,10 +123,12 @@ export function BodyPhotoUploader({ onAdded, onCancel }: { onAdded?: (photoId: s
         </Field>
       </div>
       {read.status === "running" && (
-        <p className="flex items-center gap-2 text-muted">
-          <Spinner className="h-4 w-4" /> Finding your face, top, trousers and shoes… (the first time downloads a 29 MB model)
-          <span className="sr-only">You can keep using the app; this carries on if you leave this page.</span>
-        </p>
+        <LoadingPanel
+          title="Reading you"
+          stages={BODY_PHOTO_STAGES}
+          photo={picked ? { src: picked, alt: "The photo you picked, being read" } : undefined}
+          note="The first photo also downloads a 29 MB model. You can carry on using the app — this keeps going if you leave this page."
+        />
       )}
       {prepared && (
         <div className="grid gap-5 sm:grid-cols-[180px_1fr]">

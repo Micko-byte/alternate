@@ -37,10 +37,21 @@ export default {
       keyframes: {
         rise: { from: { opacity: "0.001", transform: "translateY(10px)" }, to: { opacity: "1", transform: "none" } },
         marquee: { from: { transform: "translateX(0)" }, to: { transform: "translateX(-50%)" } },
+        // The name of the house: a band of the opposite colour sweeping down over the mark.
+        // Not called "alternate" — that is a CSS animation-direction keyword, and the shorthand
+        // would read it as a direction and leave the animation nameless.
+        alternating: { from: { clipPath: "inset(-45% 0 100% 0)" }, to: { clipPath: "inset(100% 0 -45% 0)" } },
+        // A line travelling down a photo while it is read
+        scan: { from: { top: "-6%" }, to: { top: "106%" } },
+        // Indeterminate bar: we never pretend to know a percentage
+        crawl: { from: { transform: "translateX(-60%)" }, to: { transform: "translateX(360%)" } },
       },
       animation: {
         rise: "rise .6s cubic-bezier(.2,.7,.2,1) both",
         marquee: "marquee 38s linear infinite",
+        alternating: "alternating 2.6s cubic-bezier(.65,0,.35,1) infinite",
+        scan: "scan 2.2s cubic-bezier(.45,0,.55,1) infinite",
+        crawl: "crawl 1.9s cubic-bezier(.65,0,.35,1) infinite",
       },
     },
   },
