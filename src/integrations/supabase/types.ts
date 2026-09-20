@@ -439,6 +439,7 @@ export type Database = {
           id: string
           length: string | null
           length_cm: number | null
+          material: string | null
           measurements: Json | null
           size_label: string | null
           source_note: string | null
@@ -454,6 +455,7 @@ export type Database = {
           id?: string
           length?: string | null
           length_cm?: number | null
+          material?: string | null
           measurements?: Json | null
           size_label?: string | null
           source_note?: string | null
@@ -469,6 +471,7 @@ export type Database = {
           id?: string
           length?: string | null
           length_cm?: number | null
+          material?: string | null
           measurements?: Json | null
           size_label?: string | null
           source_note?: string | null
@@ -769,6 +772,7 @@ export type Database = {
           is_one_of_a_kind: boolean
           length: string | null
           length_cm: number | null
+          material: string | null
           name: string
           needs_review: boolean
           price_kes: number
@@ -793,6 +797,7 @@ export type Database = {
           is_one_of_a_kind?: boolean
           length?: string | null
           length_cm?: number | null
+          material?: string | null
           name: string
           needs_review?: boolean
           price_kes: number
@@ -817,6 +822,7 @@ export type Database = {
           is_one_of_a_kind?: boolean
           length?: string | null
           length_cm?: number | null
+          material?: string | null
           name?: string
           needs_review?: boolean
           price_kes?: number

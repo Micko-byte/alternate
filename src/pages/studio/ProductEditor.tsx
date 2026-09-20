@@ -15,6 +15,12 @@ import { MEASURES_FOR, MEASURE_LABELS, STRETCH_OPTIONS, convertAround, toMeasure
 
 type VariantDraft = { id?: string; size_label: string; size_min: string; size_max: string; stock_qty: string; m: Partial<Record<MeasureKey, string>> };
 
+/** Fabrics stores actually sell in Nairobi. Free text, so anything else can be typed. */
+const MATERIALS = [
+  "100% cotton", "Cotton blend", "100% polyester", "Polyester blend", "Silk", "Satin", "Chiffon",
+  "Linen", "Denim", "Viscose / rayon", "Wool", "Knit / jersey", "Lace", "Leather", "Faux leather", "Ankara / kitenge",
+];
+
 export default function ProductEditor() {
   const { id } = useParams();
   return id === "new" ? <NewProduct /> : <EditProduct id={id!} />;
@@ -82,7 +88,7 @@ function EditProduct({ id }: { id: string }) {
   });
 
   const [measuredFlat, setMeasuredFlat] = useState(false);
-  const [form, setForm] = useState({ name: "", category: "dress", garmentType: "", length: "", lengthCm: "", stretch: "", department: "women" as Department, sizeSystem: "uk_women" as SizeSystem, price_kes: "", description: "", status: "draft", is_one_of_a_kind: false });
+  const [form, setForm] = useState({ name: "", category: "dress", garmentType: "", material: "", length: "", lengthCm: "", stretch: "", department: "women" as Department, sizeSystem: "uk_women" as SizeSystem, price_kes: "", description: "", status: "draft", is_one_of_a_kind: false });
   const [variants, setVariants] = useState<VariantDraft[]>([]);
   const [removed, setRemoved] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
@@ -97,6 +103,7 @@ function EditProduct({ id }: { id: string }) {
       category: p.category,
       garmentType: p.garment_type ?? "",
       length: p.length ?? "",
+      material: p.material ?? "",
       lengthCm: p.length_cm != null ? String(p.length_cm) : "",
       stretch: p.stretch ?? "",
       department: p.department,
@@ -222,6 +229,7 @@ function EditProduct({ id }: { id: string }) {
           garment_type: form.garmentType.trim().slice(0, 40) || null,
           length: (LENGTH_OPTIONS[form.category] && form.length ? form.length : null) as never,
           length_cm: Number(form.lengthCm) >= 5 && Number(form.lengthCm) <= 250 ? Number(form.lengthCm) : null,
+          material: form.material.trim() || null,
           stretch: (form.stretch || null) as never,
           department: form.department,
           price_kes: Number(form.price_kes),
@@ -365,6 +373,12 @@ function EditProduct({ id }: { id: string }) {
             <Input list="garment-types" value={form.garmentType} maxLength={40} onChange={(e) => setForm({ ...form, garmentType: e.target.value })} />
             <datalist id="garment-types">
               {(GARMENT_BY_CATEGORY[form.category]?.types ?? []).map((t) => <option key={t} value={t} />)}
+            </datalist>
+          </Field>
+          <Field label="What is it made of?" hint="The fabric decides how it falls. Polyester and satin slide and cling; cotton and denim hold their shape; chiffon floats.">
+            <Input list="garment-materials" value={form.material} maxLength={80} onChange={(e) => setForm({ ...form, material: e.target.value })} placeholder="100% polyester" />
+            <datalist id="garment-materials">
+              {MATERIALS.map((m) => <option key={m} value={m} />)}
             </datalist>
           </Field>
           {LENGTH_OPTIONS[form.category] && (

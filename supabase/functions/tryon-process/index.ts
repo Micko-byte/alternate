@@ -355,10 +355,11 @@ async function prepare(admin: SupabaseClient, tryon: Tryon, setup: AiSetup) {
   let labelSize: string | null = null;
   let garmentMeasurements: Record<string, number> | null = null;
   let stretch: string | null = null;
+  let material: string | null = null;
   let menswear = profile?.shops_for === "men";
 
   if (tryon.product_id) {
-    const { data: product } = await admin.from("products").select("id, name, description, category, department, garment_notes, length, length_cm, stretch").eq("id", tryon.product_id).single();
+    const { data: product } = await admin.from("products").select("id, name, description, category, department, garment_notes, length, length_cm, stretch, material").eq("id", tryon.product_id).single();
     if (tryon.variant_id) {
       const { data: variant } = await admin.from("product_variants").select("measurements").eq("id", tryon.variant_id).maybeSingle();
       garmentMeasurements = (variant?.measurements as Record<string, number> | null) ?? null;
@@ -382,11 +383,12 @@ async function prepare(admin: SupabaseClient, tryon: Tryon, setup: AiSetup) {
     chosenLength = product.length;
     lengthCm = garmentMeasurements?.length ?? product.length_cm;
     stretch = product.stretch;
+    material = product.material;
     menswear = product.department === "men";
   } else {
     const { data: upload } = await admin
       .from("garment_uploads")
-      .select("storage_path, cutout_path, category, source_note, length, length_cm, size_label, measurements, stretch")
+      .select("storage_path, cutout_path, category, source_note, length, length_cm, size_label, measurements, stretch, material")
       .eq("id", tryon.garment_upload_id)
       .single();
     if (!upload) throw new Error("Inspiration row missing");
@@ -400,6 +402,7 @@ async function prepare(admin: SupabaseClient, tryon: Tryon, setup: AiSetup) {
     lengthCm = garmentMeasurements?.length ?? upload.length_cm;
     labelSize = upload.size_label;
     stretch = upload.stretch;
+    material = upload.material;
   }
 
   const key = tryon.product_id ? { product_id: tryon.product_id } : { garment_upload_id: tryon.garment_upload_id };
@@ -427,7 +430,8 @@ async function prepare(admin: SupabaseClient, tryon: Tryon, setup: AiSetup) {
   }
   const item: InspectionItem | null = itemFor(inspection, category);
   const garmentType = tryon.garment_type ?? item?.type ?? null;
-  const notes = cachedNotes || item?.description || "";
+  const fabric = material?.trim() ? `Made of ${material.trim()}: draw how that fabric falls, shines and creases.` : "";
+  const notes = [cachedNotes || item?.description || "", fabric].filter(Boolean).join(" ");
   if (tryon.product_id && !cachedNotes && notes) await admin.from("products").update({ garment_notes: notes }).eq("id", tryon.product_id);
 
   // ---- length: chosen by the shopper or store > measured length in cm > as designed (read from the photo)
