@@ -143,6 +143,10 @@ s1 = photo_slide("01-her-photo.jpg", 0.10, MUSTARD, "Her photo", PAPER, INK, "St
                  ["This is", "her photo."], 1, MUSTARD, INK,
                  "Plain wall. White sneakers. Standing straight.", 104)
 
+sd = photo_slide("02-the-dress.jpg", 0.40, MUSTARD, "The piece", MUSTARD, INK, "Seen on Instagram",
+                 ["The dress", "she saw."], 1, MUSTARD, INK,
+                 "The post said mini. Laid flat on the floor it only looks long.", 100)
+
 s2 = photo_slide("03-free-ai-gemini.jpg", 0.16, MUSTARD, "Free AI", HOT, PAPER, "We asked a free AI",
                  ["It was told mini.", "It made a midi."], 1, HOT, PAPER,
                  "Same two pictures. A completely different dress.", 86)
@@ -214,7 +218,7 @@ d6.text((76, 1108), "2 for KES 50", font=font(F_BLACK, 62), fill=PAPER)
 d6.text((76, 1190), "vaaalternate.lol", font=font(F_MONO, 26), fill=MUSTARD)
 stripe(s6, H - 92, (MUSTARD, HOT, SKY, VIOLET, INK))
 
-for i, im in enumerate([s1, s2, s3, s4, s5, s6], 1):
+for i, im in enumerate([s1, sd, s2, s3, s4, s5, s6], 1):
     p = os.path.join(OUT, "slide-%d.jpg" % i)
     im.save(p, "JPEG", quality=94)
     print("wrote", p)

@@ -1,4 +1,4 @@
-"""VAA ALTERNATE — one vertical ad, cut on a beat.
+"""ALTERNATE — one vertical ad, cut on a beat.
 
 Renders 1080x1920 frames with Pillow, synthesises a 128 BPM bed with numpy, muxes with ffmpeg.
 Every picture is real: her photo, the piece, a free AI's try, a paid AI's try, and ours.
@@ -11,8 +11,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ASSETS = r"C:\Users\User\neggarman\alternate-style-hub\docs\campaign\assets"
 OUT = os.path.join(HERE, "out")
 W, H, FPS = 1080, 1920, 30
-BPM = 128.0
-BEAT = 60.0 / BPM              # 0.469s — every cut lands on one
+BPM = 94.0
+BEAT = 60.0 / BPM              # 0.64s — every cut lands on one
 
 PAPER = (243, 241, 236); INK = (16, 15, 13); MUSTARD = (232, 184, 74)
 HOT = (214, 64, 52); NAVY = (34, 42, 65); GREY = (196, 192, 183)
@@ -105,7 +105,7 @@ def measure(s, f):
     return box[2] - box[0], box[3] - box[1]
 
 
-def kinetic(frame, x, y, words, f, t_in, start=0.0, step=0.10, fill=PAPER, hi=None, hi_bg=MUSTARD,
+def kinetic(frame, x, y, words, f, t_in, start=0.0, step=0.14, fill=PAPER, hi=None, hi_bg=MUSTARD,
             hi_fg=INK, line_gap=14, max_w=None):
     """Words pop in one by one and wrap inside the frame; a named word gets a solid block behind it."""
     max_w = max_w or (W - x - 56)
@@ -127,7 +127,7 @@ def kinetic(frame, x, y, words, f, t_in, start=0.0, step=0.10, fill=PAPER, hi=No
         cx = x
         cy = y + row * lh
         for word, wpx in line:
-            p = out_back((t_in - start - i * step) / 0.34)
+            p = out_back((t_in - start - i * step) / 0.46)
             i += 1
             if p <= 0:
                 cx += wpx + space
@@ -161,7 +161,7 @@ def label(frame, xy, s, col=MUSTARD, fg=INK, size=34, pad=(18, 12)):
 def chrome(frame, t, total):
     """Brand line and a thin progress rule — the bits that make it read as an ad, not a clip."""
     d = ImageDraw.Draw(frame)
-    d.text((60, 74), "VAA ALTERNATE", font=font(F_MONO, 32), fill=PAPER)
+    d.text((60, 74), "VAA ALTERNATE", font=font(F_MONO, 28), fill=PAPER)
     d.text((W - 60, 74), "NAIROBI", font=font(F_MONO, 32), fill=GREY, anchor="ra")
     d.rectangle((0, 0, int(W * clamp(t / total)), 7), fill=MUSTARD)
     return frame
@@ -221,41 +221,41 @@ def build_frame(t, A):
     # ---- 1. hook: her photo
     if t < 3 * beat * 2:                                   # 0.00 - 2.81
         t0 = 0.0
-        f = drift(A["her"], t - t0, 2.81)
-        f = punch(f, t - t0, 1.12, 1.0, 0.7)
+        f = drift(A["her"], t - t0, 3.83)
+        f = punch(f, t - t0, 1.10, 1.0, 1.0)
         f = scrim(f)
         f = kinetic(f, 60, 1180, "I saw this dress on Instagram.".split(), font(F_BLACK, 86), t - t0, 0.25, 0.085, hi="Instagram.")
         f = kinetic(f, 60, 1480, "I wanted it on ME first.".split(), font(F_BOLD, 56), t - t0, 1.3, 0.07, fill=GREY, hi="ME")
     # ---- 2. the piece
     elif t < 3 * beat * 3:                                 # 2.81 - 4.22
         t0 = 3 * beat * 2
-        f = punch(A["dress"], t - t0, 1.14, 1.02, 0.5)
+        f = punch(A["dress"], t - t0, 1.12, 1.02, 0.8)
         f = scrim(f, top=0.22, bottom=0.46)
         f = kinetic(f, 60, 1320, "The post said MINI.".split(), font(F_BLACK, 92), t - t0, 0.1, 0.08, hi="MINI.")
         f = flash(f, t - t0)
     # ---- 3. free AI
     elif t < 3 * beat * 3 + 6 * beat:                      # 4.22 - 7.03
         t0 = 3 * beat * 3
-        f = drift(A["free"], t - t0, 2.81, 0.06)
-        f = punch(f, t - t0, 1.15, 1.0, 0.45)
+        f = drift(A["free"], t - t0, 3.83, 0.06)
+        f = punch(f, t - t0, 1.12, 1.0, 0.75)
         f = scrim(f)
         f = label(f, (60, 980), "FREE AI", col=PAPER, fg=INK)
         f = kinetic(f, 60, 1100, "It gave me a MIDI.".split(), font(F_BLACK, 88), t - t0, 0.15, 0.08, hi="MIDI.")
-        if t - t0 > 1.0:
+        if t - t0 > 1.5:
             f = ring(f, 560, 1430, 620, 330, t)
-            f = stamp(f, (120, 1560), "WRONG LENGTH", t - t0 - 1.2)
+            f = stamp(f, (120, 1560), "WRONG LENGTH", t - t0 - 1.8)
         f = flash(f, t - t0)
     # ---- 4. paid AI
     elif t < 3 * beat * 3 + 12 * beat:                     # 7.03 - 9.84
         t0 = 3 * beat * 3 + 6 * beat
-        f = drift(A["paid"], t - t0, 2.81, 0.06)
-        f = punch(f, t - t0, 1.15, 1.0, 0.45)
+        f = drift(A["paid"], t - t0, 3.83, 0.06)
+        f = punch(f, t - t0, 1.12, 1.0, 0.75)
         f = scrim(f)
         f = label(f, (60, 980), "PAID AI", col=PAPER, fg=INK)
         f = kinetic(f, 60, 1100, "Nice. But those are\n not my SHOES.".split(" "), font(F_BLACK, 84), t - t0, 0.15, 0.075, hi="SHOES.")
-        if t - t0 > 1.1:
+        if t - t0 > 1.6:
             f = ring(f, 570, 1770, 470, 210, t)
-            f = stamp(f, (150, 1500), "NOT HER SHOES", t - t0 - 1.3)
+            f = stamp(f, (150, 1500), "NOT HER SHOES", t - t0 - 1.9)
         f = flash(f, t - t0)
     # ---- 5. the three crops, one per beat
     elif t < 3 * beat * 3 + 12 * beat + 6 * beat:          # 9.84 - 12.66
@@ -263,7 +263,7 @@ def build_frame(t, A):
         k = int((t - t0) / (2 * beat))
         shot = [A["crop_len"], A["crop_feet"], A["crop_waist"]][min(k, 2)]
         word = ["LENGTH", "SHOES", "SHAPE"][min(k, 2)]
-        f = punch(shot, (t - t0) % (2 * beat), 1.16, 1.0, 0.4)
+        f = punch(shot, (t - t0) % (2 * beat), 1.13, 1.0, 0.6)
         f = scrim(f, top=0.2, bottom=0.44)
         f = stamp(f, (90, 1320), "CHANGED: " + word, (t - t0) % (2 * beat), col=HOT, size=52, rot=-5)
         f = flash(f, (t - t0) % (2 * beat), 0.1)
@@ -275,18 +275,18 @@ def build_frame(t, A):
         cut = int(H * p)
         f = base.copy()
         f.paste(A["ours"].crop((0, H - cut, W, H)), (0, H - cut))
-        f = drift(f, t - t0, 3.75, 0.05)
+        f = drift(f, t - t0, 3.75, 0.075)
         f = scrim(f)
         f = label(f, (60, 940), "VAA ALTERNATE", col=MUSTARD, fg=INK)
         f = kinetic(f, 60, 1060, "Same me.\n Same shoes.\n Just the DRESS.".split(" "), font(F_BLACK, 88), t - t0, 0.5, 0.075, hi="DRESS.")
-        if t - t0 > 2.2:
+        if t - t0 > 3.0:
             f = kinetic(f, 60, 1560, "Your face. Your body. Your shoes.".split(), font(F_BOLD, 48), t - t0, 2.2, 0.05, fill=GREY)
         f = flash(f, t - t0)
     # ---- 7. split screen
     elif t < 3 * beat * 3 + 12 * beat + 6 * beat + 14 * beat:  # 16.41 - 19.22
         t0 = 3 * beat * 3 + 12 * beat + 6 * beat + 8 * beat
-        p = out_cubic((t - t0) / 1.1) * 0.5
-        f = split(A["paid"], A["ours"], p, "PAID AI", "VAA ALTERNATE")
+        p = out_cubic((t - t0) / 1.5) * 0.5
+        f = split(A["paid"], A["ours"], p, "PAID AI", "ALTERNATE")
         f = scrim(f, top=0.24, bottom=0.42)
         f = kinetic(f, 60, 1380, "One of these is still HER.".split(), font(F_BLACK, 76), t - t0, 0.6, 0.07, hi="HER.")
     # ---- 8. end card
@@ -303,11 +303,11 @@ def build_frame(t, A):
             box = thumb.crop((0, 120, thumb.width, 120 + 720))
             f.paste(box, (int(W / 2 - box.width / 2), int(300 - 80 * (1 - clamp(tp)))))
         f = kinetic(f, 60, 1130, "Try it on\n YOUR photo.".split(" "), font(F_BLACK, 96), ti, 0.35, 0.08, hi="YOUR")
-        if ti > 1.1:
+        if ti > 1.6:
             f = kinetic(f, 60, 1450, "KES 25 a try-on. 2 for KES 50.".split(), font(F_BOLD, 52), ti, 1.1, 0.05, fill=MUSTARD)
-        if ti > 1.8:
+        if ti > 2.5:
             f = kinetic(f, 60, 1560, "Pay with M-Pesa. Ready in a minute.".split(), font(F_BOLD, 44), ti, 1.8, 0.04, fill=GREY)
-        if ti > 2.4:
+        if ti > 3.2:
             f = label(f, (60, 1700), "vaaalternate.lol", col=PAPER, fg=INK, size=40)
         f = flash(f, ti, 0.14)
     return f
@@ -375,7 +375,7 @@ def main():
     A["crop_waist"] = crop_of(A["paid"], (260, 700, 820, 1300))
 
     total = 3 * BEAT * 3 + 12 * BEAT + 6 * BEAT + 14 * BEAT + 9 * BEAT
-    folder = os.path.join(OUT, "frames")
+    folder = os.path.join(OUT, "frames-%d" % os.getpid())   # own folder, so two runs never fight
     os.makedirs(folder, exist_ok=True)
     n = int(total * FPS)
     for i in range(n):
@@ -383,9 +383,12 @@ def main():
         f = build_frame(t, A)
         f = chrome(f, t, total)
         f.save(os.path.join(folder, "f%04d.jpg" % i), "JPEG", quality=93)
+    made = len([f for f in os.listdir(folder) if f.endswith(".jpg")])
+    if made != n:
+        raise SystemExit("only %d of %d frames were written" % (made, n))
     wav = os.path.join(OUT, "bed.wav")
     audio(wav, total)
-    mp4 = os.path.join(OUT, "VAA ALTERNATE-ad-vertical.mp4")
+    mp4 = os.path.join(OUT, "ALTERNATE-ad-vertical.mp4")
     subprocess.run(["ffmpeg", "-v", "error", "-y", "-framerate", str(FPS), "-i", os.path.join(folder, "f%04d.jpg"),
                     "-i", wav, "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "slow", "-crf", "19",
                     "-c:a", "aac", "-b:a", "160k", "-shortest", "-movflags", "+faststart", mp4], check=True)
