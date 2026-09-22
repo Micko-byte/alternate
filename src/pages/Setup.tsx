@@ -9,7 +9,7 @@ import { cn, errorMessage, signedUrl } from "@/lib/utils";
 import type { FitStyle, ShopsFor, SizeSystem } from "@/lib/sizes";
 import { FitPicker } from "@/components/FitPicker";
 import { ShopsForPicker, SizeFields, sizeKey } from "@/components/SizeFields";
-import { Button, ButtonLink, Field, Input, Notice, PageHeader, Select } from "@/components/ui";
+import { Button, ButtonLink, Field, Input, Select, Spinner } from "@/components/ui";
 import { BodyPhotoUploader } from "@/components/BodyPhotoUploader";
 import { Measurements } from "@/components/Measurements";
 import { PrivatePhoto } from "@/components/PrivatePhoto";
@@ -19,40 +19,78 @@ import { HeightInput, WeightInput, heightCheck } from "@/components/UnitInputs";
 
 const POLICY_VERSION = "2026-09-v1";
 
+/**
+ * One thing at a time: age and height, then the photo, then straight into the fitting room.
+ * Sizes, measurements and the rest are offered at the end and can be skipped - the fitting room
+ * asks for the size of whatever is being tried on anyway.
+ */
 export default function Setup() {
   const setup = useSetupStatus();
+  const [showExtras, setShowExtras] = useState(false);
 
-  return (
-    <div className="grid gap-10">
-      <PageHeader eyebrow="Fitting profile" title="Set up your fitting room">
-        {setup.ready && <ButtonLink to="/fitting-room" variant="solid">Open the fitting room</ButtonLink>}
-      </PageHeader>
-      <div className="grid gap-6">
-        <Step n={1} title="About you" done={setup.steps.about}><AboutStep /></Step>
-        <Step n={2} title="Privacy" done={setup.steps.privacy}><PrivacyStep /></Step>
-        <Step n={3} title="Your photos" done={setup.steps.photos}>
-          {setup.steps.about && setup.steps.privacy ? <PhotosStep /> : <Notice title="Finish steps 1 and 2 first">We need your age and photo consent before you upload body photos.</Notice>}
-        </Step>
-        <Step n={4} title="Sizes & fit" done={setup.steps.sizes} id="sizes" optional><SizesStep /></Step>
+  if (setup.loading) {
+    return <div className="grid min-h-[50dvh] place-items-center"><Spinner /></div>;
+  }
+
+  // Everything needed before a first try-on, on one screen: age, height, one tick, one photo.
+  if (!setup.ready) {
+    return (
+      <div className="mx-auto grid w-full max-w-xl gap-5">
+        <div className="grid gap-1.5">
+          <span className="label">One screen, then you are in</span>
+          <h1 className="display text-[clamp(30px,7vw,44px)]">Add your photo</h1>
+          <p className="text-[15px] text-muted">Standing, phone at chest height, head to feet. That photo plus your height is all a try-on needs.</p>
+        </div>
+
+        <Card title="You" blurb="Your age because try-ons are 18+, your height so clothes are drawn at your real size.">
+          <AboutStep />
+        </Card>
+
+        <Card title="Your photo">
+          <div className="grid gap-6">
+            <PrivacyStep />
+            {setup.steps.about && setup.steps.privacy
+              ? <PhotosStep />
+              : <p className="border border-rule bg-sunk p-4 text-[14px] text-muted">Fill in the two answers above and tick the boxes, then the uploader opens here.</p>}
+          </div>
+        </Card>
+
         {setup.steps.photos && (
-          <Step n={5} title="Measurements" done={false} id="measurements"><Measurements /></Step>
+          <ButtonLink to="/fitting-room" variant="solid" size="lg" className="justify-self-start">Open the fitting room</ButtonLink>
         )}
       </div>
+    );
+  }
+
+  return (
+    <div className="mx-auto grid w-full max-w-xl gap-5">
+      <Card title="Your fitting room is ready" blurb="Screenshot any piece you like and see it on your own body, in your size.">
+        <div className="grid gap-4">
+          <ButtonLink to="/fitting-room" variant="solid" size="lg" className="justify-self-start">Open the fitting room</ButtonLink>
+          <button type="button" onClick={() => setShowExtras((v) => !v)} className="label justify-self-start text-muted underline underline-offset-4 hover:text-ink">
+            {showExtras ? "Hide the optional bits" : "Add sizes, measurements or more photos"}
+          </button>
+        </div>
+      </Card>
+      {showExtras && (
+        <div className="grid gap-5">
+          <Card title="More photos" blurb="Side and back angles make the fit truer. Optional."><PhotosStep /></Card>
+          <Card title="Sizes & fit" blurb="Optional - the fitting room asks for the size of whatever you are trying on." id="sizes"><SizesStep /></Card>
+          <Card title="Measurements" blurb="Optional. Typed measurements beat anything estimated from a photo." id="measurements"><Measurements /></Card>
+        </div>
+      )}
     </div>
   );
 }
 
-function Step({ n, title, done, id, optional, children }: { n: number; title: string; done: boolean; id?: string; optional?: boolean; children: ReactNode }) {
+function Card({ title, blurb, id, children }: { title: string; blurb?: string; id?: string; children: ReactNode }) {
   return (
-    <section id={id} className="grid gap-5 border border-rule bg-surface p-5 md:grid-cols-[220px_1fr] md:p-7">
-      <div className="flex items-start gap-3 md:grid md:content-start">
-        <span className={cn("grid h-8 w-8 place-items-center border num text-[13px]", done ? "border-good bg-good text-white" : "border-ink")}>{done ? <Check className="h-4 w-4" /> : n}</span>
-        <div className="grid gap-0.5">
-          <h2 className="display text-[26px]">{title}</h2>
-          {optional && <span className="label text-muted">Optional &mdash; we ask in the fitting room</span>}
-        </div>
+    <section id={id} className="grid gap-5 border border-rule bg-surface p-5 md:p-7">
+      <div className="grid gap-1.5">
+        <h2 className="display text-[clamp(24px,5vw,30px)]">{title}</h2>
+        {blurb && <p className="text-[14.5px] text-muted">{blurb}</p>}
       </div>
-      <div>{children}</div>
+      {children}
     </section>
   );
 }
@@ -100,15 +138,18 @@ function AboutStep() {
   return (
     <div className="grid gap-4">
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Name"><Input value={form.display_name} onChange={set("display_name")} /></Field>
-        <Field label="Phone (M-Pesa)"><Input type="tel" value={form.phone} onChange={set("phone")} placeholder="07XX XXX XXX" /></Field>
         <Field label="Date of birth" hint="You must be 18 or older"><Input type="date" required value={form.date_of_birth} onChange={set("date_of_birth")} /></Field>
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Height" hint={heightCheck(form.height_cm)}><HeightInput valueCm={form.height_cm} onChangeCm={(v) => setForm({ ...form, height_cm: v })} /></Field>
-          <Field label="Weight"><WeightInput valueKg={form.weight_kg} onChangeKg={(v) => setForm({ ...form, weight_kg: v })} /></Field>
-        </div>
+        <Field label="Height" hint={heightCheck(form.height_cm)}><HeightInput valueCm={form.height_cm} onChangeCm={(v) => setForm({ ...form, height_cm: v })} /></Field>
       </div>
-      <Button onClick={save} loading={busy} className="justify-self-start">Save</Button>
+      <details className="grid gap-4">
+        <summary className="label cursor-pointer text-muted hover:text-ink">Name, phone and weight (optional)</summary>
+        <div className="grid gap-4 pt-4 sm:grid-cols-2">
+          <Field label="Name"><Input value={form.display_name} onChange={set("display_name")} /></Field>
+          <Field label="Phone (M-Pesa)"><Input type="tel" value={form.phone} onChange={set("phone")} placeholder="07XX XXX XXX" /></Field>
+          <Field label="Weight" hint="Makes the fit truer; skip it if you would rather not"><WeightInput valueKg={form.weight_kg} onChangeKg={(v) => setForm({ ...form, weight_kg: v })} /></Field>
+        </div>
+      </details>
+      <Button onClick={save} loading={busy} size="lg" className="justify-self-start" disabled={!form.date_of_birth || !form.height_cm}>Save and continue</Button>
     </div>
   );
 }
@@ -157,9 +198,9 @@ function PrivacyStep() {
   const [busy, setBusy] = useState(false);
 
   const items = [
-    { type: "terms", text: "I accept the VAA ALTERNATE terms and privacy policy." },
-    { type: "body_photo_processing", text: "I agree VAA ALTERNATE may process my body photos, height and weight to create try-ons. They are private to me and I can delete them at any time." },
-    { type: "cross_border_transfer", text: "I agree my photos may be sent to OpenAI in the United States to generate try-ons, and are not used to train their models." },
+    { type: "terms", text: "I accept the terms and privacy policy." },
+    { type: "body_photo_processing", text: "My photos may be used to make my try-ons. They stay private to me and I can delete them any time." },
+    { type: "cross_border_transfer", text: "My photos may be sent to OpenAI in the US to draw the try-on. They are not used to train it." },
   ] as const;
 
   const save = async () => {
@@ -189,7 +230,7 @@ function PrivacyStep() {
       ))}
       {items.some((i) => !active.has(i.type)) && (
         <Button onClick={save} loading={busy} className="justify-self-start" disabled={!items.filter((i) => !active.has(i.type)).every((i) => checked[i.type])}>
-          Agree and continue
+          Agree
         </Button>
       )}
     </div>
