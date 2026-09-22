@@ -1351,6 +1351,59 @@ export type Database = {
         }
         Relationships: []
       }
+      tryon_meshes: {
+        Row: {
+          completed_at: string | null
+          cost_usd: number | null
+          created_at: string
+          credits_charged: number
+          engine: string
+          error_message: string | null
+          id: string
+          provider_task_id: string | null
+          status: string
+          storage_path: string | null
+          tryon_id: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          cost_usd?: number | null
+          created_at?: string
+          credits_charged?: number
+          engine?: string
+          error_message?: string | null
+          id?: string
+          provider_task_id?: string | null
+          status?: string
+          storage_path?: string | null
+          tryon_id: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          cost_usd?: number | null
+          created_at?: string
+          credits_charged?: number
+          engine?: string
+          error_message?: string | null
+          id?: string
+          provider_task_id?: string | null
+          status?: string
+          storage_path?: string | null
+          tryon_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tryon_meshes_tryon_id_fkey"
+            columns: ["tryon_id"]
+            isOneToOne: false
+            referencedRelation: "tryons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tryon_prices: {
         Row: {
           credits: number
@@ -1636,6 +1689,7 @@ export type Database = {
           user_id: string
         }[]
       }
+      admin_mesh_stats: { Args: never; Returns: Json }
       admin_overview: { Args: { _days?: number }; Returns: Json }
       admin_reports: {
         Args: never
@@ -1746,9 +1800,36 @@ export type Database = {
         Args: { _email: string; _grant: boolean }
         Returns: undefined
       }
+      refund_mesh: {
+        Args: { _mesh_id: string; _reason: string }
+        Returns: undefined
+      }
       refund_tryon: {
         Args: { _reason: string; _tryon_id: string }
         Returns: undefined
+      }
+      request_mesh: {
+        Args: { _tryon_id: string }
+        Returns: {
+          completed_at: string | null
+          cost_usd: number | null
+          created_at: string
+          credits_charged: number
+          engine: string
+          error_message: string | null
+          id: string
+          provider_task_id: string | null
+          status: string
+          storage_path: string | null
+          tryon_id: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "tryon_meshes"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       request_tryon: {
         Args: {
@@ -1837,6 +1918,8 @@ export type Database = {
         | "tryon_charge"
         | "tryon_refund"
         | "adjustment"
+        | "mesh_charge"
+        | "mesh_refund"
       department: "women" | "men" | "unisex"
       feedback_category:
         | "tryon_quality"
@@ -2030,6 +2113,8 @@ export const Constants = {
         "tryon_charge",
         "tryon_refund",
         "adjustment",
+        "mesh_charge",
+        "mesh_refund",
       ],
       department: ["women", "men", "unisex"],
       feedback_category: [

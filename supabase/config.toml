@@ -30,6 +30,12 @@ verify_jwt = false
 [functions.paystack-webhook]
 verify_jwt = false
 
+[functions.mesh-create]
+verify_jwt = false
+
+[functions.mesh-status]
+verify_jwt = false
+
 [functions.draft-product]
 verify_jwt = false
 

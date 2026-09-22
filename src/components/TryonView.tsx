@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Box, Download, Eye, EyeOff, Flag, ShieldCheck, ThumbsDown, ThumbsUp, Trash2 } from "lucide-react";
+import { Download, Eye, EyeOff, Flag, ShieldCheck, ThumbsDown, ThumbsUp, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useIsAdmin } from "@/lib/queries";
@@ -12,7 +12,7 @@ import { AlternatingMark, Crawl, Pondering, TRYON_STAGES } from "@/components/Lo
 import { FaceLockImage } from "@/components/FaceLockImage";
 import { FeedbackButton } from "@/components/FeedbackButton";
 import { DeleteForever } from "@/components/DeleteForever";
-import { ComingSoon3D } from "@/components/ComingSoon3D";
+import { SpinButton } from "@/components/SpinButton";
 import { deleteMyData } from "@/lib/deleteData";
 import { useNavigate } from "react-router-dom";
 
@@ -39,7 +39,7 @@ export function TryonView({ id }: { id: string }) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("tryons")
-        .select("*, body_photos(storage_path, face_mask_path), products(id, name, price_kes, stores(name, whatsapp_phone)), garment_uploads(storage_path, category)")
+        .select("*, body_photos(storage_path, face_mask_path), products(id, name, price_kes, category, stores(name, whatsapp_phone)), garment_uploads(storage_path, category)")
         .eq("id", id)
         .maybeSingle();
       if (error) throw error;
@@ -221,7 +221,7 @@ export function TryonView({ id }: { id: string }) {
               <Button variant={t.rating === -1 ? "solid" : "outline"} size="sm" onClick={() => rate(-1)}><ThumbsDown className="h-4 w-4" /> Not right</Button>
               <Button variant="ghost" size="sm" onClick={download}><Download className="h-4 w-4" /> Download{blurFace ? " (face blurred)" : ""}</Button>
               <Button variant="ghost" size="sm" onClick={report}><Flag className="h-4 w-4" /> Not me</Button>
-              <ComingSoon3D trigger={(open) => <Button variant="outline" size="sm" onClick={open}><Box className="h-4 w-4" /> 3D view <span className="ml-1 bg-mustard px-1.5 py-0.5 text-[9.5px] text-ink">Soon</span></Button>} />
+              <SpinButton tryonId={t.id} category={t.products?.category ?? t.garment_uploads?.category ?? null} />
             </div>
             <div className="grid gap-2 border-t border-rule pt-4">
               <span className="label">Your data</span>

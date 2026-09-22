@@ -210,6 +210,20 @@ export function useShopPacks() {
   return { lead, starter, others: live.filter((p) => p !== lead).sort((a, b) => a.sort_order - b.sort_order) };
 }
 
+/** Whether the 3D spin is switched on, and what it costs. */
+export function useMeshSettings() {
+  const q = useQuery({
+    queryKey: ["mesh-settings"],
+    staleTime: 5 * 60_000,
+    queryFn: async () => {
+      const { data } = await supabase.from("app_settings").select("key, value").in("key", ["mesh_mode", "mesh_credits"]);
+      const map = Object.fromEntries((data ?? []).map((r) => [r.key, r.value]));
+      return { mode: (map.mesh_mode ?? "off") as "off" | "meshy" | "selfhost", credits: Number(map.mesh_credits ?? 2) };
+    },
+  });
+  return q.data ?? { mode: "off" as const, credits: 2 };
+}
+
 export function useIsAdmin() {
   const { user } = useAuth();
   return useQuery({
