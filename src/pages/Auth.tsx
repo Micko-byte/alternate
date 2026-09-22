@@ -1,28 +1,24 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link, Navigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, ArrowRight, MailCheck } from "lucide-react";
+import { ArrowLeft, MailCheck } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { storedReferral } from "@/lib/referral";
-import { cn, errorMessage } from "@/lib/utils";
-import type { FitStyle, ShopsFor } from "@/lib/sizes";
-import { FitPicker } from "@/components/FitPicker";
-import { ShopsForPicker, SizeFields, sizeKey } from "@/components/SizeFields";
+import { storedSource } from "@/lib/source";
+import { errorMessage } from "@/lib/utils";
 import { Button, Field, Input, Notice } from "@/components/ui";
 import { Wordmark } from "@/components/Wordmark";
 import { PasswordInput } from "@/components/PasswordInput";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
-/** Signing up is four short screens, then the code we email. Signing in stays one screen. */
-const STEPS = ["account", "shops", "sizes", "code"] as const;
+/** Signing up is one screen, then the code we email. Sizes and fit are asked in the fitting room,
+ *  for the one category being tried on, so nothing is collected before it is needed. */
+const STEPS = ["account"] as const;
 type Step = (typeof STEPS)[number] | "otp";
 
 const STEP_TITLE: Record<string, { title: string; blurb: string }> = {
-  account: { title: "Create your account", blurb: "Name, email and a password. Nothing else yet." },
-  shops: { title: "What do you shop for?", blurb: "So the rail only shows pieces you'd actually wear." },
-  sizes: { title: "Your usual sizes", blurb: "You'll only be offered pieces in stock in your size, and try-ons are drawn to fit it." },
-  code: { title: "Did a store send you?", blurb: "Type their code so they get credit for bringing you. Skip it if nobody did." },
+  account: { title: "Create your account", blurb: "Name, email and a password. That is the whole form." },
   otp: { title: "Check your email", blurb: "We sent you a 6-digit code." },
 };
 
@@ -39,10 +35,7 @@ export default function Auth() {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [name, setName] = useState("");
-  const [referral, setReferral] = useState(storedReferral());
-  const [shopsFor, setShopsFor] = useState<ShopsFor>("women");
-  const [fit, setFit] = useState<FitStyle>("regular");
-  const [sizes, setSizes] = useState<Record<string, string>>({});
+  const [referral] = useState(storedReferral());
   const [otp, setOtp] = useState("");
   const [cooldown, setCooldown] = useState(0);
   const [busy, setBusy] = useState(false);
@@ -58,7 +51,6 @@ export default function Auth() {
   const next = params.get("next") || (asStore ? "/studio" : mode === "signup" ? "/me/setup" : "/");
   if (user) return <Navigate to={next} replace />;
 
-  const stepIndex = STEPS.indexOf(step as (typeof STEPS)[number]);
   const goTo = (m: "signin" | "signup") => { setMode(m); setStep("account"); };
 
   const createAccount = async () => {
@@ -70,14 +62,8 @@ export default function Auth() {
         data: {
           display_name: name.trim() || undefined,
           referral_code: referral.trim() || undefined,
-          shops_for: shopsFor,
-          preferred_fit: fit,
-          sizes: Object.entries(sizes)
-            .filter(([, v]) => v)
-            .map(([key, v]) => {
-              const [category, system] = key.split(":");
-              return { category, system, value: Number(v) };
-            }),
+          source: storedSource() || undefined,
+          shops_for: "women",
         },
       },
     });
@@ -112,13 +98,9 @@ export default function Auth() {
       } else if (step === "otp") {
         const { error } = await supabase.auth.verifyOtp({ email, token: otp.replace(/\D/g, ""), type: "signup" });
         if (error) throw error;
-      } else if (step === "account") {
-        if (password !== confirm) throw new Error("The two passwords don't match. Type the same one twice.");
-        setStep("shops");
-      } else if (step === "code") {
-        await createAccount();
       } else {
-        setStep(STEPS[stepIndex + 1]);
+        if (password !== confirm) throw new Error("The two passwords don't match. Type the same one twice.");
+        await createAccount();
       }
     } catch (err) {
       toast.error(errorMessage(err));
@@ -180,17 +162,6 @@ export default function Auth() {
             ))}
           </div>}
 
-          {mode === "signup" && step !== "otp" && (
-            <div className="grid gap-2">
-              <div className="flex items-center justify-between">
-                <span className="label">Step {stepIndex + 1} of {STEPS.length}</span>
-                <span className="num text-[12px] text-muted">{Math.round(((stepIndex + 1) / STEPS.length) * 100)}%</span>
-              </div>
-              <div className="flex gap-1" aria-hidden>
-                {STEPS.map((s, i) => <span key={s} className={cn("h-1 flex-1", i <= stepIndex ? "bg-ink" : "bg-sunk")} />)}
-              </div>
-            </div>
-          )}
 
           {(mode !== "signup" || step === "account") && (
             <>
@@ -235,20 +206,7 @@ export default function Auth() {
             </>
           )}
 
-          {mode === "signup" && step === "shops" && <ShopsForPicker value={shopsFor} onChange={setShopsFor} />}
 
-          {mode === "signup" && step === "sizes" && (
-            <div className="grid gap-4">
-              <SizeFields required shopsFor={shopsFor} values={sizes} onChange={(category, system, value) => setSizes((v) => ({ ...v, [sizeKey(category, system)]: value }))} />
-              <FitPicker value={fit} onChange={setFit} hint="how you like it" />
-            </div>
-          )}
-
-          {mode === "signup" && step === "code" && (
-            <Field label="Store code (optional)" hint="From the store link that sent you here">
-              <Input value={referral} onChange={(e) => setReferral(e.target.value.toUpperCase())} className="num uppercase" placeholder="ALT-1234" />
-            </Field>
-          )}
 
           {mode === "signup" && step === "otp" && (
             <div className="grid gap-4">
@@ -280,15 +238,9 @@ export default function Auth() {
           )}
 
           <Button type="submit" variant="accent" size="lg" loading={busy} disabled={step === "account" && mode === "signup" && !!confirm && password !== confirm}>
-            {mode === "forgot" ? "Send reset link" : mode === "signin" ? "Sign in" : step === "otp" ? "Confirm and start" : step === "code" ? "Finish setup" : "Continue"}
-            {mode === "signup" && step !== "otp" && <ArrowRight className="h-4 w-4" />}
+            {mode === "forgot" ? "Send reset link" : mode === "signin" ? "Sign in" : step === "otp" ? "Confirm and start" : "Create account"}
           </Button>
 
-          {mode === "signup" && stepIndex > 0 && (
-            <button type="button" onClick={() => setStep(STEPS[stepIndex - 1])} className="label justify-self-center text-muted underline underline-offset-4 hover:text-ink">
-              Back a step
-            </button>
-          )}
           {mode === "forgot" && (
             <button type="button" onClick={() => setMode("signin")} className="label justify-self-center text-ink underline underline-offset-4">
               Back to sign in

@@ -29,11 +29,11 @@ export default function Setup() {
       </PageHeader>
       <div className="grid gap-6">
         <Step n={1} title="About you" done={setup.steps.about}><AboutStep /></Step>
-        <Step n={2} title="Sizes & fit" done={setup.steps.sizes} id="sizes"><SizesStep /></Step>
-        <Step n={3} title="Privacy" done={setup.steps.privacy}><PrivacyStep /></Step>
-        <Step n={4} title="Your photos" done={setup.steps.photos}>
-          {setup.steps.about && setup.steps.privacy ? <PhotosStep /> : <Notice title="Finish steps 1 and 3 first">We need your age and photo consent before you upload body photos.</Notice>}
+        <Step n={2} title="Privacy" done={setup.steps.privacy}><PrivacyStep /></Step>
+        <Step n={3} title="Your photos" done={setup.steps.photos}>
+          {setup.steps.about && setup.steps.privacy ? <PhotosStep /> : <Notice title="Finish steps 1 and 2 first">We need your age and photo consent before you upload body photos.</Notice>}
         </Step>
+        <Step n={4} title="Sizes & fit" done={setup.steps.sizes} id="sizes" optional><SizesStep /></Step>
         {setup.steps.photos && (
           <Step n={5} title="Measurements" done={false} id="measurements"><Measurements /></Step>
         )}
@@ -42,12 +42,15 @@ export default function Setup() {
   );
 }
 
-function Step({ n, title, done, id, children }: { n: number; title: string; done: boolean; id?: string; children: ReactNode }) {
+function Step({ n, title, done, id, optional, children }: { n: number; title: string; done: boolean; id?: string; optional?: boolean; children: ReactNode }) {
   return (
     <section id={id} className="grid gap-5 border border-rule bg-surface p-5 md:grid-cols-[220px_1fr] md:p-7">
       <div className="flex items-start gap-3 md:grid md:content-start">
         <span className={cn("grid h-8 w-8 place-items-center border num text-[13px]", done ? "border-good bg-good text-white" : "border-ink")}>{done ? <Check className="h-4 w-4" /> : n}</span>
-        <h2 className="display text-[26px]">{title}</h2>
+        <div className="grid gap-0.5">
+          <h2 className="display text-[26px]">{title}</h2>
+          {optional && <span className="label text-muted">Optional &mdash; we ask in the fitting room</span>}
+        </div>
       </div>
       <div>{children}</div>
     </section>

@@ -6,6 +6,7 @@ import { AuthProvider, useAuth } from "@/lib/auth";
 import { useSetupStatus } from "@/lib/queries";
 import { Spinner } from "@/components/ui";
 import { captureReferral } from "@/lib/referral";
+import { captureSource } from "@/lib/source";
 import { AppShell } from "@/components/AppShell";
 import { StudioShell } from "@/components/StudioShell";
 import { RequireAuth } from "@/components/Guards";
@@ -43,7 +44,7 @@ const queryClient = new QueryClient({
 
 function ReferralCapture() {
   const { search } = useLocation();
-  useEffect(() => captureReferral(search), [search]);
+  useEffect(() => { captureReferral(search); captureSource(search); }, [search]);
   return null;
 }
 

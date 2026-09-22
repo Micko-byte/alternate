@@ -89,7 +89,8 @@ export function useSetupStatus() {
   return {
     loading: profile.isLoading || consents.isLoading || photos.isLoading || sizes.isLoading,
     steps,
-    ready: steps.about && steps.sizes && steps.privacy && steps.photos,
+    // Sizes are asked in the fitting room, for the one category being tried on
+    ready: steps.about && steps.privacy && steps.photos,
   };
 }
 

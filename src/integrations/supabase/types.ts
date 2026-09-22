@@ -855,6 +855,7 @@ export type Database = {
           phone: string | null
           preferred_fit: Database["public"]["Enums"]["fit_style"]
           shops_for: Database["public"]["Enums"]["shops_for"] | null
+          signup_source: string | null
           tryon_limit: number | null
           updated_at: string
           weight_kg: number | null
@@ -870,6 +871,7 @@ export type Database = {
           phone?: string | null
           preferred_fit?: Database["public"]["Enums"]["fit_style"]
           shops_for?: Database["public"]["Enums"]["shops_for"] | null
+          signup_source?: string | null
           tryon_limit?: number | null
           updated_at?: string
           weight_kg?: number | null
@@ -885,6 +887,7 @@ export type Database = {
           phone?: string | null
           preferred_fit?: Database["public"]["Enums"]["fit_style"]
           shops_for?: Database["public"]["Enums"]["shops_for"] | null
+          signup_source?: string | null
           tryon_limit?: number | null
           updated_at?: string
           weight_kg?: number | null
@@ -1663,6 +1666,7 @@ export type Database = {
         Args: { _limit: number; _user_id: string }
         Returns: undefined
       }
+      admin_sources: { Args: never; Returns: Json }
       admin_tryons: {
         Args: {
           _limit?: number

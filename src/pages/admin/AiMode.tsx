@@ -47,6 +47,15 @@ export function AiMode() {
     },
   });
 
+  const sources = useQuery({
+    queryKey: ["admin-sources"],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("admin_sources");
+      if (error) throw error;
+      return data as unknown as { source: string; accounts: number; tried: number; paid: number }[];
+    },
+  });
+
   const payments = useQuery({
     queryKey: ["payments-status"],
     queryFn: async () => {
@@ -120,6 +129,26 @@ export function AiMode() {
           {" · "}Reading a body: <span className="num text-ink">{costs.data?.body_profiles.avg_usd != null ? money(costs.data.body_profiles.avg_usd) : "–"}</span> each.
           Both are saved and reused, so they're paid once per garment and per set of photos.
         </p>
+      </div>
+
+      <div className="grid gap-2 border-t border-rule pt-5">
+        <h3 className="label text-ink">Where people came from</h3>
+        <p className="text-[13px] text-muted">Put <span className="num">?s=tiktok-bio</span> on the link in an ad or a bio. Accounts made from that link are counted here, with how many went on to try on and to pay.</p>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[420px] text-left text-[13px]">
+            <thead className="label"><tr><th className="py-2">Link</th><th>Accounts</th><th>Tried on</th><th>Paid</th></tr></thead>
+            <tbody>
+              {(sources.data ?? []).length ? (sources.data ?? []).map((r) => (
+                <tr key={r.source} className="border-t border-rule">
+                  <td className="py-2">{r.source}</td>
+                  <td className="num">{r.accounts}</td>
+                  <td className="num">{r.tried}</td>
+                  <td className="num">{r.paid}</td>
+                </tr>
+              )) : <tr className="border-t border-rule"><td colSpan={4} className="py-3 text-muted">No accounts in the last 90 days.</td></tr>}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <div className="grid gap-2 border-t border-rule pt-5">
