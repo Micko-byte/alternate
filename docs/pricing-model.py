@@ -23,7 +23,8 @@ AI_TRYON_SAVER, AI_TRYON_PREMIUM = 11.0, 17.0
 SPIN_CREDITS = 30                      # Meshy image-to-3D, textured, PBR
 
 MESHY = [("Free", 0, 100), ("Pro", 20, 1000), ("Premium", 40, 3000), ("Ultra", 100, 8000), ("Studio (team)", 70, 5500)]
-PACKS = [("Two try-ons", 2, 50), ("Launch offer (first buy)", 3, 50), ("Bundle of 5", 5, 120), ("Bundle of 12", 12, 270)]
+PACKS = [("Two try-ons", 2, 50), ("Launch offer (first buy)", 3, 50), ("Try it and spin it", 5, 110),
+         ("Bundle of 5", 5, 120), ("Bundle of 12", 12, 270)]
 
 
 def spin_cost(plan_usd, plan_credits):
@@ -167,16 +168,16 @@ S(Paragraph(
     "HD and Studio cost barely more to draw than Standard but sell for two and four credits, so they are "
     "the most profitable things on the list. The spin is second. Keep pushing both.", styles["small"]))
 
-S(Paragraph("Packs stay as they are — they already work with a four-credit spin:", styles["body"]))
+S(Paragraph("The packs as they now stand. All of them work with a four-credit spin:", styles["body"]))
 rows = [["PACK", "CREDITS", "PRICE", "PER CREDIT", "BUYS"]]
 for name, credits, price in PACKS:
     buys = f"{credits} try-ons or {credits // 4} spin" + ("s" if credits // 4 != 1 else "")
     rows.append([name, str(credits), kes(price), kes(price / credits, 1), buys if credits >= 4 else f"{credits} try-ons"])
 S(table(rows, [52 * mm, 22 * mm, 26 * mm, 30 * mm, 44 * mm], {1: "CENTER", 2: "RIGHT", 3: "RIGHT"}))
 S(Paragraph(
-    "One change worth making: a <b>Spin pack — 5 credits for KES 110</b>. It is one try-on plus one spin "
-    "with a small discount, which is exactly the journey we want people to take, and at KES 22 a credit it "
-    "still clears cost.", styles["body"]))
+    "<b>&#10003; Try it and spin it — 5 credits for KES 110 — is live.</b> One try-on plus one spin with a "
+    "small discount: the journey we want people to take, and at KES 22 a credit it still clears cost.",
+    styles["body"]))
 
 # ---- 4. meshy credits to buy
 S(Paragraph("4 · How many Meshy credits to buy", styles["h2"]))
@@ -216,14 +217,35 @@ S(Paragraph(
 # ---- 6. decisions
 S(Paragraph("6 · The decisions, in one place", styles["h2"]))
 for line in [
-    "<b>Spin price: 4 credits.</b> KES 100 on its own, KES 90 inside a bundle. Set it in Admin, not in code.",
+    "<b>Spin price: 4 credits</b> — KES 100 on its own, KES 90 inside a bundle. Set, and changeable in Admin.",
     "<b>Plan: Pro at $10 for testing</b> (first month half price), Premium at $40 the month spins go on sale.",
     "<b>Try-on prices do not change.</b> KES 25, two for KES 50. They work and they are what the ads say.",
-    "<b>Add a Spin pack: 5 credits for KES 110</b> — one try-on and one spin, the journey we actually want.",
+    "<b>Try it and spin it — 5 credits for KES 110 — is on sale</b>, one try-on and one spin together.",
     "<b>Never bundle a free spin.</b> One free spin costs more than a paid try-on earns.",
     "<b>Review at 250 spins a month</b>, when self-hosting starts to pay.",
 ]:
     S(Paragraph(line, styles["body"]))
+
+# ---- 7. where this stands
+S(Paragraph("7 · Where this stands today", styles["h2"]))
+rows = [["", "STATE"]]
+rows += [
+    ["Spin price set to 4 credits", "live in the database"],
+    ["Try it and spin it pack, KES 110", "live and on sale"],
+    ["3D consent, asked at the first spin", "live - request_mesh refuses without it"],
+    ["Mesh table, private bucket, refund path", "live"],
+    ["mesh-create / mesh-status functions", "deployed"],
+    ["MESHY_API_KEY on the server", "NOT SET - add in Edge Functions, Secrets"],
+    ["mesh_mode switch in Admin", "OFF - turn on after the key is in"],
+]
+S(table(rows, [96 * mm, 78 * mm], highlight=[6, 7]))
+S(Paragraph(
+    "Nothing above needs a deploy to change. The spin price, the engine and whether 3D shows at all are "
+    "settings in Admin, so the day Meshy gets expensive or a cheaper engine is worth running, it is a "
+    "dropdown rather than a release.", styles["small"]))
+S(Paragraph(
+    "<b>The number to watch:</b> what share of paying shoppers buy a spin. Under roughly one in six, 3D is "
+    "a demo rather than a business and the Meshy bill should be switched off, not optimised.", styles["body"]))
 
 doc = BaseDocTemplate(OUT, pagesize=A4, leftMargin=18 * mm, rightMargin=18 * mm, topMargin=20 * mm,
                       bottomMargin=16 * mm, title="VAA ALTERNATE — pricing after 3D", author="VAA ALTERNATE")
