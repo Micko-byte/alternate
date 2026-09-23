@@ -126,6 +126,11 @@ S(table(rows, [40 * mm, 28 * mm, 26 * mm, 32 * mm, 48 * mm], {1: "RIGHT", 2: "RI
 S(Paragraph(
     "Premium is the first plan where a spin makes money at a sane price. Pro looks cheaper but its credits "
     "cost twice as much, and the free plan's 3 spins a month are for testing, not selling.", styles["small"]))
+S(Paragraph(
+    "<b>These are the API numbers, not just the website's.</b> Meshy charges no separate API fee and sets no "
+    "monthly API minimum: calls from our server spend the same credits the plan includes, at the same rate, "
+    "and API access begins at Pro. The one figure not published is the price of a top-up pack bought outside "
+    "a plan, so check what checkout says before buying credits that way.", styles["small"]))
 
 # ---- 2. what to charge
 S(Paragraph("2 · What a spin has to cost the shopper", styles["h2"]))
